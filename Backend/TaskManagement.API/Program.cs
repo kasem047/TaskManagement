@@ -58,6 +58,27 @@ builder.Services
 // SignalR
 builder.Services.AddSignalR();
 
+// CORS
+// Allows the Angular development application
+// to communicate with the hosted API.
+// When the final frontend domain is known,
+// it can be added here as another allowed origin.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "FrontendPolicy",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:4200",
+                    "https://localhost:4200")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
+
 // Task reminders
 builder.Services.AddHostedService<
     TaskReminderBackgroundService>();
@@ -498,15 +519,18 @@ using (var scope =
 // Handle all unhandled exceptions globally.
 app.UseExceptionHandler();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
+// Swagger is enabled for the hosted API
+// so it can be tested during development and project presentation.
+app.UseSwagger();
 
-    app.UseSwaggerUI();
-}
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+
+// CORS must run before authentication/authorization
+// for requests coming from the Angular frontend.
+app.UseCors(
+    "FrontendPolicy");
 
 app.UseAuthentication();
 
@@ -517,6 +541,8 @@ app.MapControllers();
 
 // SignalR notifications hub
 app.MapHub<NotificationHub>(
-    "/hubs/notifications");
+        "/hubs/notifications")
+    .RequireCors(
+        "FrontendPolicy");
 
 app.Run();
