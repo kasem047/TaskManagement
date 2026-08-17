@@ -37,6 +37,11 @@ public interface IApplicationDbContext
 
     DbSet<UserSession> UserSessions { get; }
 
+    DbSet<PasswordRecoveryRequest>
+        PasswordRecoveryRequests
+    { get; }
+
+
     Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default);
 }

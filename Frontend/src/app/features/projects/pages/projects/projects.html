@@ -1,0 +1,274 @@
+<div class="projects-page">
+
+  <!-- Header -->
+  <header class="page-header">
+
+    <div class="header-copy">
+
+      <button
+        class="back-button"
+        type="button"
+        (click)="back()"
+      >
+        ← لوحة التحكم
+      </button>
+
+
+      <span class="eyebrow">
+        مساحة العمل
+      </span>
+
+
+      <h1>
+        {{ workspaceName }}
+      </h1>
+
+
+      <p>
+        إدارة المشاريع التابعة لمساحة العمل.
+      </p>
+
+    </div>
+
+
+    <div class="header-actions">
+
+      <button
+        class="refresh-button"
+        type="button"
+        (click)="loadProjects()"
+      >
+        تحديث
+      </button>
+
+
+      <button
+        class="create-button"
+        type="button"
+      >
+        <span>+</span>
+
+        مشروع جديد
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <!-- Statistics -->
+  <section class="stats">
+
+    <article>
+
+      <span>
+        جميع المشاريع
+      </span>
+
+      <strong>
+        {{ projects.length }}
+      </strong>
+
+    </article>
+
+
+    <article>
+
+      <span>
+        المشاريع النشطة
+      </span>
+
+      <strong>
+        {{ activeProjects.length }}
+      </strong>
+
+    </article>
+
+
+    <article>
+
+      <span>
+        المؤرشفة
+      </span>
+
+      <strong>
+        {{ archivedProjects.length }}
+      </strong>
+
+    </article>
+
+  </section>
+
+
+  <!-- Projects -->
+  <section class="projects-panel">
+
+    <div class="panel-heading">
+
+      <div>
+
+        <h2>
+          المشاريع
+        </h2>
+
+        <p>
+          جميع المشاريع التي يمكنك الوصول إليها.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    @if (loading) {
+
+      <div class="state">
+
+        <span class="loader"></span>
+
+        <p>
+          جارٍ تحميل المشاريع...
+        </p>
+
+      </div>
+
+    } @else if (errorMessage) {
+
+      <div class="state error">
+
+        <strong>
+          تعذر تحميل المشاريع
+        </strong>
+
+        <p>
+          {{ errorMessage }}
+        </p>
+
+        <button
+          type="button"
+          (click)="loadProjects()"
+        >
+          إعادة المحاولة
+        </button>
+
+      </div>
+
+    } @else if (projects.length === 0) {
+
+      <div class="state">
+
+        <div class="empty-icon">
+          +
+        </div>
+
+        <strong>
+          لا توجد مشاريع بعد
+        </strong>
+
+        <p>
+          ابدأ بإنشاء أول مشروع ضمن مساحة العمل.
+        </p>
+
+      </div>
+
+    } @else {
+
+      <div class="projects-grid">
+
+        @for (
+          project of projects;
+          track project.id
+        ) {
+
+          <article
+            class="project-card"
+            [class.archived]="
+              project.isArchived
+            "
+          >
+
+            <div class="project-top">
+
+              <div class="project-icon">
+                {{
+                  firstLetter(
+                    project.name
+                  )
+                }}
+              </div>
+
+
+              @if (project.isArchived) {
+
+                <span class="archive-badge">
+                  مؤرشف
+                </span>
+
+              } @else {
+
+                <span class="active-badge">
+                  نشط
+                </span>
+
+              }
+
+            </div>
+
+
+            <h3>
+              {{ project.name }}
+            </h3>
+
+
+            <p>
+              {{
+                project.description
+                || 'لا يوجد وصف للمشروع.'
+              }}
+            </p>
+
+
+            <div class="project-meta">
+
+              <div>
+
+                <span>
+                  مدير المشروع
+                </span>
+
+                <strong>
+                  {{
+                    managerName(
+                      project
+                    )
+                  }}
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <button
+            class="open-project"
+            type="button"
+            (click)="openProject(project)"
+            >
+              فتح المشروع
+
+              <span>
+                ←
+              </span>
+            </button>
+
+          </article>
+
+        }
+
+      </div>
+
+    }
+
+  </section>
+
+</div>

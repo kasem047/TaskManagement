@@ -31,6 +31,11 @@ public sealed class TaskService : ITaskService
         _notificationService = notificationService;
     }
 
+
+    /* =========================================================
+       GET TASKS
+       ========================================================= */
+
     public async Task<List<TaskResponse>> GetTasksAsync(
         int workspaceId,
         int projectId)
@@ -43,20 +48,29 @@ public sealed class TaskService : ITaskService
             workspaceId,
             SystemPermissions.TaskView);
 
-        var tasks = await _dbContext.TaskItems
-            .AsNoTracking()
-            .Where(task =>
-                task.ProjectId == projectId &&
-                !task.IsDeleted)
-            .OrderBy(task => task.Status)
-            .ThenBy(task => task.Position)
-            .ThenBy(task => task.CreatedAt)
-            .ToListAsync();
+        var tasks =
+            await _dbContext.TaskItems
+                .AsNoTracking()
+                .Where(task =>
+                    task.ProjectId == projectId &&
+                    !task.IsDeleted)
+                .OrderBy(task =>
+                    task.Status)
+                .ThenBy(task =>
+                    task.Position)
+                .ThenBy(task =>
+                    task.CreatedAt)
+                .ToListAsync();
 
         return tasks
             .Select(MapToResponse)
             .ToList();
     }
+
+
+    /* =========================================================
+       GET TASK BY ID
+       ========================================================= */
 
     public async Task<TaskResponse> GetTaskByIdAsync(
         int workspaceId,
@@ -71,21 +85,29 @@ public sealed class TaskService : ITaskService
             workspaceId,
             SystemPermissions.TaskView);
 
-        var task = await GetTaskAsync(
-            projectId,
-            taskId);
+        var task =
+            await GetTaskAsync(
+                projectId,
+                taskId);
 
-        return MapToResponse(task);
+        return MapToResponse(
+            task);
     }
+
+
+    /* =========================================================
+       CREATE TASK
+       ========================================================= */
 
     public async Task<TaskResponse> CreateTaskAsync(
         int workspaceId,
         int projectId,
         CreateTaskRequest request)
     {
-        var project = await GetActiveProjectAsync(
-            workspaceId,
-            projectId);
+        var project =
+            await GetActiveProjectAsync(
+                workspaceId,
+                projectId);
 
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
@@ -101,10 +123,11 @@ public sealed class TaskService : ITaskService
             request.Title.Trim();
 
         var duplicateTitleExists =
-            await _dbContext.TaskItems.AnyAsync(task =>
-                task.ProjectId == projectId &&
-                !task.IsDeleted &&
-                task.Title == normalizedTitle);
+            await _dbContext.TaskItems
+                .AnyAsync(task =>
+                    task.ProjectId == projectId &&
+                    !task.IsDeleted &&
+                    task.Title == normalizedTitle);
 
         if (duplicateTitleExists)
         {
@@ -113,41 +136,79 @@ public sealed class TaskService : ITaskService
         }
 
         var normalizedDueDate =
-            NormalizeDueDate(request.DueDate);
+            NormalizeDueDate(
+                request.DueDate);
 
-        if (normalizedDueDate.HasValue &&
-            normalizedDueDate.Value <= DateTime.UtcNow)
+        if (
+            normalizedDueDate.HasValue &&
+            normalizedDueDate.Value <=
+                DateTime.UtcNow)
         {
             throw new BadRequestException(
                 "Task due date must be in the future.");
         }
 
-        var lastPosition = await _dbContext.TaskItems
-            .Where(task =>
-                task.ProjectId == projectId &&
-                !task.IsDeleted &&
-                task.Status == TaskItemStatus.Todo)
-            .Select(task => (double?)task.Position)
-            .MaxAsync();
+        var lastPosition =
+            await _dbContext.TaskItems
+                .Where(task =>
+                    task.ProjectId == projectId &&
+                    !task.IsDeleted &&
+                    task.Status ==
+                        TaskItemStatus.Todo)
+                .Select(task =>
+                    (double?)task.Position)
+                .MaxAsync();
 
         var now =
             DateTime.UtcNow;
 
-        var task = new TaskItem
-        {
-            ProjectId = projectId,
-            Title = normalizedTitle,
-            Description = NormalizeOptionalText(
-                request.Description),
-            Status = TaskItemStatus.Todo,
-            Priority = request.Priority,
-            DueDate = normalizedDueDate,
-            Position = (lastPosition ?? 0) + 1,
-            CreatedByUserId = _currentUserService.UserId,
-            CreatedAt = now
-        };
+        var task =
+            new TaskItem
+            {
+                ProjectId =
+                    projectId,
 
-        _dbContext.TaskItems.Add(task);
+                Title =
+                    normalizedTitle,
+
+                Description =
+                    NormalizeOptionalText(
+                        request.Description),
+
+                Status =
+                    TaskItemStatus.Todo,
+
+                Priority =
+                    request.Priority,
+
+                DueDate =
+                    normalizedDueDate,
+
+                Position =
+                    (lastPosition ?? 0) + 1,
+
+                CreatedByUserId =
+                    _currentUserService.UserId,
+
+                /*
+                 * المهمة الجديدة لا تحتوي
+                 * على Progress بعد.
+                 */
+                ProgressPercentage =
+                    null,
+
+                ProgressNote =
+                    null,
+
+                ProgressUpdatedAt =
+                    null,
+
+                CreatedAt =
+                    now
+            };
+
+        _dbContext.TaskItems.Add(
+            task);
 
         await _dbContext.SaveChangesAsync();
 
@@ -158,8 +219,14 @@ public sealed class TaskService : ITaskService
             task.Id,
             $"Created task: {task.Title}");
 
-        return MapToResponse(task);
+        return MapToResponse(
+            task);
     }
+
+
+    /* =========================================================
+       UPDATE TASK DETAILS
+       ========================================================= */
 
     public async Task<TaskResponse> UpdateTaskAsync(
         int workspaceId,
@@ -167,9 +234,10 @@ public sealed class TaskService : ITaskService
         int taskId,
         UpdateTaskRequest request)
     {
-        var project = await GetActiveProjectAsync(
-            workspaceId,
-            projectId);
+        var project =
+            await GetActiveProjectAsync(
+                workspaceId,
+                projectId);
 
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
@@ -181,19 +249,24 @@ public sealed class TaskService : ITaskService
                 "Tasks in archived projects cannot be updated.");
         }
 
-        var task = await GetTaskAsync(
-            projectId,
-            taskId);
+        var task =
+            await GetTaskAsync(
+                projectId,
+                taskId);
 
         var normalizedTitle =
             request.Title.Trim();
 
         var duplicateTitleExists =
-            await _dbContext.TaskItems.AnyAsync(existingTask =>
-                existingTask.ProjectId == projectId &&
-                existingTask.Id != taskId &&
-                !existingTask.IsDeleted &&
-                existingTask.Title == normalizedTitle);
+            await _dbContext.TaskItems
+                .AnyAsync(existingTask =>
+                    existingTask.ProjectId ==
+                        projectId &&
+                    existingTask.Id !=
+                        taskId &&
+                    !existingTask.IsDeleted &&
+                    existingTask.Title ==
+                        normalizedTitle);
 
         if (duplicateTitleExists)
         {
@@ -205,13 +278,16 @@ public sealed class TaskService : ITaskService
             task.Priority;
 
         var previousDueDate =
-            NormalizeDueDate(task.DueDate);
+            NormalizeDueDate(
+                task.DueDate);
 
         var requestedDueDate =
-            NormalizeDueDate(request.DueDate);
+            NormalizeDueDate(
+                request.DueDate);
 
         var priorityChanged =
-            previousPriority != request.Priority;
+            previousPriority !=
+            request.Priority;
 
         var dueDateChanged =
             !Nullable.Equals(
@@ -219,13 +295,15 @@ public sealed class TaskService : ITaskService
                 requestedDueDate);
 
         /*
-         * Existing overdue tasks may still be edited.
-         * But a user may not deliberately change the due
-         * date to another date that is already in the past.
+         * مهمة قديمة ومتأخرة يمكن تعديلها،
+         * لكن لا يمكن تغيير موعدها إلى
+         * تاريخ جديد موجود أصلًا في الماضي.
          */
-        if (dueDateChanged &&
+        if (
+            dueDateChanged &&
             requestedDueDate.HasValue &&
-            requestedDueDate.Value <= DateTime.UtcNow)
+            requestedDueDate.Value <=
+                DateTime.UtcNow)
         {
             throw new BadRequestException(
                 "A changed task due date must be in the future.");
@@ -256,7 +334,8 @@ public sealed class TaskService : ITaskService
             task.Id,
             $"Updated task details: {task.Title}");
 
-        if (priorityChanged ||
+        if (
+            priorityChanged ||
             dueDateChanged)
         {
             var notificationRecipientUserIds =
@@ -294,8 +373,14 @@ public sealed class TaskService : ITaskService
                 task.Id);
         }
 
-        return MapToResponse(task);
+        return MapToResponse(
+            task);
     }
+
+
+    /* =========================================================
+       UPDATE STATUS / PROGRESS / POSITION
+       ========================================================= */
 
     public async Task<TaskResponse> UpdateTaskStatusAsync(
         int workspaceId,
@@ -303,9 +388,10 @@ public sealed class TaskService : ITaskService
         int taskId,
         UpdateTaskStatusRequest request)
     {
-        var project = await GetActiveProjectAsync(
-            workspaceId,
-            projectId);
+        var project =
+            await GetActiveProjectAsync(
+                workspaceId,
+                projectId);
 
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
@@ -317,9 +403,10 @@ public sealed class TaskService : ITaskService
                 "Task status cannot be changed in an archived project.");
         }
 
-        var task = await GetTaskAsync(
-            projectId,
-            taskId);
+        var task =
+            await GetTaskAsync(
+                projectId,
+                taskId);
 
         var previousStatus =
             task.Status;
@@ -327,17 +414,181 @@ public sealed class TaskService : ITaskService
         var previousPosition =
             task.Position;
 
+        var previousProgressPercentage =
+            task.ProgressPercentage;
+
+        var previousProgressNote =
+            task.ProgressNote;
+
+        var normalizedProgressNote =
+            NormalizeOptionalText(
+                request.ProgressNote);
+
+        var normalizedChangeReason =
+            NormalizeOptionalText(
+                request.ChangeReason);
+
+        /*
+         * التحقق من بيانات الإنجاز الجزئي
+         * على مستوى Service أيضًا.
+         *
+         * هذا مهم حتى لو تم استدعاء Service
+         * من Test أو Service آخر بدون المرور
+         * عبر Model Validation في Controller.
+         */
+        ValidateProgressRequest(
+            request,
+            normalizedProgressNote);
+
         var statusChanged =
-            previousStatus != request.Status;
+            previousStatus !=
+            request.Status;
 
         var positionChanged =
-            previousPosition != request.Position;
+            previousPosition !=
+            request.Position;
 
-        if (!statusChanged &&
-            !positionChanged)
+        var progressChanged =
+            request.Status ==
+                TaskItemStatus.PartiallyCompleted &&
+            (
+                task.ProgressPercentage !=
+                    request.ProgressPercentage ||
+                !string.Equals(
+                    task.ProgressNote,
+                    normalizedProgressNote,
+                    StringComparison.Ordinal)
+            );
+
+        /*
+         * إذا لم يتغير شيء نهائيًا
+         * لا يوجد داعي للـSave.
+         */
+        if (
+            !statusChanged &&
+            !positionChanged &&
+            !progressChanged)
         {
-            return MapToResponse(task);
+            return MapToResponse(
+                task);
         }
+
+        /*
+         * التحقق من Workflow:
+         *
+         * - المدير/المالك أو صاحب صلاحية
+         *   إدارة تفاصيل المهمة يستطيع التحكم
+         *   الكامل بالـWorkflow.
+         *
+         * - العضو العادي يجب أن يكون
+         *   مسندًا للمهمة.
+         *
+         * - العضو يتحرك للأمام فقط.
+         */
+        await EnsureWorkflowChangeAllowedAsync(
+            workspaceId,
+            task,
+            request.Status,
+            statusChanged,
+            positionChanged,
+            progressChanged,
+            normalizedChangeReason);
+
+        var now =
+            DateTime.UtcNow;
+
+        /*
+         * ===========================
+         * PARTIALLY COMPLETED
+         * ===========================
+         */
+        if (
+            request.Status ==
+            TaskItemStatus.PartiallyCompleted)
+        {
+            task.ProgressPercentage =
+                request.ProgressPercentage;
+
+            task.ProgressNote =
+                normalizedProgressNote;
+
+            if (
+                statusChanged ||
+                progressChanged)
+            {
+                task.ProgressUpdatedAt =
+                    now;
+            }
+        }
+
+        /*
+         * ===========================
+         * DONE
+         * ===========================
+         *
+         * عند اكتمال المهمة يصبح
+         * Progress = 100 حقيقيًا.
+         */
+        else if (
+            request.Status ==
+            TaskItemStatus.Done)
+        {
+            task.ProgressPercentage =
+                100;
+
+            /*
+             * إذا كان هناك ProgressNote سابق
+             * نحتفظ به لأنه يوثق ما تم إنجازه.
+             */
+
+            task.ProgressUpdatedAt =
+                now;
+        }
+
+        /*
+         * ===========================
+         * BACK TO ACTIVE WORK
+         * ===========================
+         *
+         * إذا أعاد المدير المهمة من:
+         *
+         * PartiallyCompleted / Done
+         *
+         * إلى:
+         *
+         * Todo / InProgress
+         *
+         * نمسح الـProgress الحالي.
+         *
+         * التاريخ السابق لا يضيع لأنه
+         * محفوظ في ActivityLog.
+         */
+        else if (
+            statusChanged &&
+            (
+                request.Status ==
+                    TaskItemStatus.Todo ||
+                request.Status ==
+                    TaskItemStatus.InProgress
+            ))
+        {
+            task.ProgressPercentage =
+                null;
+
+            task.ProgressNote =
+                null;
+
+            task.ProgressUpdatedAt =
+                null;
+        }
+
+        /*
+         * في Cancelled:
+         *
+         * لا نمسح نسبة الإنجاز السابقة
+         * إن كانت موجودة، لأنها قد تكون
+         * معلومة تاريخية مفيدة.
+         */
 
         task.Status =
             request.Status;
@@ -346,34 +597,63 @@ public sealed class TaskService : ITaskService
             request.Position;
 
         task.UpdatedAt =
-            DateTime.UtcNow;
+            now;
 
         await _dbContext.SaveChangesAsync();
 
+
+        /* =====================================================
+           STATUS LOG
+           ===================================================== */
+
         if (statusChanged)
         {
+            var statusLogDescription =
+                BuildStatusLogDescription(
+                    task.Title,
+                    previousStatus,
+                    task.Status,
+                    normalizedChangeReason);
+
             await _activityLogService.LogAsync(
                 workspaceId,
                 "task.status_changed",
                 nameof(TaskItem),
                 task.Id,
-                $"Changed task status from {previousStatus} to {task.Status}: {task.Title}");
-
-            var notificationRecipientUserIds =
-                await GetTaskNotificationRecipientUserIdsAsync(
-                    task.Id,
-                    project.ManagerUserId);
-
-            await _notificationService.CreateManyAsync(
-                notificationRecipientUserIds,
-                workspaceId,
-                "Task status changed",
-                $"Task \"{task.Title}\" status changed from {previousStatus} to {task.Status}.",
-                "task.status_changed",
-                nameof(TaskItem),
-                task.Id);
+                statusLogDescription);
         }
-        else
+
+
+        /* =====================================================
+           PROGRESS LOG
+           ===================================================== */
+
+        if (
+            request.Status ==
+                TaskItemStatus.PartiallyCompleted &&
+            (
+                statusChanged ||
+                progressChanged
+            ))
+        {
+            await _activityLogService.LogAsync(
+                workspaceId,
+                "task.progress_updated",
+                nameof(TaskItem),
+                task.Id,
+                BuildProgressLogDescription(
+                    task.ProgressPercentage,
+                    task.ProgressNote));
+        }
+
+
+        /* =====================================================
+           POSITION LOG
+           ===================================================== */
+
+        if (
+            positionChanged &&
+            !statusChanged)
         {
             await _activityLogService.LogAsync(
                 workspaceId,
@@ -383,17 +663,58 @@ public sealed class TaskService : ITaskService
                 $"Changed task position from {previousPosition} to {task.Position}: {task.Title}");
         }
 
-        return MapToResponse(task);
+
+        /* =====================================================
+           NOTIFICATIONS
+           ===================================================== */
+
+        if (
+            statusChanged ||
+            progressChanged)
+        {
+            var notificationRecipientUserIds =
+                await GetTaskNotificationRecipientUserIdsAsync(
+                    task.Id,
+                    project.ManagerUserId);
+
+            var notification =
+                BuildWorkflowNotification(
+                    task,
+                    previousStatus,
+                    statusChanged,
+                    progressChanged,
+                    previousProgressPercentage,
+                    previousProgressNote,
+                    normalizedChangeReason);
+
+            await _notificationService.CreateManyAsync(
+                notificationRecipientUserIds,
+                workspaceId,
+                notification.Title,
+                notification.Message,
+                notification.Type,
+                nameof(TaskItem),
+                task.Id);
+        }
+
+        return MapToResponse(
+            task);
     }
+
+
+    /* =========================================================
+       DELETE TASK
+       ========================================================= */
 
     public async Task DeleteTaskAsync(
         int workspaceId,
         int projectId,
         int taskId)
     {
-        var project = await GetActiveProjectAsync(
-            workspaceId,
-            projectId);
+        var project =
+            await GetActiveProjectAsync(
+                workspaceId,
+                projectId);
 
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
@@ -405,9 +726,10 @@ public sealed class TaskService : ITaskService
                 "Tasks in archived projects cannot be deleted.");
         }
 
-        var task = await GetTaskAsync(
-            projectId,
-            taskId);
+        var task =
+            await GetTaskAsync(
+                projectId,
+                taskId);
 
         var notificationRecipientUserIds =
             await GetTaskNotificationRecipientUserIdsAsync(
@@ -448,15 +770,361 @@ public sealed class TaskService : ITaskService
             task.Id);
     }
 
+
+    /* =========================================================
+       WORKFLOW AUTHORIZATION
+       ========================================================= */
+
+    private async Task EnsureWorkflowChangeAllowedAsync(
+        int workspaceId,
+        TaskItem task,
+        TaskItemStatus requestedStatus,
+        bool statusChanged,
+        bool positionChanged,
+        bool progressChanged,
+        string? changeReason)
+    {
+        /*
+         * نعتمد الصلاحيات الفعلية بدل الاعتماد
+         * على اسم Role فقط.
+         *
+         * من يستطيع تعديل تفاصيل المهمة
+         * نعتبره صاحب صلاحية إدارة Workflow.
+         *
+         * هذا يشمل عادة:
+         *
+         * ProjectManager
+         * WorkspaceOwner
+         *
+         * كما يحترم User Permission Overrides.
+         */
+        var canManageWorkflow =
+            await CanManageTaskWorkflowAsync(
+                workspaceId);
+
+        if (canManageWorkflow)
+        {
+            if (
+                statusChanged &&
+                RequiresChangeReason(
+                    task.Status,
+                    requestedStatus) &&
+                string.IsNullOrWhiteSpace(
+                    changeReason))
+            {
+                throw new BadRequestException(
+                    "A reason is required when rejecting, reopening, or moving a task backward.");
+            }
+
+            return;
+        }
+
+
+        /*
+         * المستخدم العادي يجب أن يكون
+         * مسؤولًا عن المهمة أصلًا.
+         */
+        var currentUserAssigned =
+            await IsCurrentUserAssignedAsync(
+                task.Id);
+
+        if (!currentUserAssigned)
+        {
+            throw new ForbiddenException(
+                "You can only update the workflow of tasks assigned to you.");
+        }
+
+
+        /*
+         * العضو لا يستطيع تعديل مهمة
+         * منتهية أو ملغاة.
+         */
+        if (
+            task.Status ==
+                TaskItemStatus.Done ||
+            task.Status ==
+                TaskItemStatus.Cancelled)
+        {
+            throw new ForbiddenException(
+                "Completed or cancelled tasks cannot be changed by an assigned member.");
+        }
+
+
+        /*
+         * تغيير ترتيب أو تحديث Progress
+         * داخل نفس الحالة مسموح للمسؤول
+         * عن المهمة ما دامت ليست Final.
+         */
+        if (!statusChanged)
+        {
+            if (
+                positionChanged ||
+                progressChanged)
+            {
+                return;
+            }
+
+            return;
+        }
+
+
+        /*
+         * Member Workflow:
+         *
+         * Todo
+         *    -> InProgress
+         *
+         * InProgress
+         *    -> PartiallyCompleted
+         *    -> Done
+         *
+         * PartiallyCompleted
+         *    -> Done
+         *
+         * لا رجوع للخلف.
+         * لا إلغاء.
+         */
+        if (
+            !IsValidMemberStatusTransition(
+                task.Status,
+                requestedStatus))
+        {
+            throw new ConflictException(
+                $"Invalid task status transition from {GetStatusResponseName(task.Status)} to {GetStatusResponseName(requestedStatus)} for an assigned member.");
+        }
+    }
+
+
+    /*
+     * صاحب صلاحية TaskDetailsUpdate
+     * يعتبر قادرًا على إدارة Workflow.
+     *
+     * استعمال Permission وليس Role Name
+     * يجعل User Overrides تعمل أيضًا.
+     */
+    private async Task<bool> CanManageTaskWorkflowAsync(
+        int workspaceId)
+    {
+        try
+        {
+            await _permissionService.EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.TaskDetailsUpdate);
+
+            return true;
+        }
+        catch (ForbiddenException)
+        {
+            return false;
+        }
+    }
+
+
+    private async Task<bool> IsCurrentUserAssignedAsync(
+        int taskId)
+    {
+        var currentUserId =
+            _currentUserService.UserId;
+
+        return await _dbContext.TaskAssignees
+            .AsNoTracking()
+            .AnyAsync(assignment =>
+                assignment.TaskItemId ==
+                    taskId &&
+                assignment.UserId ==
+                    currentUserId &&
+                !assignment.IsDeleted);
+    }
+
+
+    /*
+     * Member فقط.
+     */
+    private static bool IsValidMemberStatusTransition(
+        TaskItemStatus currentStatus,
+        TaskItemStatus newStatus)
+    {
+        return currentStatus switch
+        {
+            TaskItemStatus.Todo =>
+                newStatus ==
+                    TaskItemStatus.InProgress,
+
+            TaskItemStatus.InProgress =>
+                newStatus ==
+                    TaskItemStatus.PartiallyCompleted ||
+                newStatus ==
+                    TaskItemStatus.Done,
+
+            TaskItemStatus.PartiallyCompleted =>
+                newStatus ==
+                    TaskItemStatus.Done,
+
+            TaskItemStatus.Done =>
+                false,
+
+            TaskItemStatus.Cancelled =>
+                false,
+
+            _ =>
+                false
+        };
+    }
+
+
+    /*
+     * مدير المشروع / مالك مساحة العمل
+     * يستطيع الرجوع بالحالات.
+     *
+     * لكن يجب كتابة سبب في الحالات التالية:
+     *
+     * PartiallyCompleted -> InProgress
+     * Done               -> InProgress
+     * Done               -> Todo
+     * Cancelled          -> Active
+     * وغيرها من عمليات الرجوع.
+     */
+    private static bool RequiresChangeReason(
+        TaskItemStatus currentStatus,
+        TaskItemStatus newStatus)
+    {
+        if (
+            currentStatus ==
+                TaskItemStatus.Done ||
+            currentStatus ==
+                TaskItemStatus.Cancelled)
+        {
+            return true;
+        }
+
+        if (
+            newStatus ==
+            TaskItemStatus.Cancelled)
+        {
+            return false;
+        }
+
+        var currentRank =
+            GetWorkflowRank(
+                currentStatus);
+
+        var newRank =
+            GetWorkflowRank(
+                newStatus);
+
+        if (
+            currentRank.HasValue &&
+            newRank.HasValue &&
+            newRank.Value <
+                currentRank.Value)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    private static int? GetWorkflowRank(
+        TaskItemStatus status)
+    {
+        return status switch
+        {
+            TaskItemStatus.Todo =>
+                1,
+
+            TaskItemStatus.InProgress =>
+                2,
+
+            TaskItemStatus.PartiallyCompleted =>
+                3,
+
+            TaskItemStatus.Done =>
+                4,
+
+            TaskItemStatus.Cancelled =>
+                null,
+
+            _ =>
+                null
+        };
+    }
+
+
+    /* =========================================================
+       PROGRESS VALIDATION
+       ========================================================= */
+
+    private static void ValidateProgressRequest(
+        UpdateTaskStatusRequest request,
+        string? normalizedProgressNote)
+    {
+        if (
+            request.Status !=
+            TaskItemStatus.PartiallyCompleted)
+        {
+            return;
+        }
+
+        if (
+            !request.ProgressPercentage.HasValue)
+        {
+            throw new BadRequestException(
+                "Progress percentage is required for a partially completed task.");
+        }
+
+        if (
+            request.ProgressPercentage.Value <
+                1 ||
+            request.ProgressPercentage.Value >
+                99)
+        {
+            throw new BadRequestException(
+                "Progress percentage must be between 1 and 99.");
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                normalizedProgressNote))
+        {
+            throw new BadRequestException(
+                "Progress note is required for a partially completed task.");
+        }
+
+        if (
+            normalizedProgressNote.Length <
+            3)
+        {
+            throw new BadRequestException(
+                "Progress note must contain at least 3 characters.");
+        }
+
+        if (
+            normalizedProgressNote.Length >
+            1000)
+        {
+            throw new BadRequestException(
+                "Progress note cannot exceed 1000 characters.");
+        }
+    }
+
+
+    /* =========================================================
+       PROJECT / TASK HELPERS
+       ========================================================= */
+
     private async Task EnsureProjectExistsAsync(
         int workspaceId,
         int projectId)
     {
         var projectExists =
-            await _dbContext.Projects.AnyAsync(project =>
-                project.Id == projectId &&
-                project.WorkspaceId == workspaceId &&
-                !project.IsDeleted);
+            await _dbContext.Projects
+                .AnyAsync(project =>
+                    project.Id ==
+                        projectId &&
+                    project.WorkspaceId ==
+                        workspaceId &&
+                    !project.IsDeleted);
 
         if (!projectExists)
         {
@@ -465,15 +1133,19 @@ public sealed class TaskService : ITaskService
         }
     }
 
+
     private async Task<Project> GetActiveProjectAsync(
         int workspaceId,
         int projectId)
     {
-        var project = await _dbContext.Projects
-            .FirstOrDefaultAsync(project =>
-                project.Id == projectId &&
-                project.WorkspaceId == workspaceId &&
-                !project.IsDeleted);
+        var project =
+            await _dbContext.Projects
+                .FirstOrDefaultAsync(project =>
+                    project.Id ==
+                        projectId &&
+                    project.WorkspaceId ==
+                        workspaceId &&
+                    !project.IsDeleted);
 
         if (project is null)
         {
@@ -484,15 +1156,19 @@ public sealed class TaskService : ITaskService
         return project;
     }
 
+
     private async Task<TaskItem> GetTaskAsync(
         int projectId,
         int taskId)
     {
-        var task = await _dbContext.TaskItems
-            .FirstOrDefaultAsync(task =>
-                task.Id == taskId &&
-                task.ProjectId == projectId &&
-                !task.IsDeleted);
+        var task =
+            await _dbContext.TaskItems
+                .FirstOrDefaultAsync(task =>
+                    task.Id ==
+                        taskId &&
+                    task.ProjectId ==
+                        projectId &&
+                    !task.IsDeleted);
 
         if (task is null)
         {
@@ -503,6 +1179,11 @@ public sealed class TaskService : ITaskService
         return task;
     }
 
+
+    /* =========================================================
+       NOTIFICATION RECIPIENTS
+       ========================================================= */
+
     private async Task<HashSet<int>>
         GetTaskNotificationRecipientUserIdsAsync(
             int taskId,
@@ -512,14 +1193,16 @@ public sealed class TaskService : ITaskService
             await _dbContext.TaskAssignees
                 .AsNoTracking()
                 .Where(assignment =>
-                    assignment.TaskItemId == taskId &&
+                    assignment.TaskItemId ==
+                        taskId &&
                     !assignment.IsDeleted)
                 .Select(assignment =>
                     assignment.UserId)
                 .ToListAsync();
 
         var recipientUserIds =
-            assigneeUserIds.ToHashSet();
+            assigneeUserIds
+                .ToHashSet();
 
         if (managerUserId.HasValue)
         {
@@ -530,11 +1213,154 @@ public sealed class TaskService : ITaskService
         return recipientUserIds;
     }
 
+
+    /* =========================================================
+       WORKFLOW NOTIFICATION
+       ========================================================= */
+
+    private static WorkflowNotification BuildWorkflowNotification(
+        TaskItem task,
+        TaskItemStatus previousStatus,
+        bool statusChanged,
+        bool progressChanged,
+        int? previousProgressPercentage,
+        string? previousProgressNote,
+        string? changeReason)
+    {
+        if (
+            task.Status ==
+            TaskItemStatus.PartiallyCompleted)
+        {
+            return new WorkflowNotification(
+                "Task partially completed",
+                $"Task \"{task.Title}\" is now {task.ProgressPercentage}% complete. Progress: {task.ProgressNote}",
+                "task.partially_completed");
+        }
+
+        if (
+            statusChanged &&
+            task.Status ==
+            TaskItemStatus.Done)
+        {
+            return new WorkflowNotification(
+                "Task completed",
+                $"Task \"{task.Title}\" was completed.",
+                "task.completed");
+        }
+
+        if (
+            statusChanged &&
+            task.Status ==
+            TaskItemStatus.Cancelled)
+        {
+            return new WorkflowNotification(
+                "Task cancelled",
+                $"Task \"{task.Title}\" was cancelled.",
+                "task.cancelled");
+        }
+
+        if (
+            statusChanged &&
+            RequiresChangeReason(
+                previousStatus,
+                task.Status))
+        {
+            var reasonPart =
+                string.IsNullOrWhiteSpace(
+                    changeReason)
+                    ? string.Empty
+                    : $" Reason: {changeReason}";
+
+            return new WorkflowNotification(
+                "Task reopened or returned",
+                $"Task \"{task.Title}\" changed from {GetStatusResponseName(previousStatus)} to {GetStatusResponseName(task.Status)}.{reasonPart}",
+                "task.reopened");
+        }
+
+        if (
+            progressChanged &&
+            previousProgressPercentage.HasValue)
+        {
+            var previousNotePart =
+                string.IsNullOrWhiteSpace(
+                    previousProgressNote)
+                    ? string.Empty
+                    : $" Previous progress: {previousProgressNote}.";
+
+            return new WorkflowNotification(
+                "Task progress updated",
+                $"Task \"{task.Title}\" progress changed from {previousProgressPercentage}% to {task.ProgressPercentage}%.{previousNotePart}",
+                "task.progress_updated");
+        }
+
+        return new WorkflowNotification(
+            "Task status changed",
+            $"Task \"{task.Title}\" status changed from {GetStatusResponseName(previousStatus)} to {GetStatusResponseName(task.Status)}.",
+            "task.status_changed");
+    }
+
+
+    private sealed record WorkflowNotification(
+        string Title,
+        string Message,
+        string Type);
+
+
+    /* =========================================================
+       ACTIVITY LOG DESCRIPTIONS
+       ========================================================= */
+
+    private static string BuildStatusLogDescription(
+        string taskTitle,
+        TaskItemStatus previousStatus,
+        TaskItemStatus currentStatus,
+        string? changeReason)
+    {
+        var description =
+            $"Changed task status from {GetStatusResponseName(previousStatus)} to {GetStatusResponseName(currentStatus)}: {taskTitle}";
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                changeReason))
+        {
+            description +=
+                $". Reason: {changeReason}";
+        }
+
+        return description;
+    }
+
+
+    private static string BuildProgressLogDescription(
+        int? progressPercentage,
+        string? progressNote)
+    {
+        var percentage =
+            progressPercentage ?? 0;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                progressNote))
+        {
+            return
+                $"Recorded task progress at {percentage}%.";
+        }
+
+        return
+            $"Recorded task progress at {percentage}%. Progress note: {progressNote}";
+    }
+
+
+    /* =========================================================
+       DETAILS NOTIFICATIONS
+       ========================================================= */
+
     private static string GetTaskDetailsNotificationTitle(
         bool priorityChanged,
         bool dueDateChanged)
     {
-        if (priorityChanged &&
+        if (
+            priorityChanged &&
             dueDateChanged)
         {
             return "Task details changed";
@@ -545,11 +1371,13 @@ public sealed class TaskService : ITaskService
             : "Task due date changed";
     }
 
+
     private static string GetTaskDetailsNotificationType(
         bool priorityChanged,
         bool dueDateChanged)
     {
-        if (priorityChanged &&
+        if (
+            priorityChanged &&
             dueDateChanged)
         {
             return "task.details_changed";
@@ -559,6 +1387,7 @@ public sealed class TaskService : ITaskService
             ? "task.priority_changed"
             : "task.due_date_changed";
     }
+
 
     private static string BuildTaskDetailsNotificationMessage(
         string taskTitle,
@@ -588,6 +1417,11 @@ public sealed class TaskService : ITaskService
             $"Task \"{taskTitle}\" was updated: {string.Join("; ", changes)}.";
     }
 
+
+    /* =========================================================
+       DATES
+       ========================================================= */
+
     private static string FormatDueDate(
         DateTime? dueDate)
     {
@@ -597,12 +1431,14 @@ public sealed class TaskService : ITaskService
         }
 
         var utcDueDate =
-            AsUtc(dueDate.Value);
+            AsUtc(
+                dueDate.Value);
 
         return utcDueDate.ToString(
             "yyyy-MM-dd HH:mm 'UTC'",
             CultureInfo.InvariantCulture);
     }
+
 
     private static DateTime? NormalizeDueDate(
         DateTime? dueDate)
@@ -615,6 +1451,7 @@ public sealed class TaskService : ITaskService
         return AsUtc(
             dueDate.Value);
     }
+
 
     private static DateTime AsUtc(
         DateTime value)
@@ -634,16 +1471,67 @@ public sealed class TaskService : ITaskService
         };
     }
 
+
+    /* =========================================================
+       STATUS OUTPUT
+       ========================================================= */
+
+    /*
+     * لا نعتمد على Enum.ToString()
+     * للقيمة 3 لأن عندنا حاليًا:
+     *
+     * PartiallyCompleted = 3
+     * InReview = 3
+     *
+     * فنفرض الاسم الجديد بشكل صريح.
+     */
+    private static string GetStatusResponseName(
+        TaskItemStatus status)
+    {
+        return status switch
+        {
+            TaskItemStatus.Todo =>
+                "Todo",
+
+            TaskItemStatus.InProgress =>
+                "InProgress",
+
+            TaskItemStatus.PartiallyCompleted =>
+                "PartiallyCompleted",
+
+            TaskItemStatus.Done =>
+                "Done",
+
+            TaskItemStatus.Cancelled =>
+                "Cancelled",
+
+            _ =>
+                status.ToString()
+        };
+    }
+
+
+    /* =========================================================
+       NORMALIZATION
+       ========================================================= */
+
     private static string? NormalizeOptionalText(
         string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (
+            string.IsNullOrWhiteSpace(
+                value))
         {
             return null;
         }
 
         return value.Trim();
     }
+
+
+    /* =========================================================
+       RESPONSE MAPPING
+       ========================================================= */
 
     private static TaskResponse MapToResponse(
         TaskItem task)
@@ -663,13 +1551,15 @@ public sealed class TaskService : ITaskService
                 task.Description,
 
             Status =
-                task.Status.ToString(),
+                GetStatusResponseName(
+                    task.Status),
 
             Priority =
                 task.Priority.ToString(),
 
             DueDate =
-                NormalizeDueDate(task.DueDate),
+                NormalizeDueDate(
+                    task.DueDate),
 
             Position =
                 task.Position,
@@ -677,12 +1567,36 @@ public sealed class TaskService : ITaskService
             CreatedByUserId =
                 task.CreatedByUserId,
 
+
+            /* =====================
+               REAL PROGRESS
+               ===================== */
+
+            ProgressPercentage =
+                task.ProgressPercentage,
+
+            ProgressNote =
+                task.ProgressNote,
+
+            ProgressUpdatedAt =
+                task.ProgressUpdatedAt.HasValue
+                    ? AsUtc(
+                        task.ProgressUpdatedAt.Value)
+                    : null,
+
+
+            /* =====================
+               AUDIT
+               ===================== */
+
             CreatedAt =
-                AsUtc(task.CreatedAt),
+                AsUtc(
+                    task.CreatedAt),
 
             UpdatedAt =
                 task.UpdatedAt.HasValue
-                    ? AsUtc(task.UpdatedAt.Value)
+                    ? AsUtc(
+                        task.UpdatedAt.Value)
                     : null
         };
     }

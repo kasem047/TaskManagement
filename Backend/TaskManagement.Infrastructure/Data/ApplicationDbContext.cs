@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application.Interfaces;
 using TaskManagement.Domain.Entities;
@@ -45,6 +46,8 @@ public class ApplicationDbContext :
 
     public DbSet<UserSession> UserSessions { get; set; }
 
+    public DbSet<PasswordRecoveryRequest> PasswordRecoveryRequests { get; set; }
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
@@ -53,7 +56,10 @@ public class ApplicationDbContext :
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(ApplicationDbContext).Assembly);
 
+        // =========================
         // User
+        // =========================
+
         modelBuilder.Entity<User>()
             .HasIndex(user => user.Email)
             .IsUnique();
@@ -72,7 +78,11 @@ public class ApplicationDbContext :
             .Property(user => user.PasswordHash)
             .HasMaxLength(500);
 
+
+        // =========================
         // UserSession
+        // =========================
+
         modelBuilder.Entity<UserSession>()
             .Property(userSession =>
                 userSession.SessionToken)
@@ -122,7 +132,11 @@ public class ApplicationDbContext :
                 userSession.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+
+        // =========================
         // Role
+        // =========================
+
         modelBuilder.Entity<Role>()
             .Property(role =>
                 role.Name)
@@ -139,7 +153,11 @@ public class ApplicationDbContext :
                 role.Name)
             .IsUnique();
 
+
+        // =========================
         // Permission
+        // =========================
+
         modelBuilder.Entity<Permission>()
             .Property(permission =>
                 permission.Name)
@@ -162,7 +180,11 @@ public class ApplicationDbContext :
                 permission.Name)
             .IsUnique();
 
+
+        // =========================
         // RolePermission
+        // =========================
+
         modelBuilder.Entity<RolePermission>()
             .HasOne(rolePermission =>
                 rolePermission.Role)
@@ -190,7 +212,11 @@ public class ApplicationDbContext :
                 })
             .IsUnique();
 
+
+        // =========================
         // Workspace
+        // =========================
+
         modelBuilder.Entity<Workspace>()
             .Property(workspace =>
                 workspace.Name)
@@ -211,7 +237,11 @@ public class ApplicationDbContext :
                 workspace.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+
+        // =========================
         // WorkspaceMember
+        // =========================
+
         modelBuilder.Entity<WorkspaceMember>()
             .HasOne(workspaceMember =>
                 workspaceMember.Workspace)
@@ -248,7 +278,11 @@ public class ApplicationDbContext :
                 })
             .IsUnique();
 
+
+        // =========================
         // UserPermissionOverride
+        // =========================
+
         modelBuilder.Entity<UserPermissionOverride>()
             .Property(userPermissionOverride =>
                 userPermissionOverride.Reason)

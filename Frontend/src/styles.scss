@@ -1,0 +1,188 @@
+:root {
+  color-scheme: light;
+
+  // Backgrounds
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #f7f8fc;
+  --surface-3: #eef2f7;
+
+  // Borders
+  --border: #e1e6ef;
+  --border-strong: #d4dce8;
+
+  // Text
+  --text-primary: #182033;
+  --text-secondary: #5e6a80;
+  --text-muted: #8994a8;
+
+  // Brand
+  --primary: #5d6fe6;
+  --primary-2: #8a73d8;
+  --primary-hover: #5264d3;
+  --primary-active: #4758bd;
+  --primary-soft: #e9ecfd;
+
+  // Supporting colors
+  --violet: #8a73d8;
+  --violet-soft: #eeeaf9;
+
+  --rose: #d26d87;
+  --rose-soft: #f8e8ed;
+
+  --sky: #629bc7;
+  --sky-soft: #eaf2f8;
+
+  --cyan: #5e9da8;
+  --cyan-soft: #e8f2f3;
+
+  // Semantic
+  --success: #4f8a75;
+  --success-soft: #e6f1ec;
+
+  --warning: #c77b55;
+  --warning-soft: #f8e9df;
+
+  --danger: #c95468;
+  --danger-soft: #f8e5e9;
+
+  // Sidebar
+  --sidebar: #151d33;
+  --sidebar-active: #232d48;
+  --sidebar-text: #aab6cf;
+
+  // Radius
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  // Shadows
+  --shadow-sm:
+    0 1px 2px rgba(22, 29, 51, 0.03),
+    0 8px 22px rgba(22, 29, 51, 0.05);
+
+  --shadow-md:
+    0 18px 46px rgba(22, 29, 51, 0.08);
+
+  --shadow-lg:
+    0 28px 70px rgba(22, 29, 51, 0.12);
+
+  // Spacing
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+}
+
+html.dark {
+  color-scheme: dark;
+  --primary-2: #9b87e3;
+
+  --bg: #0f131d;
+  --surface: #171c29;
+  --surface-2: #1d2433;
+  --surface-3: #252e42;
+
+  --border: #2f394e;
+  --border-strong: #3d4962;
+
+  --text-primary: #f3f5fa;
+  --text-secondary: #a9b1c1;
+  --text-muted: #7e899e;
+
+  --primary: #7f90ff;
+  --primary-hover: #91a0ff;
+  --primary-active: #6f82f0;
+  --primary-soft: #28325a;
+
+  --violet: #b39be8;
+  --violet-soft: #352d4d;
+
+  --rose: #ea88a0;
+  --rose-soft: #3d2731;
+
+  --sky: #7cb0d7;
+  --sky-soft: #223548;
+
+  --cyan: #78b5bd;
+  --cyan-soft: #223a3e;
+
+  --success: #76ae98;
+  --success-soft: #20382f;
+
+  --warning: #e69a75;
+  --warning-soft: #3d2c24;
+
+  --danger: #e7788b;
+  --danger-soft: #3c252c;
+
+  --sidebar: #101728;
+  --sidebar-active: #202a43;
+  --sidebar-text: #9fabbf;
+
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.14),
+    0 10px 28px rgba(0, 0, 0, 0.18);
+
+  --shadow-md:
+    0 20px 52px rgba(0, 0, 0, 0.24);
+
+  --shadow-lg:
+    0 28px 80px rgba(0, 0, 0, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+
+  font-family:
+    "IBM Plex Sans Arabic",
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    Arial,
+    sans-serif;
+
+  color: var(--text-primary);
+  background: var(--bg);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+app-root {
+  display: block;
+  min-height: 100vh;
+}

@@ -1,0 +1,2586 @@
+<div class="tasks-page">
+
+  <!-- =========================
+       HEADER
+       ========================= -->
+
+  <header class="page-header">
+
+    <div class="header-copy">
+
+      <button
+        class="back-button"
+        type="button"
+        (click)="backToProjects()"
+      >
+        ← المشاريع
+      </button>
+
+      <span class="eyebrow">
+        لوحة المهام
+      </span>
+
+      <h1>
+        إدارة المهام
+      </h1>
+
+      <p>
+        متابعة المهام عبر مساحات العمل والمشاريع المتاحة لك.
+      </p>
+
+    </div>
+
+
+    <div class="header-actions">
+
+      <button
+        class="header-icon-button"
+        type="button"
+        title="تحديث"
+        aria-label="تحديث"
+        (click)="loadTasks()"
+      >
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18.8 6L20 11M4 13l1.2 5A7 7 0 0 0 17.9 16"
+          />
+        </svg>
+      </button>
+
+
+      <button
+        class="header-icon-button filter-button"
+        type="button"
+        title="الفلترة"
+        aria-label="الفلترة"
+        (click)="openFilters()"
+      >
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M4 6h16M7 12h10M10 18h4"
+          />
+        </svg>
+
+        @if (
+          activeFilterCount > 0
+        ) {
+
+          <span class="filter-count">
+            {{ activeFilterCount }}
+          </span>
+
+        }
+
+      </button>
+
+
+      <button
+        class="create-button"
+        type="button"
+        (click)="openCreateModal()"
+      >
+        <span>+</span>
+        مهمة جديدة
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <!-- =========================
+       BOARD CONTEXT
+       ========================= -->
+
+  <section class="board-context">
+
+    <div>
+
+      <strong>
+        {{ filteredTasks.length }}
+      </strong>
+
+      <span>
+        مهمة ظاهرة من أصل
+        {{ tasks.length }}
+      </span>
+
+    </div>
+
+
+    <span class="scope-chip">
+
+      @if (
+        selectedProjectIds.size === 1
+      ) {
+
+        مشروع محدد
+
+      } @else if (
+        selectedWorkspaceIds.size === 1
+      ) {
+
+        مساحة عمل محددة
+
+      } @else {
+
+        عرض شامل
+
+      }
+
+    </span>
+
+  </section>
+
+
+  <!-- =========================
+       SUMMARY
+       ========================= -->
+
+  <section class="summary">
+
+    <article>
+      <span>إجمالي المهام</span>
+
+      <strong>
+        {{ filteredTasks.length }}
+      </strong>
+    </article>
+
+
+    <article>
+      <span>قيد التنفيذ</span>
+
+      <strong>
+        {{
+          tasksByStatus(
+            'InProgress'
+          ).length
+        }}
+      </strong>
+    </article>
+
+
+    <article>
+      <span>مكتملة جزئيًا</span>
+
+      <strong>
+        {{
+          tasksByStatus(
+            'InReview'
+          ).length
+        }}
+      </strong>
+    </article>
+
+
+    <article>
+      <span>مكتملة</span>
+
+      <strong>
+        {{
+          tasksByStatus(
+            'Done'
+          ).length
+        }}
+      </strong>
+    </article>
+
+  </section>
+
+
+  @if (boardActionError) {
+
+    <div class="board-error">
+
+      <span>
+        {{ boardActionError }}
+      </span>
+
+      <button
+        type="button"
+        (click)="boardActionError = ''"
+      >
+        ×
+      </button>
+
+    </div>
+
+  }
+
+
+  <!-- =========================
+       CONTENT
+       ========================= -->
+
+  @if (loading) {
+
+    <section class="state-panel">
+
+      <span class="loader"></span>
+
+      <p>
+        جارٍ تحميل المهام...
+      </p>
+
+    </section>
+
+  } @else if (errorMessage) {
+
+    <section class="state-panel">
+
+      <strong>
+        تعذر تحميل المهام
+      </strong>
+
+      <p>
+        {{ errorMessage }}
+      </p>
+
+      <button
+        type="button"
+        (click)="loadTasks()"
+      >
+        إعادة المحاولة
+      </button>
+
+    </section>
+
+  } @else {
+
+    <div class="board-scroll">
+
+      <section
+        class="board"
+        cdkDropListGroup
+      >
+
+        @for (
+          column of columns;
+          track column.status
+        ) {
+
+          <article class="column">
+
+            <header class="column-header">
+
+              <div class="column-title">
+
+                <span
+                  class="status-dot"
+                  [class.Todo]="column.status === 'Todo'"
+                  [class.InProgress]="column.status === 'InProgress'"
+                  [class.InReview]="column.status === 'InReview'"
+                  [class.Done]="column.status === 'Done'"
+                  [class.Cancelled]="column.status === 'Cancelled'"
+                ></span>
+
+                <strong>
+                  {{ column.label }}
+                </strong>
+
+              </div>
+
+
+              <span class="count">
+                {{
+                  tasksByStatus(
+                    column.status
+                  ).length
+                }}
+              </span>
+
+            </header>
+
+
+            <div
+              class="column-body"
+              cdkDropList
+              [cdkDropListData]="
+                pagedTasksByStatus(
+                  column.status
+                )
+              "
+              (cdkDropListDropped)="
+                dropTask(
+                  $event,
+                  column.status
+                )
+              "
+            >
+
+              @for (
+                task of pagedTasksByStatus(
+                  column.status
+                );
+                track task.id
+              ) {
+
+                <article
+                  class="task-card"
+                  cdkDrag
+                  [cdkDragData]="task"
+                  [class.overdue]="
+                    isOverdue(task)
+                  "
+                  [class.moving]="
+                    movingTaskId ===
+                    task.id
+                  "
+                >
+
+                  <div class="task-card-top">
+
+                    <button
+                      class="drag-handle"
+                      type="button"
+                      cdkDragHandle
+                      title="سحب المهمة"
+                      aria-label="سحب المهمة"
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="8" cy="7" r="1.4"/>
+                        <circle cx="16" cy="7" r="1.4"/>
+                        <circle cx="8" cy="12" r="1.4"/>
+                        <circle cx="16" cy="12" r="1.4"/>
+                        <circle cx="8" cy="17" r="1.4"/>
+                        <circle cx="16" cy="17" r="1.4"/>
+                      </svg>
+                    </button>
+
+
+                    <div class="task-badges">
+
+                      @if (
+                        isOverdue(task)
+                      ) {
+
+                        <span class="overdue-badge">
+                          متأخرة
+                        </span>
+
+                      }
+
+
+                      @if (
+                        needsProgressInfo(task)
+                      ) {
+
+                        <span class="progress-missing-badge">
+                          نسبة الإنجاز مطلوبة
+                        </span>
+
+                      }
+
+
+                      <span
+                        class="priority"
+                        [class.low]="task.priority === 'Low'"
+                        [class.medium]="task.priority === 'Medium'"
+                        [class.high]="task.priority === 'High'"
+                        [class.critical]="task.priority === 'Critical'"
+                      >
+                        {{
+                          priorityLabel(
+                            task.priority
+                          )
+                        }}
+                      </span>
+
+                    </div>
+
+
+                    <span class="task-id">
+                      #{{ task.id }}
+                    </span>
+
+                  </div>
+
+
+                  <h3>
+                    {{ task.title }}
+                  </h3>
+
+
+                  <p class="task-description">
+                    {{
+                      task.description
+                      || 'لا يوجد وصف لهذه المهمة.'
+                    }}
+                  </p>
+
+
+                  <div class="task-context">
+
+                    <span class="context-workspace">
+                      {{ task.workspaceName }}
+                    </span>
+
+                    <span>›</span>
+
+                    <strong>
+                      {{ task.projectName }}
+                    </strong>
+
+                  </div>
+
+
+                  <div
+                    class="task-assignees"
+                    [title]="assigneeNames(task)"
+                  >
+
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                      />
+
+                      <circle
+                        cx="9"
+                        cy="7"
+                        r="4"
+                      />
+
+                      <path
+                        d="M22 21v-2a4 4 0 0 0-3-3.87"
+                      />
+
+                      <path
+                        d="M16 3.13a4 4 0 0 1 0 7.75"
+                      />
+                    </svg>
+
+
+                    <span>
+                      مسندة إلى
+                    </span>
+
+
+                    <strong
+                      [class.unassigned]="
+                        task.assignees.length === 0
+                      "
+                    >
+                      {{
+                        assigneeSummary(
+                          task
+                        )
+                      }}
+                    </strong>
+
+                  </div>
+
+
+                  @if (
+                    shouldShowProgress(task)
+                  ) {
+
+                    <div class="progress-block">
+
+                      <div class="progress-head">
+
+                        <span>
+                          الإنجاز
+                        </span>
+
+                        <strong>
+                          {{
+                            taskProgress(task)
+                          }}%
+                        </strong>
+
+                      </div>
+
+
+                      <div class="progress-track">
+
+                        <span
+                          class="progress-value"
+                          [style.width.%]="
+                            taskProgress(task)
+                          "
+                        ></span>
+
+                      </div>
+
+
+                      @if (
+                        task.progressNote
+                      ) {
+
+                        <p class="progress-note">
+                          {{ task.progressNote }}
+                        </p>
+
+                      }
+
+                    </div>
+
+                  }
+
+
+                  <div
+                    class="task-date"
+                    [class.task-date-overdue]="
+                      isOverdue(task)
+                    "
+                  >
+
+                    <svg viewBox="0 0 24 24">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="8"
+                      />
+
+                      <path
+                        d="M12 8v4l3 2"
+                      />
+                    </svg>
+
+
+                    <span>
+                      {{
+                        formatDate(
+                          task.dueDate
+                        )
+                      }}
+                    </span>
+
+
+                    @if (
+                      isOverdue(task)
+                    ) {
+
+                      <strong>
+                        متأخرة منذ
+                        {{ overdueDays(task) }}
+                        يوم
+                      </strong>
+
+                    }
+
+                  </div>
+
+
+                  <footer class="task-actions">
+
+                    <button
+                      type="button"
+                      title="تعديل المهمة"
+                      aria-label="تعديل المهمة"
+                      (click)="
+                        openTaskPanel(
+                          task,
+                          'edit'
+                        )
+                      "
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path
+                          d="M4 20h4l11-11a2.1 2.1 0 0 0-3-3L5 17l-1 3Z"
+                        />
+
+                        <path
+                          d="m14.5 7.5 3 3"
+                        />
+                      </svg>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      title="التعليقات والمرفقات"
+                      aria-label="التعليقات والمرفقات"
+                      (click)="
+                        openTaskPanel(
+                          task,
+                          'interaction'
+                        )
+                      "
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path
+                          d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"
+                        />
+                      </svg>
+                    </button>
+
+
+                    <button
+                      type="button"
+                      title="سجل حياة المهمة"
+                      aria-label="سجل حياة المهمة"
+                      (click)="
+                        openTaskPanel(
+                          task,
+                          'history'
+                        )
+                      "
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path
+                          d="M3 12a9 9 0 1 0 3-6.7L3 8"
+                        />
+
+                        <path
+                          d="M3 4v4h4"
+                        />
+
+                        <path
+                          d="M12 7v5l3 2"
+                        />
+                      </svg>
+                    </button>
+
+                  </footer>
+
+                </article>
+
+              }
+
+
+              @if (
+                pagedTasksByStatus(
+                  column.status
+                ).length === 0
+              ) {
+
+                <div class="empty-column">
+                  لا توجد مهام مطابقة.
+                </div>
+
+              }
+
+            </div>
+
+
+            @if (
+              tasksByStatus(
+                column.status
+              ).length >
+              pageSize
+            ) {
+
+              <footer class="column-pagination">
+
+                <button
+                  type="button"
+                  [disabled]="
+                    columnPages[
+                      column.status
+                    ] === 1
+                  "
+                  (click)="
+                    previousColumnPage(
+                      column.status
+                    )
+                  "
+                >
+                  السابق
+                </button>
+
+
+                <span>
+                  {{
+                    columnPages[
+                      column.status
+                    ]
+                  }}
+                  /
+                  {{
+                    columnPageCount(
+                      column.status
+                    )
+                  }}
+                </span>
+
+
+                <button
+                  type="button"
+                  [disabled]="
+                    columnPages[
+                      column.status
+                    ] >=
+                    columnPageCount(
+                      column.status
+                    )
+                  "
+                  (click)="
+                    nextColumnPage(
+                      column.status
+                    )
+                  "
+                >
+                  التالي
+                </button>
+
+              </footer>
+
+            }
+
+          </article>
+
+        }
+
+      </section>
+
+    </div>
+
+  }
+
+
+  <!-- =========================
+       FILTER DRAWER
+       ========================= -->
+
+  @if (showFilters) {
+
+    <div
+      class="drawer-backdrop"
+      (click)="closeFilters()"
+    ></div>
+
+
+    <aside class="filter-drawer">
+
+      <header class="drawer-header">
+
+        <div>
+          <span>
+            فلترة متقدمة
+          </span>
+
+          <h2>
+            تخصيص لوحة المهام
+          </h2>
+        </div>
+
+
+        <button
+          type="button"
+          aria-label="إغلاق"
+          (click)="closeFilters()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="drawer-body">
+
+        <section class="filter-section">
+
+          <h3>
+            نطاق العرض
+          </h3>
+
+
+          <div class="scope-buttons">
+
+            <button
+              type="button"
+              [class.active]="
+                scopeMode === 'all'
+              "
+              (click)="useAllScope()"
+            >
+              عرض شامل
+            </button>
+
+
+            <button
+              type="button"
+              [class.active]="
+                scopeMode ===
+                'workspace'
+              "
+              (click)="
+                useCurrentWorkspaceScope()
+              "
+            >
+              المساحة الحالية
+            </button>
+
+
+            <button
+              type="button"
+              [class.active]="
+                scopeMode ===
+                'project'
+              "
+              (click)="
+                useCurrentProjectScope()
+              "
+            >
+              المشروع الحالي
+            </button>
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <h3>
+            البحث
+          </h3>
+
+          <input
+            class="filter-search"
+            type="search"
+            placeholder="المهمة، المشروع، مساحة العمل، المسؤول..."
+            [value]="filterSearch"
+            (input)="
+              setFilterSearch(
+                $any(
+                  $event.target
+                ).value
+              )
+            "
+          >
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <div class="filter-section-head">
+
+            <h3>
+              مساحات العمل
+            </h3>
+
+            <span>
+              {{
+                selectedWorkspaceIds
+                  .size
+              }}
+              محددة
+            </span>
+
+          </div>
+
+
+          <div class="filter-list">
+
+            @for (
+              workspace of workspaces;
+              track workspace.id
+            ) {
+
+              <label class="filter-option">
+
+                <input
+                  type="checkbox"
+                  [checked]="
+                    selectedWorkspaceIds
+                      .has(
+                        workspace.id
+                      )
+                  "
+                  (change)="
+                    toggleWorkspace(
+                      workspace.id
+                    )
+                  "
+                >
+
+                <span class="filter-option-copy">
+
+                  <strong>
+                    {{ workspace.name }}
+                  </strong>
+
+                  <small>
+                    {{
+                      roleLabel(
+                        workspace.currentUserRole
+                      )
+                    }}
+                  </small>
+
+                </span>
+
+              </label>
+
+            }
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <div class="filter-section-head">
+
+            <h3>
+              المشاريع
+            </h3>
+
+            <span>
+              {{
+                selectedProjectIds
+                  .size
+              }}
+              محددة
+            </span>
+
+          </div>
+
+
+          <div class="filter-list">
+
+            @for (
+              project of availableProjects;
+              track project.id
+            ) {
+
+              <label class="filter-option">
+
+                <input
+                  type="checkbox"
+                  [checked]="
+                    selectedProjectIds
+                      .has(
+                        project.id
+                      )
+                  "
+                  (change)="
+                    toggleProject(
+                      project.id
+                    )
+                  "
+                >
+
+                <span class="filter-option-copy">
+
+                  <strong>
+                    {{ project.name }}
+                  </strong>
+
+                  <small>
+                    {{
+                      project.workspaceName
+                    }}
+                  </small>
+
+                </span>
+
+              </label>
+
+            }
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <h3>
+            الحالة
+          </h3>
+
+          <div class="filter-pills">
+
+            @for (
+              column of columns;
+              track column.status
+            ) {
+
+              <button
+                type="button"
+                [class.active]="
+                  selectedStatuses
+                    .has(
+                      column.status
+                    )
+                "
+                (click)="
+                  toggleStatus(
+                    column.status
+                  )
+                "
+              >
+                {{ column.label }}
+              </button>
+
+            }
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <h3>
+            الأولوية
+          </h3>
+
+          <div class="filter-pills">
+
+            @for (
+              priority of priorities;
+              track priority.value
+            ) {
+
+              <button
+                type="button"
+                [class.active]="
+                  selectedPriorities
+                    .has(
+                      priority.value
+                    )
+                "
+                (click)="
+                  togglePriority(
+                    priority.value
+                  )
+                "
+              >
+                {{ priority.label }}
+              </button>
+
+            }
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <h3>
+            الموعد النهائي
+          </h3>
+
+          <div class="filter-pills">
+
+            <button
+              type="button"
+              [class.active]="
+                dueFilter === 'all'
+              "
+              (click)="
+                setDueFilter('all')
+              "
+            >
+              الكل
+            </button>
+
+            <button
+              type="button"
+              [class.active]="
+                dueFilter ===
+                'overdue'
+              "
+              (click)="
+                setDueFilter('overdue')
+              "
+            >
+              المتأخرة
+            </button>
+
+            <button
+              type="button"
+              [class.active]="
+                dueFilter === 'today'
+              "
+              (click)="
+                setDueFilter('today')
+              "
+            >
+              اليوم
+            </button>
+
+            <button
+              type="button"
+              [class.active]="
+                dueFilter === 'week'
+              "
+              (click)="
+                setDueFilter('week')
+              "
+            >
+              7 أيام
+            </button>
+
+            <button
+              type="button"
+              [class.active]="
+                dueFilter ===
+                'no-date'
+              "
+              (click)="
+                setDueFilter(
+                  'no-date'
+                )
+              "
+            >
+              بدون موعد
+            </button>
+
+          </div>
+
+        </section>
+
+
+        <section class="filter-section">
+
+          <label class="switch-option">
+
+            <input
+              type="checkbox"
+              [checked]="
+                includeArchivedProjects
+              "
+              (change)="
+                setIncludeArchivedProjects(
+                  $any(
+                    $event.target
+                  ).checked
+                )
+              "
+            >
+
+            <span>
+              إظهار المشاريع المؤرشفة
+            </span>
+
+          </label>
+
+        </section>
+
+      </div>
+
+
+      <footer class="drawer-footer">
+
+        <span>
+          يعرض
+          <strong>
+            {{ filteredTasks.length }}
+          </strong>
+          من
+          <strong>
+            {{ tasks.length }}
+          </strong>
+        </span>
+
+
+        <button
+          class="clear-filter-button"
+          type="button"
+          (click)="clearAllFilters()"
+        >
+          مسح الفلاتر
+        </button>
+
+      </footer>
+
+    </aside>
+
+  }
+
+
+  <!-- =========================
+       CREATE MODAL
+       ========================= -->
+
+  @if (showCreateModal) {
+
+    <div
+      class="modal-backdrop"
+      (click)="closeCreateModal()"
+    >
+
+      <section
+        class="task-modal"
+        (click)="$event.stopPropagation()"
+      >
+
+        <header class="modal-header">
+
+          <div>
+            <span>مهمة جديدة</span>
+            <h2>إنشاء مهمة</h2>
+          </div>
+
+          <button
+            type="button"
+            (click)="closeCreateModal()"
+          >
+            ×
+          </button>
+
+        </header>
+
+
+        <form
+          class="task-form"
+          [formGroup]="createForm"
+          (ngSubmit)="createTask()"
+        >
+
+          <div class="form-row">
+
+            <div class="form-field">
+
+              <label>
+                مساحة العمل
+              </label>
+
+              <select
+                formControlName="workspaceId"
+                (change)="onCreateWorkspaceChange()"
+              >
+
+                @for (
+                  workspace of workspaces;
+                  track workspace.id
+                ) {
+
+                  <option
+                    [ngValue]="
+                      workspace.id
+                    "
+                  >
+                    {{ workspace.name }}
+                  </option>
+
+                }
+
+              </select>
+
+            </div>
+
+
+            <div class="form-field">
+
+              <label>
+                المشروع
+              </label>
+
+              <select
+                formControlName="projectId"
+              >
+
+                @for (
+                  project of createProjects;
+                  track project.id
+                ) {
+
+                  <option
+                    [ngValue]="project.id"
+                  >
+                    {{ project.name }}
+                  </option>
+
+                }
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          <div class="form-field">
+
+            <label>
+              عنوان المهمة
+            </label>
+
+            <input
+              type="text"
+              formControlName="title"
+            >
+
+          </div>
+
+
+          <div class="form-field">
+
+            <label>
+              الوصف
+            </label>
+
+            <textarea
+              rows="4"
+              formControlName="description"
+            ></textarea>
+
+          </div>
+
+
+          <div class="form-row">
+
+            <div class="form-field">
+
+              <label>
+                الأولوية
+              </label>
+
+              <select
+                formControlName="priority"
+              >
+                <option [ngValue]="1">منخفضة</option>
+                <option [ngValue]="2">متوسطة</option>
+                <option [ngValue]="3">مرتفعة</option>
+                <option [ngValue]="4">حرجة</option>
+              </select>
+
+            </div>
+
+
+            <div class="form-field">
+
+              <label>
+                الموعد النهائي
+              </label>
+
+              <input
+                type="datetime-local"
+                formControlName="dueDate"
+              >
+
+            </div>
+
+          </div>
+
+
+          @if (createError) {
+
+            <div class="form-api-error">
+              {{ createError }}
+            </div>
+
+          }
+
+
+          <footer class="modal-actions">
+
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeCreateModal()"
+            >
+              إلغاء
+            </button>
+
+            <button
+              type="submit"
+              class="primary-button"
+              [disabled]="creatingTask"
+            >
+              {{
+                creatingTask
+                  ? 'جارٍ الإنشاء...'
+                  : 'إنشاء المهمة'
+              }}
+            </button>
+
+          </footer>
+
+        </form>
+
+      </section>
+
+    </div>
+
+  }
+
+
+  <!-- =========================
+       PARTIAL COMPLETION
+       ========================= -->
+
+  @if (showProgressModal) {
+
+    <div
+      class="modal-backdrop"
+      (click)="closeProgressModal()"
+    >
+
+      <section
+        class="task-modal progress-modal"
+        (click)="$event.stopPropagation()"
+      >
+
+        <header class="modal-header">
+
+          <div>
+
+            <span>
+              إنجاز جزئي
+            </span>
+
+            <h2>
+              تحديد نسبة الإنجاز
+            </h2>
+
+          </div>
+
+
+          <button
+            type="button"
+            (click)="closeProgressModal()"
+          >
+            ×
+          </button>
+
+        </header>
+
+
+        <form
+          class="task-form"
+          [formGroup]="progressForm"
+          (ngSubmit)="confirmPartialCompletion()"
+        >
+
+          <div class="progress-modal-intro">
+
+            <strong>
+              {{
+                pendingStatusChange
+                  ?.task?.title
+              }}
+            </strong>
+
+            <p>
+              قبل نقل المهمة إلى
+              «مكتملة جزئيًا»، حدّد النسبة
+              الحقيقية التي تم إنجازها
+              واشرح ما الذي تم تنفيذه.
+            </p>
+
+          </div>
+
+
+          <div class="form-field">
+
+            <label>
+              نسبة الإنجاز %
+            </label>
+
+            <input
+              type="number"
+              min="1"
+              max="99"
+              formControlName="percentage"
+            >
+
+            <small>
+              من 1% إلى 99%.
+              عند اكتمالها بالكامل استخدم
+              حالة «مكتملة».
+            </small>
+
+          </div>
+
+
+          <div class="form-field">
+
+            <label>
+              ما الذي تم إنجازه؟
+            </label>
+
+            <textarea
+              rows="4"
+              formControlName="note"
+              placeholder="مثال: تم إنهاء تصميم الواجهة وربط الحقول الأساسية..."
+            ></textarea>
+
+          </div>
+
+
+          @if (progressError) {
+
+            <div class="form-api-error">
+              {{ progressError }}
+            </div>
+
+          }
+
+
+          <footer class="modal-actions">
+
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeProgressModal()"
+            >
+              إلغاء
+            </button>
+
+            <button
+              type="submit"
+              class="primary-button"
+              [disabled]="savingProgress"
+            >
+              {{
+                savingProgress
+                  ? 'جارٍ الحفظ...'
+                  : 'تسجيل الإنجاز'
+              }}
+            </button>
+
+          </footer>
+
+        </form>
+
+      </section>
+
+    </div>
+
+  }
+
+
+  <!-- =========================
+       TASK PANEL
+       ========================= -->
+
+  @if (selectedTask) {
+
+    <div
+      class="modal-backdrop"
+      (click)="closeTaskPanel()"
+    >
+
+      <section
+        class="task-modal task-panel-modal"
+        (click)="$event.stopPropagation()"
+      >
+
+        <header class="modal-header">
+
+          <div>
+
+            <span>
+              المهمة #{{ selectedTask.id }}
+            </span>
+
+            <h2>
+              {{ selectedTask.title }}
+            </h2>
+
+          </div>
+
+
+          <button
+            type="button"
+            (click)="closeTaskPanel()"
+          >
+            ×
+          </button>
+
+        </header>
+
+
+        <!-- =========================
+             EDIT
+             ========================= -->
+
+        @if (
+          selectedTaskPanel ===
+          'edit'
+        ) {
+
+          <form
+            class="task-form"
+            [formGroup]="editForm"
+            (ngSubmit)="saveTaskChanges()"
+          >
+
+            <div class="task-source-panel">
+
+              {{ selectedTask.workspaceName }}
+
+              <strong>›</strong>
+
+              {{ selectedTask.projectName }}
+
+            </div>
+
+
+            <!-- =========================
+                 ASSIGNEE PICKER
+                 ========================= -->
+
+            <section class="assignee-control">
+
+              <div class="assignee-control-head">
+
+                <div>
+
+                  <span class="assignee-control-title">
+                    المسؤولون عن المهمة
+                  </span>
+
+                  <small>
+                    {{
+                      selectedTask.assignees.length
+                    }}
+                    مسؤول
+                  </small>
+
+                </div>
+
+
+                @if (
+                  canManageAssignees(
+                    selectedTask
+                  )
+                ) {
+
+                  <button
+                    type="button"
+                    class="add-assignee-button"
+                    (click)="openAssigneePicker()"
+                  >
+
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M15 19a6 6 0 0 0-12 0"
+                      />
+
+                      <circle
+                        cx="9"
+                        cy="7"
+                        r="4"
+                      />
+
+                      <path
+                        d="M19 8v6"
+                      />
+
+                      <path
+                        d="M16 11h6"
+                      />
+                    </svg>
+
+                    إضافة مسؤول
+
+                  </button>
+
+                }
+
+              </div>
+
+
+              <div class="selected-assignees">
+
+                @if (
+                  selectedTask.assignees.length === 0
+                ) {
+
+                  <div class="no-selected-assignees">
+
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                      />
+
+                      <circle
+                        cx="9"
+                        cy="7"
+                        r="4"
+                      />
+                    </svg>
+
+                    <span>
+                      لم يتم إسناد المهمة لأي مستخدم.
+                    </span>
+
+                  </div>
+
+                } @else {
+
+                  @for (
+                    assignee of selectedTask.assignees;
+                    track assignee.id
+                  ) {
+
+                    <div class="selected-assignee-chip">
+
+                      <span class="assignee-chip-avatar">
+                        {{
+                          firstLetter(
+                            assignee.userFullName
+                          )
+                        }}
+                      </span>
+
+
+                      <span class="assignee-chip-name">
+                        {{ assignee.userFullName }}
+                      </span>
+
+
+                      @if (
+                        canManageAssignees(
+                          selectedTask
+                        )
+                      ) {
+
+                        <button
+                          type="button"
+                          title="إزالة المسؤول"
+                          aria-label="إزالة المسؤول"
+                          [disabled]="
+                            assigneeActionUserId !==
+                            null
+                          "
+                          (click)="
+                            removeAssignedUser(
+                              assignee.userId
+                            )
+                          "
+                        >
+
+                          @if (
+                            assigneeActionUserId ===
+                            assignee.userId
+                          ) {
+
+                            <span class="mini-spinner"></span>
+
+                          } @else {
+
+                            ×
+
+                          }
+
+                        </button>
+
+                      }
+
+                    </div>
+
+                  }
+
+                }
+
+              </div>
+
+
+              @if (assigneeError) {
+
+                <div class="assignee-inline-error">
+
+                  <span>
+                    {{ assigneeError }}
+                  </span>
+
+                  <button
+                    type="button"
+                    (click)="assigneeError = ''"
+                  >
+                    ×
+                  </button>
+
+                </div>
+
+              }
+
+
+              <!-- =========================
+                   POPOVER
+                   ========================= -->
+
+              @if (showAssigneePicker) {
+
+                <div class="assignee-picker-popover">
+
+                  <header class="assignee-picker-header">
+
+                    <div class="assignee-search-box">
+
+                      <svg viewBox="0 0 24 24">
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r="7"
+                        />
+
+                        <path
+                          d="m20 20-3.5-3.5"
+                        />
+                      </svg>
+
+
+                      <input
+                        type="search"
+                        autocomplete="off"
+                        placeholder="ابحث بالاسم أو البريد..."
+                        [value]="assigneeSearch"
+                        (input)="
+                          setAssigneeSearch(
+                            $any(
+                              $event.target
+                            ).value
+                          )
+                        "
+                      >
+
+                    </div>
+
+
+                    <button
+                      type="button"
+                      class="close-assignee-picker"
+                      aria-label="إغلاق"
+                      (click)="closeAssigneePicker()"
+                    >
+                      ×
+                    </button>
+
+                  </header>
+
+
+                  @if (assigneesLoading) {
+
+                    <div class="assignee-picker-state">
+
+                      <span class="history-loader"></span>
+
+                      <p>
+                        جارٍ تحميل أعضاء مساحة العمل...
+                      </p>
+
+                    </div>
+
+                  } @else if (assigneeError) {
+
+                    <div class="assignee-picker-state">
+
+                      <p>
+                        تعذر تحميل الأعضاء.
+                      </p>
+
+                      <button
+                        type="button"
+                        class="retry-small-button"
+                        (click)="reloadAssigneeMembers()"
+                      >
+                        إعادة المحاولة
+                      </button>
+
+                    </div>
+
+                  } @else if (
+                    visibleAssignableMembers.length === 0
+                  ) {
+
+                    <div class="assignee-picker-state">
+
+                      <svg
+                        class="picker-empty-icon"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r="7"
+                        />
+
+                        <path
+                          d="m20 20-3.5-3.5"
+                        />
+                      </svg>
+
+                      @if (
+                        assigneeSearch.trim()
+                      ) {
+
+                        <p>
+                          لا توجد نتائج مطابقة للبحث.
+                        </p>
+
+                      } @else {
+
+                        <p>
+                          لا يوجد أعضاء آخرون متاحون للإسناد.
+                        </p>
+
+                      }
+
+                    </div>
+
+                  } @else {
+
+                    <div class="assignee-picker-results">
+
+                      @for (
+                        member of visibleAssignableMembers;
+                        track member.id
+                      ) {
+
+                        <button
+                          type="button"
+                          class="assignee-result"
+                          [disabled]="
+                            assigneeActionUserId !== null
+                          "
+                          (click)="
+                            selectAssignee(
+                              member
+                            )
+                          "
+                        >
+
+                          <span class="assignee-result-avatar">
+
+                            {{
+                              firstLetter(
+                                member.fullName
+                              )
+                            }}
+
+                          </span>
+
+
+                          <span class="assignee-result-info">
+
+                            <strong>
+                              {{ member.fullName }}
+                            </strong>
+
+                            <small>
+                              {{ member.email }}
+                            </small>
+
+                          </span>
+
+
+                          <span class="assignee-result-role">
+
+                            {{
+                              roleLabel(
+                                member.roleName
+                              )
+                            }}
+
+                          </span>
+
+
+                          <span class="assignee-result-action">
+
+                            @if (
+                              assigneeActionUserId ===
+                              member.userId
+                            ) {
+
+                              <span class="mini-spinner"></span>
+
+                            } @else {
+
+                              +
+
+                            }
+
+                          </span>
+
+                        </button>
+
+                      }
+
+                    </div>
+
+
+                    <footer class="assignee-picker-footer">
+
+                      <span>
+
+                        {{
+                          assignableMatchCount
+                        }}
+                        مستخدم متاح
+
+                      </span>
+
+
+                      @if (
+                        assignableMatchCount >
+                        assigneePickerLimit
+                      ) {
+
+                        <small>
+                          اعرض أول
+                          {{ assigneePickerLimit }}
+                          نتائج — استخدم البحث للوصول للبقية.
+                        </small>
+
+                      }
+
+                    </footer>
+
+                  }
+
+                </div>
+
+              }
+
+            </section>
+
+
+            <div class="form-field">
+
+              <label>
+                العنوان
+              </label>
+
+              <input
+                type="text"
+                formControlName="title"
+              >
+
+            </div>
+
+
+            <div class="form-field">
+
+              <label>
+                الوصف
+              </label>
+
+              <textarea
+                rows="4"
+                formControlName="description"
+              ></textarea>
+
+            </div>
+
+
+            <div class="form-row">
+
+              <div class="form-field">
+
+                <label>
+                  الأولوية
+                </label>
+
+                <select
+                  formControlName="priority"
+                >
+                  <option [ngValue]="1">منخفضة</option>
+                  <option [ngValue]="2">متوسطة</option>
+                  <option [ngValue]="3">مرتفعة</option>
+                  <option [ngValue]="4">حرجة</option>
+                </select>
+
+              </div>
+
+
+              <div class="form-field">
+
+                <label>
+                  الموعد النهائي
+                </label>
+
+                <input
+                  type="datetime-local"
+                  formControlName="dueDate"
+                >
+
+              </div>
+
+            </div>
+
+
+            <div class="form-field">
+
+              <label>
+                حالة المهمة
+              </label>
+
+              <select
+                formControlName="status"
+              >
+
+                @for (
+                  column of columns;
+                  track column.status
+                ) {
+
+                  <option
+                    [ngValue]="column.status"
+                    [disabled]="
+                      !canSelectStatus(
+                        selectedTask,
+                        column.status
+                      )
+                    "
+                  >
+                    {{ column.label }}
+                  </option>
+
+                }
+
+              </select>
+
+              <small>
+                الحالات غير المتاحة تظهر
+                معطلة حسب صلاحية المستخدم.
+              </small>
+
+            </div>
+
+
+            @if (
+              editForm.controls
+                .status.value ===
+                'InReview'
+            ) {
+
+              <div class="partial-edit-section">
+
+                <strong>
+                  معلومات الإنجاز الجزئي
+                </strong>
+
+                <div class="form-field">
+
+                  <label>
+                    نسبة الإنجاز %
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    formControlName="progressPercentage"
+                  >
+
+                </div>
+
+
+                <div class="form-field">
+
+                  <label>
+                    توضيح الإنجاز
+                  </label>
+
+                  <textarea
+                    rows="3"
+                    formControlName="progressNote"
+                    placeholder="ما الذي تم إنجازه حتى الآن؟"
+                  ></textarea>
+
+                </div>
+
+              </div>
+
+            }
+
+
+            @if (editError) {
+
+              <div class="form-api-error">
+                {{ editError }}
+              </div>
+
+            }
+
+
+            <footer class="modal-actions">
+
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="closeTaskPanel()"
+              >
+                إلغاء
+              </button>
+
+              <button
+                type="submit"
+                class="primary-button"
+                [disabled]="
+                  editingTask ||
+                  assigneeActionUserId !== null
+                "
+              >
+                {{
+                  editingTask
+                    ? 'جارٍ الحفظ...'
+                    : 'حفظ التعديلات'
+                }}
+              </button>
+
+            </footer>
+
+          </form>
+
+        }
+
+
+        <!-- =========================
+            INTERACTION
+            ========================= -->
+
+        @else if (
+        selectedTaskPanel ===
+        'interaction'
+        ) {
+
+        <div class="panel-content">
+
+            <div class="task-source-panel">
+
+            {{ selectedTask.workspaceName }}
+
+            <strong>›</strong>
+
+            {{ selectedTask.projectName }}
+
+            </div>
+
+
+            <app-task-interaction
+            [task]="selectedTask"
+            ></app-task-interaction>
+
+        </div>
+
+        }
+
+
+        <!-- =========================
+            HISTORY
+     ========================= -->
+
+        @else {
+
+          <div class="panel-content">
+
+            <div class="task-source-panel">
+              {{ selectedTask.workspaceName }}
+              <strong>›</strong>
+              {{ selectedTask.projectName }}
+            </div>
+
+
+            <section class="history-assignees">
+
+              <div class="history-section-title">
+
+                <svg viewBox="0 0 24 24">
+
+                  <path
+                    d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                  />
+
+                  <circle
+                    cx="9"
+                    cy="7"
+                    r="4"
+                  />
+
+                  <path
+                    d="M22 21v-2a4 4 0 0 0-3-3.87"
+                  />
+
+                  <path
+                    d="M16 3.13a4 4 0 0 1 0 7.75"
+                  />
+
+                </svg>
+
+
+                <div>
+
+                  <span>
+                    المسؤولون الحاليون
+                  </span>
+
+                  <strong>
+                    {{ selectedTask.assignees.length }}
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              @if (
+                selectedTask.assignees.length === 0
+              ) {
+
+                <div class="history-empty-assignees">
+
+                  المهمة غير مسندة إلى أي مستخدم حاليًا.
+
+                </div>
+
+              } @else {
+
+                <div class="assignee-list">
+
+                  @for (
+                    assignee of selectedTask.assignees;
+                    track assignee.id
+                  ) {
+
+                    <article class="assignee-item">
+
+                      <span class="assignee-avatar">
+
+                        {{
+                          firstLetter(
+                            assignee.userFullName
+                          )
+                        }}
+
+                      </span>
+
+
+                      <div>
+
+                        <strong>
+                          {{ assignee.userFullName }}
+                        </strong>
+
+                        <small>
+                          مسندة منذ
+                          {{
+                            formatDateTime(
+                              assignee.assignedAt
+                            )
+                          }}
+                        </small>
+
+                      </div>
+
+                    </article>
+
+                  }
+
+                </div>
+
+              }
+
+            </section>
+
+
+            <section class="real-history-section">
+
+              <div class="history-section-title">
+
+                <svg viewBox="0 0 24 24">
+
+                  <path
+                    d="M3 12a9 9 0 1 0 3-6.7L3 8"
+                  />
+
+                  <path
+                    d="M3 4v4h4"
+                  />
+
+                  <path
+                    d="M12 7v5l3 2"
+                  />
+
+                </svg>
+
+
+                <div>
+
+                  <span>
+                    حياة المهمة
+                  </span>
+
+                  <strong>
+                    {{ taskHistory.length }}
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              @if (historyLoading) {
+
+                <div class="history-state">
+
+                  <span class="history-loader"></span>
+
+                  <p>
+                    جارٍ تحميل سجل المهمة...
+                  </p>
+
+                </div>
+
+              } @else if (historyError) {
+
+                <div class="history-error">
+
+                  <span>
+                    {{ historyError }}
+                  </span>
+
+                  <button
+                    type="button"
+                    (click)="
+                      loadTaskHistory(
+                        selectedTask
+                      )
+                    "
+                  >
+                    إعادة المحاولة
+                  </button>
+
+                </div>
+
+              } @else if (
+                taskHistory.length === 0
+              ) {
+
+                <div class="history-state">
+
+                  <p>
+                    لا توجد أحداث مسجلة لهذه المهمة.
+                  </p>
+
+                </div>
+
+              } @else {
+
+                <div class="real-timeline">
+
+                  @for (
+                    log of taskHistory;
+                    track log.id
+                  ) {
+
+                    <article class="history-event">
+
+                      <div class="history-event-rail">
+
+                        <span class="history-event-dot"></span>
+
+                      </div>
+
+
+                      <div class="history-event-content">
+
+                        <header>
+
+                          <div class="history-actor">
+
+                            <span class="history-avatar">
+
+                              {{
+                                firstLetter(
+                                  log.userFullName
+                                )
+                              }}
+
+                            </span>
+
+
+                            <div>
+
+                              <strong>
+                                {{ log.userFullName }}
+                              </strong>
+
+                              <small>
+                                قام بالإجراء
+                              </small>
+
+                            </div>
+
+                          </div>
+
+
+                          <time>
+
+                            {{
+                              formatDateTime(
+                                log.createdAt
+                              )
+                            }}
+
+                          </time>
+
+                        </header>
+
+
+                        <div class="history-event-body">
+
+                          <strong>
+
+                            {{
+                              historyTitle(
+                                log
+                              )
+                            }}
+
+                          </strong>
+
+
+                          <p>
+
+                            {{
+                              historyDescription(
+                                log
+                              )
+                            }}
+
+                          </p>
+
+
+                          @if (
+                            log.targetUserFullName
+                          ) {
+
+                            <div class="history-target">
+
+                              <span>
+                                المستخدم المعني:
+                              </span>
+
+                              <strong>
+                                {{
+                                  log.targetUserFullName
+                                }}
+                              </strong>
+
+                            </div>
+
+                          }
+
+                        </div>
+
+                      </div>
+
+                    </article>
+
+                  }
+
+                </div>
+
+              }
+
+            </section>
+
+          </div>
+
+        }
+
+      </section>
+
+    </div>
+
+  }
+
+</div>

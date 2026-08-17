@@ -214,6 +214,110 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.PasswordRecoveryRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AdminDecisionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("CodeAttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CodeExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("CodeSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CodeSentByAdminUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CodeVerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PasswordResetAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PublicToken")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RecoveryEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("RequestExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResetTokenExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResetTokenHash")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByAdminUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeSentByAdminUserId");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique();
+
+                    b.HasIndex("ReviewedByAdminUserId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("PasswordRecoveryRequests", (string)null);
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -550,6 +654,16 @@ namespace TaskManagement.Infrastructure.Data.Migrations
 
                     b.Property<int>("Priority")
                         .HasColumnType("int");
+
+                    b.Property<string>("ProgressNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("ProgressPercentage")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ProgressUpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("int");
@@ -987,6 +1101,31 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("Workspace");
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.PasswordRecoveryRequest", b =>
+                {
+                    b.HasOne("TaskManagement.Domain.Entities.User", "CodeSentByAdminUser")
+                        .WithMany()
+                        .HasForeignKey("CodeSentByAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TaskManagement.Domain.Entities.User", "ReviewedByAdminUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TaskManagement.Domain.Entities.User", "User")
+                        .WithMany("PasswordRecoveryRequests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CodeSentByAdminUser");
+
+                    b.Navigation("ReviewedByAdminUser");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.Project", b =>
                 {
                     b.HasOne("TaskManagement.Domain.Entities.User", "ManagerUser")
@@ -1214,6 +1353,8 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("CreatedTasks");
 
                     b.Navigation("CreatedWorkspaces");
+
+                    b.Navigation("PasswordRecoveryRequests");
 
                     b.Navigation("TaskAssignees");
 

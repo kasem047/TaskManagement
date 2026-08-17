@@ -1,4 +1,5 @@
-﻿using TaskManagement.Domain.Common;
+﻿using System.ComponentModel.DataAnnotations;
+using TaskManagement.Domain.Common;
 using TaskManagement.Domain.Enums;
 
 namespace TaskManagement.Domain.Entities;
@@ -13,9 +14,11 @@ public class TaskItem : BaseEntity
 
     public string? Description { get; set; }
 
-    public TaskItemStatus Status { get; set; } = TaskItemStatus.Todo;
+    public TaskItemStatus Status { get; set; } =
+        TaskItemStatus.Todo;
 
-    public TaskPriority Priority { get; set; } = TaskPriority.Medium;
+    public TaskPriority Priority { get; set; } =
+        TaskPriority.Medium;
 
     public DateTime? DueDate { get; set; }
 
@@ -25,9 +28,50 @@ public class TaskItem : BaseEntity
 
     public User CreatedByUser { get; set; } = null!;
 
-    public ICollection<TaskAssignee> TaskAssignees { get; set; } = new List<TaskAssignee>();
 
-    public ICollection<TaskComment> TaskComments { get; set; } = new List<TaskComment>();
+    /* =========================================================
+       PROGRESS
+       ========================================================= */
 
-    public ICollection<TaskAttachment> TaskAttachments { get; set; } = new List<TaskAttachment>();
+    /// <summary>
+    /// نسبة إنجاز المهمة.
+    ///
+    /// null:
+    /// لا يوجد إنجاز جزئي مسجل.
+    ///
+    /// 1 - 99:
+    /// المهمة مكتملة جزئيًا.
+    ///
+    /// 100:
+    /// يمكن استخدامها عند اكتمال المهمة بالكامل.
+    /// </summary>
+    [Range(0, 100)]
+    public int? ProgressPercentage { get; set; }
+
+
+    /// <summary>
+    /// وصف مختصر لما تم إنجازه.
+    /// </summary>
+    [MaxLength(1000)]
+    public string? ProgressNote { get; set; }
+
+
+    /// <summary>
+    /// آخر وقت تم فيه تحديث معلومات الإنجاز.
+    /// </summary>
+    public DateTime? ProgressUpdatedAt { get; set; }
+
+
+    /* =========================================================
+       RELATIONSHIPS
+       ========================================================= */
+
+    public ICollection<TaskAssignee> TaskAssignees { get; set; } =
+        new List<TaskAssignee>();
+
+    public ICollection<TaskComment> TaskComments { get; set; } =
+        new List<TaskComment>();
+
+    public ICollection<TaskAttachment> TaskAttachments { get; set; } =
+        new List<TaskAttachment>();
 }

@@ -4,23 +4,30 @@ namespace TaskManagement.Domain.Entities;
 
 public class User : IdentityUser<int>
 {
-    public string FullName { get; set; } = string.Empty;
+    public string FullName { get; set; } =
+        string.Empty;
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; } =
+        true;
 
-    public bool IsSystemAdmin { get; set; } = false;
+    public bool IsSystemAdmin { get; set; } =
+        false;
 
-    public int TokenVersion { get; set; } = 1;
+    public int TokenVersion { get; set; } =
+        1;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } =
+        DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; } =
+        false;
 
     public DateTime? DeletedAt { get; set; }
 
     public DateTime? LastLoginAt { get; set; }
+
 
     public ICollection<Workspace> CreatedWorkspaces { get; set; } =
         new List<Workspace>();
@@ -45,4 +52,9 @@ public class User : IdentityUser<int>
 
     public ICollection<UserSession> UserSessions { get; set; } =
         new List<UserSession>();
+
+    public ICollection<PasswordRecoveryRequest>
+        PasswordRecoveryRequests
+    { get; set; } =
+            new List<PasswordRecoveryRequest>();
 }

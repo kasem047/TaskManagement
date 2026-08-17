@@ -4,15 +4,35 @@ namespace TaskManagement.Application.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request);
+    Task<AuthResponse> RegisterAsync(
+        RegisterRequest request);
 
-    Task<AuthResponse> LoginAsync(LoginRequest request);
+    Task<AuthResponse> LoginAsync(
+        LoginRequest request);
 
-    Task<List<UserSessionResponse>> GetSessionsAsync();
+
+    Task<AccountProfileResponse>
+        GetProfileAsync();
+
+    Task<AccountProfileResponse>
+        UpdateProfileAsync(
+            UpdateProfileRequest request);
+
+    Task<AccountProfileResponse>
+        ChangeEmailAsync(
+            ChangeEmailRequest request);
+
+    Task ChangePasswordAsync(
+        ChangePasswordRequest request);
+
+
+    Task<List<UserSessionResponse>>
+        GetSessionsAsync();
 
     Task LogoutAsync();
 
     Task LogoutAllAsync();
 
-    Task RevokeSessionAsync(int sessionId);
+    Task RevokeSessionAsync(
+        int sessionId);
 }
