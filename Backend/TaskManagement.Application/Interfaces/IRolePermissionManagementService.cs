@@ -8,6 +8,16 @@ public interface IRolePermissionManagementService
 
     Task<List<PermissionResponse>> GetPermissionsAsync();
 
+    Task<RoleResponse> CreateRoleAsync(
+        CreateRoleRequest request);
+
+    Task<RoleResponse> UpdateRoleAsync(
+        int roleId,
+        UpdateRoleRequest request);
+
+    Task DeleteRoleAsync(
+        int roleId);
+
     Task<RolePermissionsResponse> GetRolePermissionsAsync(
         int roleId);
 

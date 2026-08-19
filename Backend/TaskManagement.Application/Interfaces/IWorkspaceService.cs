@@ -4,13 +4,26 @@ namespace TaskManagement.Application.Interfaces;
 
 public interface IWorkspaceService
 {
-    Task<WorkspaceResponse> CreateAsync(CreateWorkspaceRequest request);
+    Task<WorkspaceResponse> CreateAsync(
+        CreateWorkspaceRequest request);
 
-    Task<List<WorkspaceResponse>> GetMyWorkspacesAsync();
+    Task<List<WorkspaceResponse>>
+        GetMyWorkspacesAsync();
 
-    Task<WorkspaceResponse> GetByIdAsync(int workspaceId);
+    Task<WorkspaceResponse> GetByIdAsync(
+        int workspaceId);
 
-    Task<WorkspaceResponse> UpdateAsync(int workspaceId, UpdateWorkspaceRequest request);
+    Task<WorkspaceResponse> UpdateAsync(
+        int workspaceId,
+        UpdateWorkspaceRequest request);
 
-    Task DeleteAsync(int workspaceId);
+    Task TransferOwnershipAsync(
+        int workspaceId,
+        TransferWorkspaceOwnershipRequest request);
+
+    Task LeaveAsync(
+        int workspaceId);
+
+    Task DeleteAsync(
+        int workspaceId);
 }

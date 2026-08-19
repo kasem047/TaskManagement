@@ -1,0 +1,1504 @@
+<section
+  class="team-page"
+  dir="rtl"
+>
+
+  <header class="page-header">
+
+    <div>
+
+      <h1>
+        الفريق
+      </h1>
+
+      <p>
+        إدارة أعضاء مساحة العمل وأدوارهم.
+      </p>
+
+    </div>
+
+
+    @if (selectedWorkspace) {
+
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:10px;
+        "
+      >
+
+        @if (canManageMembers) {
+
+          <button
+            type="button"
+            class="primary-button"
+            (click)="openAddMember()"
+          >
+            <span>+</span>
+            دعوة عضو
+          </button>
+
+        } @else {
+
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="leavingWorkspace"
+            (click)="leaveWorkspace()"
+          >
+            {{
+              leavingWorkspace
+                ? 'جارٍ المغادرة...'
+                : 'مغادرة مساحة العمل'
+            }}
+          </button>
+
+        }
+
+      </div>
+
+    }
+
+  </header>
+
+
+  @if (errorMessage) {
+
+    <div class="message error-message">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="message success-message">
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  <section class="workspace-bar">
+
+    <div>
+
+      <span>
+        مساحة العمل
+      </span>
+
+
+      @if (loadingWorkspaces) {
+
+        <strong>
+          جارٍ التحميل...
+        </strong>
+
+      } @else if (
+        workspaces.length === 0
+      ) {
+
+        <strong>
+          لا توجد مساحة عمل متاحة
+        </strong>
+
+      } @else {
+
+        <select
+          [value]="selectedWorkspace?.id ?? 0"
+          (change)="
+            selectWorkspaceFromValue(
+              $any($event.target).value
+            )
+          "
+        >
+
+          @for (
+            workspace
+            of workspaces;
+            track workspace.id
+          ) {
+
+            <option
+              [value]="workspace.id"
+            >
+              {{ workspace.name }}
+            </option>
+
+          }
+
+        </select>
+
+      }
+
+    </div>
+
+
+    @if (selectedWorkspace) {
+
+      <div class="workspace-context">
+
+        <span>
+          دورك
+        </span>
+
+        <strong>
+          {{ currentRoleLabel }}
+        </strong>
+
+
+        @if (canManageMembers) {
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="openTransferOwnership()"
+          >
+            نقل الملكية
+          </button>
+
+        }
+
+      </div>
+
+    }
+
+  </section>
+
+
+  @if (selectedWorkspace) {
+
+    <div class="stats-grid">
+
+      <article>
+        <span>إجمالي الفريق</span>
+        <strong>{{ totalMembers }}</strong>
+      </article>
+
+      <article>
+        <span>مالك مساحة العمل</span>
+        <strong>{{ ownersCount }}</strong>
+      </article>
+
+      <article>
+        <span>مديرو المشاريع</span>
+        <strong>{{ managersCount }}</strong>
+      </article>
+
+      <article>
+        <span>الأعضاء</span>
+        <strong>{{ regularMembersCount }}</strong>
+      </article>
+
+    </div>
+
+
+    @if (canManageMembers) {
+
+      <section class="team-panel">
+
+        <header class="panel-header">
+
+          <div>
+            <h2>الدعوات المعلقة</h2>
+
+            <p>
+              الدعوات التي لم يقبلها أو يرفضها المستخدمون بعد.
+            </p>
+          </div>
+
+        </header>
+
+
+        @if (loadingInvitations) {
+
+          <div class="state-box">
+
+            <span class="spinner"></span>
+
+            <strong>
+              جارٍ تحميل الدعوات...
+            </strong>
+
+          </div>
+
+        } @else if (
+          pendingInvitations.length ===
+            0
+        ) {
+
+          <div class="state-box">
+
+            <strong>
+              لا توجد دعوات معلقة
+            </strong>
+
+          </div>
+
+        } @else {
+
+          <div class="members-list">
+
+            @for (
+              invitation
+              of pendingInvitations;
+              track invitation.id
+            ) {
+
+              <article class="member-card">
+
+                <div class="member-main">
+
+                  <span class="member-avatar">
+                    {{
+                      invitation
+                        .invitedUserFullName
+                        .trim()
+                        .charAt(0)
+                        .toUpperCase()
+                    }}
+                  </span>
+
+
+                  <div class="member-identity">
+
+                    <div>
+
+                      <strong>
+                        {{
+                          invitation
+                            .invitedUserFullName
+                        }}
+                      </strong>
+
+                    </div>
+
+
+                    <span>
+                      دعوة معلقة
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <div class="member-role">
+
+                  <span
+                    class="role-badge"
+                    [class.manager]="
+                      invitation.roleName ===
+                      'ProjectManager'
+                    "
+                  >
+                    {{
+                      roleLabel(
+                        invitation.roleName
+                      )
+                    }}
+                  </span>
+
+                </div>
+
+
+                <div class="member-date">
+
+                  <span>
+                    تاريخ الدعوة
+                  </span>
+
+                  <strong>
+                    {{
+                      formatDate(
+                        invitation.createdAt
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div class="member-actions">
+
+                  <button
+                    type="button"
+                    class="remove-button"
+                    [disabled]="
+                      cancelingInvitationId !==
+                      null
+                    "
+                    (click)="
+                      cancelInvitation(
+                        invitation
+                      )
+                    "
+                  >
+
+                    @if (
+                      cancelingInvitationId ===
+                      invitation.id
+                    ) {
+
+                      جارٍ الإلغاء...
+
+                    } @else {
+
+                      إلغاء الدعوة
+
+                    }
+
+                  </button>
+
+                </div>
+
+              </article>
+
+            }
+
+          </div>
+
+        }
+
+      </section>
+
+    }
+
+
+    <section class="team-panel">
+
+      <header class="panel-header">
+
+        <div>
+
+          <h2>
+            أعضاء مساحة العمل
+          </h2>
+
+          <p>
+            {{ selectedWorkspace.name }}
+          </p>
+
+        </div>
+
+
+        <div class="search-box">
+
+          <svg viewBox="0 0 24 24">
+
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+            />
+
+            <path
+              d="m20 20-4-4"
+            />
+
+          </svg>
+
+
+          <input
+            type="search"
+            placeholder="ابحث بالاسم أو البريد أو الدور..."
+            [value]="search"
+            (input)="
+              setSearch(
+                $any($event.target).value
+              )
+            "
+          >
+
+        </div>
+
+      </header>
+
+
+      @if (loadingMembers) {
+
+        <div class="state-box">
+
+          <span class="spinner"></span>
+
+          <strong>
+            جارٍ تحميل أعضاء الفريق...
+          </strong>
+
+        </div>
+
+      } @else if (
+        members.length === 0
+      ) {
+
+        <div class="state-box">
+
+          <strong>
+            لا يوجد أعضاء
+          </strong>
+
+        </div>
+
+      } @else if (
+        filteredMembers.length === 0
+      ) {
+
+        <div class="state-box">
+
+          <strong>
+            لا توجد نتائج مطابقة
+          </strong>
+
+        </div>
+
+      } @else {
+
+        <div class="members-list">
+
+          @for (
+            member
+            of filteredMembers;
+            track member.id
+          ) {
+
+            <article class="member-card">
+
+              <div class="member-main">
+
+                <span class="member-avatar">
+                  {{ initial(member) }}
+                </span>
+
+
+                <div class="member-identity">
+
+                  <div>
+
+                    <strong>
+                      {{ member.fullName }}
+                    </strong>
+
+
+                    @if (
+                      member.userId ===
+                      currentUser?.userId
+                    ) {
+
+                      <span class="you-badge">
+                        أنت
+                      </span>
+
+                    }
+
+                  </div>
+
+
+                  <span dir="ltr">
+                    {{ member.email }}
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div class="member-role">
+
+                <span
+                  class="role-badge"
+                  [class.owner]="
+                    roleClass(
+                      member.roleName
+                    ) === 'owner'
+                  "
+                  [class.manager]="
+                    roleClass(
+                      member.roleName
+                    ) === 'manager'
+                  "
+                >
+                  {{
+                    roleLabel(
+                      member.roleName
+                    )
+                  }}
+                </span>
+
+              </div>
+
+
+              <div class="member-date">
+
+                <span>
+                  تاريخ الانضمام
+                </span>
+
+                <strong>
+                  {{
+                    formatDate(
+                      member.joinedAt
+                    )
+                  }}
+                </strong>
+
+              </div>
+
+
+              <div class="member-actions">
+
+                @if (
+                  canManageMembers &&
+                  !isOwnerMember(member)
+                ) {
+
+                  <select
+                    [value]="member.roleId"
+                    [disabled]="
+                      changingRoleMemberId !==
+                      null
+                    "
+                    (change)="
+                      changeRole(
+                        member,
+                        $any($event.target).value
+                      )
+                    "
+                  >
+
+                    @for (
+                      role
+                      of roles;
+                      track role.id
+                    ) {
+
+                      <option
+                        [value]="role.id"
+                      >
+                        {{
+                          roleLabel(
+                            role.name
+                          )
+                        }}
+                      </option>
+
+                    }
+
+                  </select>
+
+
+                  <button
+                    type="button"
+                    class="secondary-button"
+                    (click)="
+                      openPermissions(
+                        member
+                      )
+                    "
+                  >
+                    الصلاحيات
+                  </button>
+
+
+                  <button
+                    type="button"
+                    class="remove-button"
+                    [disabled]="
+                      removingMemberId !==
+                      null
+                    "
+                    (click)="
+                      removeMember(
+                        member
+                      )
+                    "
+                  >
+
+                    @if (
+                      removingMemberId ===
+                      member.id
+                    ) {
+
+                      جارٍ الإزالة...
+
+                    } @else {
+
+                      إزالة
+
+                    }
+
+                  </button>
+
+                } @else if (
+                  isOwnerMember(member)
+                ) {
+
+                  <span class="read-only">
+                    تتم إدارة الملكية عبر «نقل الملكية»
+                  </span>
+
+                } @else {
+
+                  <span class="read-only">
+                    عرض فقط
+                  </span>
+
+                }
+
+              </div>
+
+            </article>
+
+          }
+
+        </div>
+
+      }
+
+    </section>
+
+  } @else if (
+    !loadingWorkspaces
+  ) {
+
+    <div class="no-workspace">
+
+      <h2>
+        لا توجد مساحة عمل متاحة
+      </h2>
+
+      <p>
+        لا توجد لديك عضوية فعالة في أي مساحة عمل.
+      </p>
+
+    </div>
+
+  }
+
+
+  <!-- ======================================================
+       USER PERMISSIONS MODAL
+       ====================================================== -->
+
+  @if (
+    permissionsOpen &&
+    permissionsMember
+  ) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closePermissions()"
+    ></button>
+
+
+    <section
+      class="modal"
+      dir="rtl"
+      style="
+        width:min(900px, calc(100vw - 40px));
+        max-height:88vh;
+        overflow:auto;
+      "
+    >
+
+      <header>
+
+        <div>
+
+          <h2>
+            صلاحيات المستخدم
+          </h2>
+
+          <p>
+            {{ permissionsMember.fullName }}
+            —
+            {{
+              roleLabel(
+                permissionsMember.roleName
+              )
+            }}
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closePermissions()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="info-message">
+
+        التخصيص يتقدم على صلاحيات الدور.
+        إذا أزلت التخصيص، تعود الصلاحية تلقائيًا إلى القيمة المحددة بواسطة الدور.
+
+      </div>
+
+
+      @if (
+        loadingUserPermissions
+      ) {
+
+        <div class="state-box">
+
+          <span class="spinner"></span>
+
+          <strong>
+            جارٍ تحميل الصلاحيات...
+          </strong>
+
+        </div>
+
+      } @else if (
+        userPermissions.length ===
+          0
+      ) {
+
+        <div class="state-box">
+
+          <strong>
+            لا توجد صلاحيات متاحة لهذا المستخدم.
+          </strong>
+
+        </div>
+
+      } @else {
+
+        @for (
+          module
+          of permissionModules;
+          track module
+        ) {
+
+          <section
+            style="
+              margin-top:18px;
+              border:1px solid #e5e7eb;
+              border-radius:12px;
+              overflow:hidden;
+            "
+          >
+
+            <header
+              style="
+                padding:12px 16px;
+                background:#f8fafc;
+                border-bottom:1px solid #e5e7eb;
+              "
+            >
+
+              <strong>
+                {{ module }}
+              </strong>
+
+            </header>
+
+
+            <div>
+
+              @for (
+                permission
+                of permissionsByModule(
+                  module
+                );
+                track permission.permissionId
+              ) {
+
+                <article
+                  style="
+                    padding:14px 16px;
+                    border-bottom:1px solid #eef0f2;
+                  "
+                >
+
+                  <div
+                    style="
+                      display:flex;
+                      justify-content:space-between;
+                      align-items:flex-start;
+                      gap:16px;
+                      flex-wrap:wrap;
+                    "
+                  >
+
+                    <div
+                      style="
+                        flex:1;
+                        min-width:220px;
+                      "
+                    >
+
+                      <strong>
+                        {{
+                          permission.permissionName
+                        }}
+                      </strong>
+
+
+                      @if (
+                        permission.description
+                      ) {
+
+                        <p
+                          style="
+                            margin:5px 0 0;
+                            opacity:.7;
+                          "
+                        >
+                          {{
+                            permission.description
+                          }}
+                        </p>
+
+                      }
+
+
+                      <div
+                        style="
+                          display:flex;
+                          gap:8px;
+                          flex-wrap:wrap;
+                          margin-top:8px;
+                        "
+                      >
+
+                        <span
+                          class="role-badge"
+                        >
+                          {{
+                            permissionSourceLabel(
+                              permission
+                            )
+                          }}
+                        </span>
+
+
+                        <span
+                          class="role-badge"
+                          [class.manager]="
+                            permission.effectiveGranted
+                          "
+                        >
+                          {{
+                            permission.effectiveGranted
+                              ? 'مسموح فعليًا'
+                              : 'غير مسموح فعليًا'
+                          }}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+
+                    <div
+                      style="
+                        display:flex;
+                        gap:8px;
+                        flex-wrap:wrap;
+                      "
+                    >
+
+                      <button
+                        type="button"
+                        class="primary-button"
+                        [disabled]="
+                          savingPermissionId !==
+                          null
+                        "
+                        (click)="
+                          setPermissionOverride(
+                            permission,
+                            true
+                          )
+                        "
+                      >
+                        منح
+                      </button>
+
+
+                      <button
+                        type="button"
+                        class="remove-button"
+                        [disabled]="
+                          savingPermissionId !==
+                          null
+                        "
+                        (click)="
+                          setPermissionOverride(
+                            permission,
+                            false
+                          )
+                        "
+                      >
+                        منع
+                      </button>
+
+
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        [disabled]="
+                          permission.overrideGranted ===
+                            null ||
+                          savingPermissionId !==
+                            null
+                        "
+                        (click)="
+                          removePermissionOverride(
+                            permission
+                          )
+                        "
+                      >
+                        العودة للدور
+                      </button>
+
+                    </div>
+
+                  </div>
+
+
+                  <label
+                    class="field"
+                    style="
+                      margin-top:12px;
+                    "
+                  >
+
+                    <span>
+                      سبب التخصيص
+                      (اختياري)
+                    </span>
+
+                    <input
+                      type="text"
+                      maxlength="500"
+                      placeholder="مثال: صلاحية مؤقتة لهذا المستخدم..."
+                      [value]="
+                        permissionReason(
+                          permission.permissionId
+                        )
+                      "
+                      (input)="
+                        setPermissionReason(
+                          permission.permissionId,
+                          $any($event.target).value
+                        )
+                      "
+                    >
+
+                  </label>
+
+
+                  @if (
+                    savingPermissionId ===
+                    permission.permissionId
+                  ) {
+
+                    <small>
+                      جارٍ حفظ التعديل...
+                    </small>
+
+                  }
+
+                </article>
+
+              }
+
+            </div>
+
+          </section>
+
+        }
+
+      }
+
+
+      <footer
+        style="
+          margin-top:20px;
+        "
+      >
+
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="
+            savingPermissionId !==
+            null
+          "
+          (click)="closePermissions()"
+        >
+          إغلاق
+        </button>
+
+      </footer>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       ADD MEMBER MODAL
+       ====================================================== -->
+
+  @if (addMemberOpen) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeAddMember()"
+    ></button>
+
+
+    <section
+      class="modal"
+      dir="rtl"
+    >
+
+      <header>
+
+        <div>
+
+          <h2>
+            دعوة عضو إلى الفريق
+          </h2>
+
+          <p>
+            اختر حساب المستخدم وحدد دوره، وسيتم إرسال دعوة للانضمام إلى مساحة العمل.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeAddMember()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="addMemberForm"
+        (ngSubmit)="addMember()"
+      >
+
+        <label class="field">
+
+          <span>
+            المستخدم
+          </span>
+
+
+          <select
+            formControlName="userId"
+          >
+
+            <option
+              [ngValue]="0"
+            >
+              اختر المستخدم
+            </option>
+
+
+            @for (
+              candidate
+              of candidates;
+              track candidate.userId
+            ) {
+
+              <option
+                [ngValue]="
+                  candidate.userId
+                "
+              >
+                {{ candidate.fullName }}
+                —
+                {{ candidate.email }}
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (
+            addMemberForm.controls.userId.touched &&
+            addMemberForm.controls.userId.invalid
+          ) {
+
+            <small class="field-error">
+              يجب اختيار المستخدم.
+            </small>
+
+          }
+
+        </label>
+
+
+        @if (
+          candidates.length === 0
+        ) {
+
+          <div class="info-message">
+            لا توجد حسابات متاحة للدعوة حاليًا.
+          </div>
+
+        }
+
+
+        <label class="field">
+
+          <span>
+            الدور داخل مساحة العمل
+          </span>
+
+
+          <select
+            formControlName="roleId"
+          >
+
+            <option
+              [ngValue]="0"
+            >
+              اختر الدور
+            </option>
+
+
+            @for (
+              role
+              of roles;
+              track role.id
+            ) {
+
+              <option
+                [ngValue]="role.id"
+              >
+                {{
+                  roleLabel(
+                    role.name
+                  )
+                }}
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (
+            addMemberForm.controls.roleId.touched &&
+            addMemberForm.controls.roleId.invalid
+          ) {
+
+            <small class="field-error">
+              يجب اختيار الدور.
+            </small>
+
+          }
+
+        </label>
+
+
+        <div class="role-help">
+
+          <article>
+
+            <strong>
+              مدير مشروع
+            </strong>
+
+            <span>
+              يمتلك صلاحيات إدارة المشاريع والمهام بحسب صلاحيات النظام.
+            </span>
+
+          </article>
+
+
+          <article>
+
+            <strong>
+              عضو
+            </strong>
+
+            <span>
+              يعمل ضمن مساحة العمل على المشاريع والمهام المسموح بها.
+            </span>
+
+          </article>
+
+        </div>
+
+
+        <div class="info-message">
+          لا يمكن تعيين مالك لمساحة العمل من هنا. تغيير المالك يتم فقط عبر عملية نقل الملكية.
+        </div>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeAddMember()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="
+              addingMember ||
+              candidates.length === 0
+            "
+          >
+            {{
+              addingMember
+                ? 'جارٍ الإرسال...'
+                : 'إرسال الدعوة'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       TRANSFER OWNERSHIP MODAL
+       ====================================================== -->
+
+  @if (transferOwnershipOpen) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeTransferOwnership()"
+    ></button>
+
+
+    <section
+      class="modal"
+      dir="rtl"
+    >
+
+      <header>
+
+        <div>
+
+          <h2>
+            نقل ملكية مساحة العمل
+          </h2>
+
+          <p>
+            هذه العملية تغيّر مالك مساحة العمل بشكل نهائي.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeTransferOwnership()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="transferOwnershipForm"
+        (ngSubmit)="transferOwnership()"
+      >
+
+        <div
+          class="error-message message"
+        >
+
+          <strong>
+            انتبه:
+          </strong>
+
+          بعد نجاح نقل الملكية، سيصبح المستخدم المحدد هو المالك الوحيد لمساحة العمل، وسيتم إخراج حسابك من مساحة العمل نهائيًا.
+
+        </div>
+
+
+        <label class="field">
+
+          <span>
+            المالك الجديد
+          </span>
+
+
+          <select
+            formControlName="newOwnerUserId"
+          >
+
+            <option
+              [ngValue]="0"
+            >
+              اختر عضوًا من مساحة العمل
+            </option>
+
+
+            @for (
+              member
+              of ownershipTransferCandidates;
+              track member.userId
+            ) {
+
+              <option
+                [ngValue]="member.userId"
+              >
+
+                {{ member.fullName }}
+                —
+                {{
+                  roleLabel(
+                    member.roleName
+                  )
+                }}
+                —
+                {{ member.email }}
+
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (
+            transferOwnershipForm.controls.newOwnerUserId.touched &&
+            transferOwnershipForm.controls.newOwnerUserId.invalid
+          ) {
+
+            <small class="field-error">
+              يجب اختيار المالك الجديد.
+            </small>
+
+          }
+
+        </label>
+
+
+        @if (
+          ownershipTransferCandidates.length ===
+            0
+        ) {
+
+          <div class="info-message">
+            لا يوجد عضو آخر حاليًا يمكن نقل الملكية إليه. أضف عضوًا إلى مساحة العمل أولًا.
+          </div>
+
+        }
+
+
+        <label class="field">
+
+          <span>
+            تأكيد العملية
+          </span>
+
+
+          <label
+            style="
+              display:flex;
+              align-items:flex-start;
+              gap:10px;
+              line-height:1.7;
+              cursor:pointer;
+            "
+          >
+
+            <input
+              type="checkbox"
+              formControlName="confirmExit"
+              style="
+                width:18px;
+                height:18px;
+                margin-top:3px;
+              "
+            >
+
+            <span>
+              أعلم أنني سأخرج من مساحة العمل بعد نقل الملكية، وأن المستخدم المحدد سيصبح المالك الوحيد لها.
+            </span>
+
+          </label>
+
+
+          @if (
+            transferOwnershipForm.controls.confirmExit.touched &&
+            transferOwnershipForm.controls.confirmExit.invalid
+          ) {
+
+            <small class="field-error">
+              يجب تأكيد فهم نتيجة نقل الملكية قبل المتابعة.
+            </small>
+
+          }
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeTransferOwnership()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="
+              transferringOwnership ||
+              ownershipTransferCandidates.length === 0
+            "
+          >
+            {{
+              transferringOwnership
+                ? 'جارٍ نقل الملكية...'
+                : 'تأكيد نقل الملكية'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+</section>

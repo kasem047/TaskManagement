@@ -139,6 +139,61 @@ export class Dashboard
 
 
   /* =========================
+     WORKSPACE MANAGEMENT
+     ========================= */
+
+  openWorkspaceManagement(): void {
+
+    this.router.navigateByUrl(
+      '/workspaces'
+    );
+  }
+
+
+  get canCreateWorkspace():
+    boolean {
+
+    /*
+     * لا نسمح بالانتقال قبل اكتمال
+     * تحميل Workspaces حتى لا يحدث
+     * قرار خاطئ أثناء التحميل.
+     */
+    return (
+      !this.loading &&
+      this.ownerCount === 0
+    );
+  }
+
+
+  openCreateWorkspace(): void {
+
+    /*
+     * المستخدم الذي يملك Workspace
+     * لا يجب أن ينتقل أصلًا إلى
+     * create=1.
+     */
+    if (
+      !this.canCreateWorkspace
+    ) {
+
+      return;
+    }
+
+
+    this.router.navigate(
+      [
+        '/workspaces'
+      ],
+      {
+        queryParams: {
+          create: 1
+        }
+      }
+    );
+  }
+
+
+  /* =========================
      OPEN WORKSPACE
      ========================= */
 
@@ -160,11 +215,67 @@ export class Dashboard
     );
 
 
+    localStorage.setItem(
+      'taskmanagement_selected_workspace_id',
+      String(
+        workspace.id
+      )
+    );
+
+
+    localStorage.setItem(
+      'taskmanagement_selected_workspace_name',
+      workspace.name
+    );
+
+
+    /*
+     * عند تغيير مساحة العمل
+     * نمسح سياق المشروع القديم.
+     */
+    localStorage.removeItem(
+      'taskmanagement_selected_project_id'
+    );
+
+
+    localStorage.removeItem(
+      'taskmanagement_project_name'
+    );
+
+
     this.router.navigate([
       '/workspaces',
       workspace.id,
       'projects'
     ]);
+  }
+
+
+  /* =========================
+     QUICK NAVIGATION
+     ========================= */
+
+  openProjects(): void {
+
+    this.router.navigateByUrl(
+      '/projects'
+    );
+  }
+
+
+  openTasks(): void {
+
+    this.router.navigateByUrl(
+      '/tasks'
+    );
+  }
+
+
+  openTeam(): void {
+
+    this.router.navigateByUrl(
+      '/team'
+    );
   }
 
 

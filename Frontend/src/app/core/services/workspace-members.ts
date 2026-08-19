@@ -8,7 +8,8 @@ import {
 } from '@angular/common/http';
 
 import {
-  Observable
+  Observable,
+  map
 } from 'rxjs';
 
 import {
@@ -17,37 +18,39 @@ import {
 
 
 export interface WorkspaceMember {
-
   id: number;
-
   workspaceId: number;
-
   userId: number;
-
   fullName: string;
-
   email: string;
-
   roleId: number;
-
   roleName: string;
-
   status: string;
-
   joinedAt: string;
 }
 
 
-export interface AddWorkspaceMemberRequest {
+export interface WorkspaceRoleOption {
+  id: number;
+  name: string;
+  description: string | null;
+}
 
+
+export interface WorkspaceMemberCandidate {
   userId: number;
+  fullName: string;
+  email: string;
+}
 
+
+export interface AddWorkspaceMemberRequest {
+  userId: number;
   roleId: number;
 }
 
 
 export interface UpdateWorkspaceMemberRoleRequest {
-
   roleId: number;
 }
 
@@ -93,6 +96,82 @@ export class WorkspaceMembers {
     return this.getByWorkspace(
       workspaceId
     );
+  }
+
+
+  getRoles(
+    workspaceId: number
+  ): Observable<WorkspaceRoleOption[]> {
+
+    return this.http
+      .get<any[]>(
+        `${this.baseUrl}/workspaces/${workspaceId}/members/roles`
+      )
+      .pipe(
+        map(items =>
+          (items ?? [])
+            .map(item => ({
+              id: Number(
+                item.id ??
+                item.roleId ??
+                0
+              ),
+
+              name: String(
+                item.name ??
+                item.roleName ??
+                ''
+              ),
+
+              description:
+                item.description ??
+                null
+            }))
+            .filter(
+              role =>
+                role.id > 0 &&
+                !!role.name
+            )
+        )
+      );
+  }
+
+
+  getCandidates(
+    workspaceId: number
+  ): Observable<WorkspaceMemberCandidate[]> {
+
+    return this.http
+      .get<any[]>(
+        `${this.baseUrl}/workspaces/${workspaceId}/members/candidates`
+      )
+      .pipe(
+        map(items =>
+          (items ?? [])
+            .map(item => ({
+              userId: Number(
+                item.userId ??
+                item.id ??
+                0
+              ),
+
+              fullName: String(
+                item.fullName ??
+                item.name ??
+                ''
+              ),
+
+              email: String(
+                item.email ??
+                ''
+              )
+            }))
+            .filter(
+              user =>
+                user.userId > 0
+            )
+        )
+      );
   }
 
 

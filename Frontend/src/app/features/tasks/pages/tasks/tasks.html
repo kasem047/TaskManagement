@@ -1,24 +1,8 @@
 <div class="tasks-page">
 
-  <!-- =========================
-       HEADER
-       ========================= -->
-
   <header class="page-header">
 
     <div class="header-copy">
-
-      <button
-        class="back-button"
-        type="button"
-        (click)="backToProjects()"
-      >
-        ← المشاريع
-      </button>
-
-      <span class="eyebrow">
-        لوحة المهام
-      </span>
 
       <h1>
         إدارة المهام
@@ -56,9 +40,7 @@
         (click)="openFilters()"
       >
         <svg viewBox="0 0 24 24">
-          <path
-            d="M4 6h16M7 12h10M10 18h4"
-          />
+          <path d="M4 6h16M7 12h10M10 18h4" />
         </svg>
 
         @if (
@@ -86,7 +68,6 @@
     </div>
 
   </header>
-
 
   <!-- =========================
        BOARD CONTEXT
@@ -1612,7 +1593,7 @@
 
 
             <!-- =========================
-                 ASSIGNEE PICKER
+                 ASSIGNEE
                  ========================= -->
 
             <section class="assignee-control">
@@ -1622,14 +1603,11 @@
                 <div>
 
                   <span class="assignee-control-title">
-                    المسؤولون عن المهمة
+                    المسؤول عن المهمة
                   </span>
 
                   <small>
-                    {{
-                      selectedTask.assignees.length
-                    }}
-                    مسؤول
+                    مسؤول واحد فقط لكل مهمة
                   </small>
 
                 </div>
@@ -1667,7 +1645,11 @@
                       />
                     </svg>
 
-                    إضافة مسؤول
+                    {{
+                      draftAssignee
+                        ? 'تغيير المسؤول'
+                        : 'اختيار مسؤول'
+                    }}
 
                   </button>
 
@@ -1678,9 +1660,7 @@
 
               <div class="selected-assignees">
 
-                @if (
-                  selectedTask.assignees.length === 0
-                ) {
+                @if (!draftAssignee) {
 
                   <div class="no-selected-assignees">
 
@@ -1697,79 +1677,60 @@
                     </svg>
 
                     <span>
-                      لم يتم إسناد المهمة لأي مستخدم.
+                      لم يتم اختيار مسؤول للمهمة.
                     </span>
 
                   </div>
 
                 } @else {
 
-                  @for (
-                    assignee of selectedTask.assignees;
-                    track assignee.id
-                  ) {
+                  <div class="selected-assignee-chip">
 
-                    <div class="selected-assignee-chip">
-
-                      <span class="assignee-chip-avatar">
-                        {{
-                          firstLetter(
-                            assignee.userFullName
-                          )
-                        }}
-                      </span>
-
-
-                      <span class="assignee-chip-name">
-                        {{ assignee.userFullName }}
-                      </span>
-
-
-                      @if (
-                        canManageAssignees(
-                          selectedTask
+                    <span class="assignee-chip-avatar">
+                      {{
+                        firstLetter(
+                          draftAssignee.userFullName
                         )
-                      ) {
+                      }}
+                    </span>
 
-                        <button
-                          type="button"
-                          title="إزالة المسؤول"
-                          aria-label="إزالة المسؤول"
-                          [disabled]="
-                            assigneeActionUserId !==
-                            null
-                          "
-                          (click)="
-                            removeAssignedUser(
-                              assignee.userId
-                            )
-                          "
-                        >
 
-                          @if (
-                            assigneeActionUserId ===
-                            assignee.userId
-                          ) {
+                    <span class="assignee-chip-name">
+                      {{ draftAssignee.userFullName }}
+                    </span>
 
-                            <span class="mini-spinner"></span>
 
-                          } @else {
+                    @if (
+                      canManageAssignees(
+                        selectedTask
+                      )
+                    ) {
 
-                            ×
+                      <button
+                        type="button"
+                        title="إزالة المسؤول"
+                        aria-label="إزالة المسؤول"
+                        (click)="
+                          removeAssignedUser(
+                            draftAssignee.userId
+                          )
+                        "
+                      >
+                        ×
+                      </button>
 
-                          }
+                    }
 
-                        </button>
-
-                      }
-
-                    </div>
-
-                  }
+                  </div>
 
                 }
 
               </div>
+
+
+              <small class="draft-save-hint">
+                تغيير المسؤول مؤقت ولن يتم تطبيقه إلا بعد الضغط على «حفظ التعديلات».
+              </small>
 
 
               @if (assigneeError) {
@@ -1793,7 +1754,7 @@
 
 
               <!-- =========================
-                   POPOVER
+                   ASSIGNEE POPOVER
                    ========================= -->
 
               @if (showAssigneePicker) {
@@ -1927,9 +1888,6 @@
                         <button
                           type="button"
                           class="assignee-result"
-                          [disabled]="
-                            assigneeActionUserId !== null
-                          "
                           (click)="
                             selectAssignee(
                               member
@@ -1973,20 +1931,7 @@
 
 
                           <span class="assignee-result-action">
-
-                            @if (
-                              assigneeActionUserId ===
-                              member.userId
-                            ) {
-
-                              <span class="mini-spinner"></span>
-
-                            } @else {
-
-                              +
-
-                            }
-
+                            ✓
                           </span>
 
                         </button>
@@ -2026,6 +1971,189 @@
                   }
 
                 </div>
+
+              }
+
+            </section>
+
+
+            <!-- =========================
+                 DEPENDENCIES
+                 ========================= -->
+
+            <section class="dependency-control">
+
+              <header class="dependency-control-head">
+
+                <div>
+
+                  <strong>
+                    اعتماديات المهمة
+                  </strong>
+
+                  @if (
+                    canEditDependencies(
+                      selectedTask
+                    )
+                  ) {
+
+                    <small>
+                      اختر المهام التي يجب أن تكتمل قبل بدء هذه المهمة.
+                    </small>
+
+                  } @else {
+
+                    <small>
+                      الاعتماديات للعرض فقط بعد بدء المهمة. لإدارتها أعد المهمة إلى «للعمل» أولًا.
+                    </small>
+
+                  }
+
+                </div>
+
+
+                <span class="dependency-count">
+                  {{ selectedDependenciesCount() }}
+                  اعتماد
+                </span>
+
+              </header>
+
+
+              @if (dependenciesLoading) {
+
+                <div class="dependency-state">
+
+                  <span class="history-loader"></span>
+
+                  <span>
+                    جارٍ تحميل الاعتماديات...
+                  </span>
+
+                </div>
+
+              } @else if (dependencyError) {
+
+                <div class="assignee-inline-error">
+
+                  <span>
+                    {{ dependencyError }}
+                  </span>
+
+                </div>
+
+              } @else if (
+                dependencyDisplayTasks.length === 0
+              ) {
+
+                <div class="dependency-state">
+
+                  @if (
+                    canEditDependencies(
+                      selectedTask
+                    )
+                  ) {
+                    لا توجد مهام أخرى متاحة داخل هذا المشروع يمكن الاعتماد عليها.
+                  } @else {
+                    لا توجد اعتماديات مسجلة لهذه المهمة.
+                  }
+
+                </div>
+
+              } @else {
+
+                <div class="dependency-list">
+
+                  @for (
+                    dependencyTask of dependencyDisplayTasks;
+                    track dependencyTask.id
+                  ) {
+
+                    <button
+                      type="button"
+                      class="dependency-item"
+                      [class.selected]="
+                        isDependencySelected(
+                          dependencyTask.id
+                        )
+                      "
+                      [disabled]="
+                        !canEditDependencies(
+                          selectedTask
+                        )
+                      "
+                      (click)="
+                        toggleDependency(
+                          dependencyTask.id
+                        )
+                      "
+                    >
+
+                      <span class="dependency-check">
+                        {{
+                          isDependencySelected(
+                            dependencyTask.id
+                          )
+                            ? '✓'
+                            : ''
+                        }}
+                      </span>
+
+
+                      <span class="dependency-info">
+
+                        <strong>
+                          {{ dependencyTask.title }}
+                        </strong>
+
+                        <small>
+                          {{ statusLabel(dependencyTask.status) }}
+                        </small>
+
+                      </span>
+
+
+                      @if (
+                        dependencyTask.status ===
+                        'Done'
+                      ) {
+
+                        <span class="dependency-ready">
+                          مكتملة
+                        </span>
+
+                      } @else {
+
+                        <span class="dependency-blocked">
+                          غير مكتملة
+                        </span>
+
+                      }
+
+                    </button>
+
+                  }
+
+                </div>
+
+              }
+
+
+              @if (
+                canEditDependencies(
+                  selectedTask
+                )
+              ) {
+
+                <small class="draft-save-hint">
+                  الاعتماديات مؤقتة ولن تُحفظ إلا عند الضغط على «حفظ التعديلات».
+                </small>
+
+              } @else {
+
+                <small class="draft-save-hint">
+                  بعد بدء المهمة تصبح الاعتماديات ثابتة للعرض فقط.
+                </small>
 
               }
 

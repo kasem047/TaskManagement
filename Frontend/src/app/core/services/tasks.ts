@@ -101,7 +101,9 @@ export interface TaskItem {
 
 
   /*
-   * Dependencies لم تُربط بعد بالBackend.
+   * بقي موجودًا للتوافق مع الواجهة الحالية.
+   * الاعتماديات الحقيقية أصبحت تُقرأ من
+   * endpoint مستقل.
    */
   hasDependencies?:
     boolean;
@@ -186,6 +188,31 @@ export interface UpdateTaskStatusRequest {
 
   changeReason?:
     string | null;
+}
+
+
+/* =========================================================
+   DEPENDENCIES
+   ========================================================= */
+
+export interface TaskDependency {
+
+  taskId: number;
+
+  dependsOnTaskId: number;
+
+  dependsOnTaskTitle: string;
+
+  dependsOnTaskStatus: string;
+
+  isSatisfied: boolean;
+}
+
+
+export interface SetTaskDependenciesRequest {
+
+  dependsOnTaskIds:
+    number[];
 }
 
 
@@ -296,6 +323,45 @@ export class Tasks {
             )
         )
 
+      );
+  }
+
+
+  /* =========================================================
+     DEPENDENCIES
+     ========================================================= */
+
+  getDependencies(
+    workspaceId: number,
+    projectId: number,
+    taskId: number
+  ): Observable<TaskDependency[]> {
+
+    return this.http
+      .get<TaskDependency[]>(
+        `${this.baseUrl}/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/dependencies`
+      );
+  }
+
+
+  setDependencies(
+    workspaceId: number,
+    projectId: number,
+    taskId: number,
+    dependsOnTaskIds: number[]
+  ): Observable<TaskDependency[]> {
+
+    const request:
+      SetTaskDependenciesRequest = {
+
+      dependsOnTaskIds
+    };
+
+
+    return this.http
+      .put<TaskDependency[]>(
+        `${this.baseUrl}/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}/dependencies`,
+        request
       );
   }
 

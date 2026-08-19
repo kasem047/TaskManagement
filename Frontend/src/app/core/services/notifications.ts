@@ -4,7 +4,8 @@ import {
 } from '@angular/core';
 
 import {
-  HttpClient
+  HttpClient,
+  HttpParams
 } from '@angular/common/http';
 
 import {
@@ -17,9 +18,7 @@ import {
 
 
 export interface NotificationItem {
-
   id: number;
-
   userId: number;
 
   actorUserId:
@@ -32,9 +31,7 @@ export interface NotificationItem {
     number | null;
 
   title: string;
-
   message: string;
-
   type: string;
 
   entityName:
@@ -53,9 +50,7 @@ export interface NotificationItem {
 
 
 export interface NotificationWorkspace {
-
   id: number;
-
   name: string;
 
   currentUserRole:
@@ -63,30 +58,62 @@ export interface NotificationWorkspace {
 }
 
 
-export interface NotificationWorkspaceMember {
-
-  id: number;
-
-  workspaceId: number;
-
+export interface NotificationRecipient {
   userId: number;
-
   fullName: string;
-
   email: string;
 
-  roleId: number;
+  workspaceId:
+    number | null;
 
-  roleName: string;
+  workspaceName:
+    string | null;
 
-  status: string;
+  roleName:
+    string | null;
 
-  joinedAt: string;
+  relationship: string;
+}
+
+
+export interface NotificationPageRequest {
+  isRead?:
+    boolean | null;
+
+  actorUserId?:
+    number | null;
+
+  workspaceId?:
+    number | null;
+
+  source?:
+    string | null;
+
+  from?:
+    string | null;
+
+  to?:
+    string | null;
+
+  page: number;
+  pageSize: number;
+}
+
+
+export interface NotificationPagedResponse {
+  items:
+    NotificationItem[];
+
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 }
 
 
 export interface SendNotificationRequest {
-
   workspaceId:
     number | null;
 
@@ -94,7 +121,6 @@ export interface SendNotificationRequest {
     number[];
 
   title: string;
-
   message: string;
 }
 
@@ -109,86 +135,260 @@ export class Notifications {
 
 
   private readonly baseUrl =
-    `${environment.apiBaseUrl}/api`;
+    `${environment.apiBaseUrl}/api/notifications`;
 
+
+  /* =========================================================
+     LEGACY / ALL
+     ========================================================= */
 
   getMine():
     Observable<NotificationItem[]> {
 
-    return this.http
-      .get<NotificationItem[]>(
-        `${this.baseUrl}/notifications`
-      );
+    return this.http.get<
+      NotificationItem[]
+    >(
+      this.baseUrl
+    );
+  }
+
+
+  /* =========================================================
+     FULL PAGE
+     ========================================================= */
+
+  getPage(
+    request:
+      NotificationPageRequest
+  ): Observable<
+    NotificationPagedResponse
+  > {
+
+    let params =
+      new HttpParams()
+        .set(
+          'page',
+          request.page
+        )
+        .set(
+          'pageSize',
+          request.pageSize
+        );
+
+
+    if (
+      request.isRead !==
+        null &&
+      request.isRead !==
+        undefined
+    ) {
+
+      params =
+        params.set(
+          'isRead',
+          request.isRead
+        );
+    }
+
+
+    if (
+      request.actorUserId
+    ) {
+
+      params =
+        params.set(
+          'actorUserId',
+          request.actorUserId
+        );
+    }
+
+
+    if (
+      request.workspaceId
+    ) {
+
+      params =
+        params.set(
+          'workspaceId',
+          request.workspaceId
+        );
+    }
+
+
+    if (
+      request.source?.trim()
+    ) {
+
+      params =
+        params.set(
+          'source',
+          request.source.trim()
+        );
+    }
+
+
+    if (
+      request.from
+    ) {
+
+      params =
+        params.set(
+          'from',
+          request.from
+        );
+    }
+
+
+    if (
+      request.to
+    ) {
+
+      params =
+        params.set(
+          'to',
+          request.to
+        );
+    }
+
+
+    return this.http.get<
+      NotificationPagedResponse
+    >(
+      `${this.baseUrl}/page`,
+      {
+        params
+      }
+    );
+  }
+
+
+  /* =========================================================
+     QUICK BELL
+     ========================================================= */
+
+  getUnread(
+    take = 8
+  ): Observable<
+    NotificationItem[]
+  > {
+
+    return this.http.get<
+      NotificationItem[]
+    >(
+      `${this.baseUrl}/unread`,
+      {
+        params: {
+          take
+        }
+      }
+    );
   }
 
 
   getUnreadCount():
     Observable<number> {
 
-    return this.http
-      .get<number>(
-        `${this.baseUrl}/notifications/unread-count`
-      );
+    return this.http.get<number>(
+      `${this.baseUrl}/unread-count`
+    );
   }
 
+
+  /* =========================================================
+     RECIPIENTS
+     ========================================================= */
+
+  getAllowedRecipients(
+    workspaceId?:
+      number | null
+  ): Observable<
+    NotificationRecipient[]
+  > {
+
+    let params =
+      new HttpParams();
+
+
+    if (
+      workspaceId &&
+      workspaceId > 0
+    ) {
+
+      params =
+        params.set(
+          'workspaceId',
+          workspaceId
+        );
+    }
+
+
+    return this.http.get<
+      NotificationRecipient[]
+    >(
+      `${this.baseUrl}/recipients`,
+      {
+        params
+      }
+    );
+  }
+
+
+  /* =========================================================
+     READ STATE
+     ========================================================= */
 
   markAsRead(
     notificationId: number
   ): Observable<void> {
 
-    return this.http
-      .patch<void>(
-        `${this.baseUrl}/notifications/${notificationId}/read`,
-        {}
-      );
+    return this.http.patch<void>(
+      `${this.baseUrl}/${notificationId}/read`,
+      {}
+    );
   }
 
 
   markAllAsRead():
     Observable<void> {
 
-    return this.http
-      .patch<void>(
-        `${this.baseUrl}/notifications/read-all`,
-        {}
-      );
+    return this.http.patch<void>(
+      `${this.baseUrl}/read-all`,
+      {}
+    );
   }
 
+
+  /* =========================================================
+     MANUAL SEND
+     ========================================================= */
 
   send(
     request:
       SendNotificationRequest
   ): Observable<void> {
 
-    return this.http
-      .post<void>(
-        `${this.baseUrl}/notifications/send`,
-        request
-      );
+    return this.http.post<void>(
+      `${this.baseUrl}/send`,
+      request
+    );
   }
 
+
+  /* =========================================================
+     WORKSPACES
+     ========================================================= */
 
   getWorkspaces():
-    Observable<NotificationWorkspace[]> {
+    Observable<
+      NotificationWorkspace[]
+    > {
 
-    return this.http
-      .get<NotificationWorkspace[]>(
-        `${this.baseUrl}/workspaces`
-      );
-  }
-
-
-  getWorkspaceMembers(
-    workspaceId: number
-  ): Observable<
-    NotificationWorkspaceMember[]
-  > {
-
-    return this.http
-      .get<
-        NotificationWorkspaceMember[]
-      >(
-        `${this.baseUrl}/workspaces/${workspaceId}/members`
-      );
+    return this.http.get<
+      NotificationWorkspace[]
+    >(
+      `${
+        environment.apiBaseUrl
+      }/api/workspaces`
+    );
   }
 }

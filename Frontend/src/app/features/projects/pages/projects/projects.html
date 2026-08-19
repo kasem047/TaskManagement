@@ -1,27 +1,32 @@
-<div class="projects-page">
+<div
+  class="projects-page"
+  dir="rtl"
+>
 
-  <!-- Header -->
   <header class="page-header">
 
     <div class="header-copy">
 
-      <button
-        class="back-button"
-        type="button"
-        (click)="back()"
-      >
-        ← لوحة التحكم
-      </button>
+      <div class="title-line">
+
+        <h1>
+          {{ workspaceName }}
+        </h1>
 
 
-      <span class="eyebrow">
-        مساحة العمل
-      </span>
+        @if (workspace) {
 
+          <span class="workspace-role">
+            {{
+              roleLabel(
+                workspace.currentUserRole
+              )
+            }}
+          </span>
 
-      <h1>
-        {{ workspaceName }}
-      </h1>
+        }
+
+      </div>
 
 
       <p>
@@ -33,30 +38,54 @@
 
     <div class="header-actions">
 
-      <button
-        class="refresh-button"
-        type="button"
-        (click)="loadProjects()"
-      >
-        تحديث
-      </button>
+      @if (canManageProjects) {
 
+        <button
+          class="create-button"
+          type="button"
+          (click)="openCreate()"
+        >
+          <span>+</span>
 
-      <button
-        class="create-button"
-        type="button"
-      >
-        <span>+</span>
+          مشروع جديد
+        </button>
 
-        مشروع جديد
-      </button>
+      }
 
     </div>
 
   </header>
 
+  <!-- =========================
+       MESSAGES
+       ========================= -->
 
-  <!-- Statistics -->
+  @if (errorMessage) {
+
+    <div class="page-message error-message">
+
+      {{ errorMessage }}
+
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="page-message success-message">
+
+      {{ successMessage }}
+
+    </div>
+
+  }
+
+
+  <!-- =========================
+       STATISTICS
+       ========================= -->
+
   <section class="stats">
 
     <article>
@@ -100,7 +129,10 @@
   </section>
 
 
-  <!-- Projects -->
+  <!-- =========================
+       PROJECTS
+       ========================= -->
+
   <section class="projects-panel">
 
     <div class="panel-heading">
@@ -132,28 +164,9 @@
 
       </div>
 
-    } @else if (errorMessage) {
-
-      <div class="state error">
-
-        <strong>
-          تعذر تحميل المشاريع
-        </strong>
-
-        <p>
-          {{ errorMessage }}
-        </p>
-
-        <button
-          type="button"
-          (click)="loadProjects()"
-        >
-          إعادة المحاولة
-        </button>
-
-      </div>
-
-    } @else if (projects.length === 0) {
+    } @else if (
+      projects.length === 0
+    ) {
 
       <div class="state">
 
@@ -166,8 +179,21 @@
         </strong>
 
         <p>
-          ابدأ بإنشاء أول مشروع ضمن مساحة العمل.
+          لم تتم إضافة مشاريع إلى مساحة العمل حتى الآن.
         </p>
+
+
+        @if (canManageProjects) {
+
+          <button
+            type="button"
+            class="state-create-button"
+            (click)="openCreate()"
+          >
+            إنشاء أول مشروع
+          </button>
+
+        }
 
       </div>
 
@@ -190,27 +216,80 @@
             <div class="project-top">
 
               <div class="project-icon">
+
                 {{
                   firstLetter(
                     project.name
                   )
                 }}
+
               </div>
 
 
-              @if (project.isArchived) {
+              <div class="project-top-actions">
 
-                <span class="archive-badge">
-                  مؤرشف
-                </span>
+                @if (
+                  project.isArchived
+                ) {
 
-              } @else {
+                  <span class="archive-badge">
+                    مؤرشف
+                  </span>
 
-                <span class="active-badge">
-                  نشط
-                </span>
+                } @else {
 
-              }
+                  <span class="active-badge">
+                    نشط
+                  </span>
+
+                }
+
+
+                @if (canManageProjects) {
+
+                  <div class="card-actions">
+
+                    @if (
+                      !project.isArchived
+                    ) {
+
+                      <button
+                        type="button"
+                        title="تعديل المشروع"
+                        aria-label="تعديل المشروع"
+                        (click)="openEdit(project)"
+                      >
+                        ✎
+                      </button>
+
+
+                      <button
+                        type="button"
+                        title="أرشفة المشروع"
+                        aria-label="أرشفة المشروع"
+                        (click)="openArchive(project)"
+                      >
+                        ▣
+                      </button>
+
+                    }
+
+
+                    <button
+                      type="button"
+                      class="danger-icon"
+                      title="حذف المشروع"
+                      aria-label="حذف المشروع"
+                      (click)="openDelete(project)"
+                    >
+                      ×
+                    </button>
+
+                  </div>
+
+                }
+
+              </div>
 
             </div>
 
@@ -223,7 +302,8 @@
             <p>
               {{
                 project.description
-                || 'لا يوجد وصف للمشروع.'
+                  ||
+                'لا يوجد وصف للمشروع.'
               }}
             </p>
 
@@ -249,16 +329,29 @@
             </div>
 
 
+            @if (
+              project.isArchived
+            ) {
+
+              <div class="archived-note">
+                المشروع مؤرشف؛ يمكن استعراض محتواه، لكن تعديله متوقف.
+              </div>
+
+            }
+
+
             <button
-            class="open-project"
-            type="button"
-            (click)="openProject(project)"
+              class="open-project"
+              type="button"
+              (click)="openProject(project)"
             >
+
               فتح المشروع
 
               <span>
                 ←
               </span>
+
             </button>
 
           </article>
@@ -270,5 +363,583 @@
     }
 
   </section>
+
+
+  <!-- ======================================================
+       CREATE MODAL
+       ====================================================== -->
+
+  @if (createModalOpen) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeCreate()"
+    ></button>
+
+
+    <section class="project-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            إنشاء مشروع
+          </h2>
+
+          <p>
+            أنشئ مشروعًا جديدًا ضمن
+            {{ workspaceName }}.
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeCreate()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="projectForm"
+        (ngSubmit)="createProject()"
+      >
+
+        <label class="form-field">
+
+          <span>
+            اسم المشروع
+          </span>
+
+
+          <input
+            type="text"
+            maxlength="150"
+            formControlName="name"
+            placeholder="مثال: تطبيق إدارة الموارد"
+          >
+
+
+          @if (
+            projectForm.controls.name.touched &&
+            projectForm.controls.name.hasError('required')
+          ) {
+
+            <small class="field-error">
+              اسم المشروع مطلوب.
+            </small>
+
+          }
+
+
+          @if (
+            projectForm.controls.name.touched &&
+            projectForm.controls.name.hasError('minlength')
+          ) {
+
+            <small class="field-error">
+              يجب أن يتكون الاسم من حرفين على الأقل.
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="form-field">
+
+          <span>
+            مدير المشروع
+          </span>
+
+
+          <select
+            formControlName="managerUserId"
+          >
+
+            <option [ngValue]="0">
+              بدون مدير حاليًا
+            </option>
+
+
+            @for (
+              manager of projectManagers;
+              track manager.userId
+            ) {
+
+              <option
+                [ngValue]="manager.userId"
+              >
+
+                {{ manager.fullName }}
+                —
+                {{ manager.email }}
+
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (loadingManagers) {
+
+            <small class="field-help">
+              جارٍ تحميل مديري المشاريع...
+            </small>
+
+          } @else if (
+            projectManagers.length === 0
+          ) {
+
+            <small class="field-help">
+              لا يوجد عضو بدور «مدير مشروع» في مساحة العمل حاليًا.
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="form-field">
+
+          <span>
+            الوصف
+          </span>
+
+
+          <textarea
+            rows="5"
+            maxlength="1000"
+            formControlName="description"
+            placeholder="اكتب وصفًا مختصرًا للمشروع..."
+          ></textarea>
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeCreate()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="submitting"
+          >
+
+            {{
+              submitting
+                ? 'جارٍ الإنشاء...'
+                : 'إنشاء المشروع'
+            }}
+
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       EDIT MODAL
+       ====================================================== -->
+
+  @if (
+    editModalOpen &&
+    selectedProject
+  ) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeEdit()"
+    ></button>
+
+
+    <section class="project-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            تعديل المشروع
+          </h2>
+
+          <p>
+            تحديث معلومات المشروع ومديره.
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeEdit()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="projectForm"
+        (ngSubmit)="updateProject()"
+      >
+
+        <label class="form-field">
+
+          <span>
+            اسم المشروع
+          </span>
+
+
+          <input
+            type="text"
+            maxlength="150"
+            formControlName="name"
+          >
+
+
+          @if (
+            projectForm.controls.name.touched &&
+            projectForm.controls.name.invalid
+          ) {
+
+            <small class="field-error">
+              أدخل اسمًا صحيحًا للمشروع.
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="form-field">
+
+          <span>
+            مدير المشروع
+          </span>
+
+
+          <select
+            formControlName="managerUserId"
+          >
+
+            <option [ngValue]="0">
+              بدون مدير
+            </option>
+
+
+            @for (
+              manager of projectManagers;
+              track manager.userId
+            ) {
+
+              <option
+                [ngValue]="manager.userId"
+              >
+
+                {{ manager.fullName }}
+                —
+                {{ manager.email }}
+
+              </option>
+
+            }
+
+          </select>
+
+        </label>
+
+
+        <label class="form-field">
+
+          <span>
+            الوصف
+          </span>
+
+
+          <textarea
+            rows="5"
+            maxlength="1000"
+            formControlName="description"
+          ></textarea>
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeEdit()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="submitting"
+          >
+
+            {{
+              submitting
+                ? 'جارٍ الحفظ...'
+                : 'حفظ التعديلات'
+            }}
+
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       ARCHIVE MODAL
+       ====================================================== -->
+
+  @if (
+    archiveModalOpen &&
+    selectedProject
+  ) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeArchive()"
+    ></button>
+
+
+    <section class="project-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            أرشفة المشروع
+          </h2>
+
+          <p>
+            المشروع سيبقى موجودًا للعرض ولكنه سيتوقف عن استقبال التعديلات.
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeArchive()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="confirmation-body">
+
+        <div class="warning-box">
+
+          هل تريد أرشفة المشروع:
+
+          <strong>
+            {{ selectedProject.name }}
+          </strong>
+          ؟
+
+        </div>
+
+
+        <p class="confirmation-note">
+          النسخة الحالية من النظام لا تحتوي عملية إلغاء أرشفة، لذلك لا تستخدم الأرشفة إلا للمشروع المنتهي.
+        </p>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeArchive()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="button"
+            class="archive-confirm-button"
+            [disabled]="archiving"
+            (click)="archiveProject()"
+          >
+
+            {{
+              archiving
+                ? 'جارٍ الأرشفة...'
+                : 'تأكيد الأرشفة'
+            }}
+
+          </button>
+
+        </footer>
+
+      </div>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       DELETE MODAL
+       ====================================================== -->
+
+  @if (
+    deleteModalOpen &&
+    selectedProject
+  ) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeDelete()"
+    ></button>
+
+
+    <section class="project-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            حذف المشروع
+          </h2>
+
+          <p>
+            تأكيد حذف المشروع من مساحة العمل.
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeDelete()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="confirmation-body">
+
+        <div class="danger-box">
+
+          سيتم حذف المشروع:
+
+          <strong>
+            {{ selectedProject.name }}
+          </strong>
+
+        </div>
+
+
+        <label class="form-field">
+
+          <span>
+            اكتب اسم المشروع للتأكيد
+          </span>
+
+
+          <input
+            type="text"
+            [value]="deleteConfirmation"
+            (input)="
+              setDeleteConfirmation(
+                $any($event.target).value
+              )
+            "
+            [placeholder]="selectedProject.name"
+            autocomplete="off"
+          >
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeDelete()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="button"
+            class="danger-button"
+            [disabled]="
+              deleting ||
+              !deleteConfirmationValid
+            "
+            (click)="deleteProject()"
+          >
+
+            {{
+              deleting
+                ? 'جارٍ الحذف...'
+                : 'حذف المشروع'
+            }}
+
+          </button>
+
+        </footer>
+
+      </div>
+
+    </section>
+
+  }
 
 </div>

@@ -620,6 +620,42 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.ToTable("TaskComments", (string)null);
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.TaskDependency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DependsOnTaskItemId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TaskItemId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnTaskItemId");
+
+                    b.HasIndex("TaskItemId", "DependsOnTaskItemId")
+                        .IsUnique();
+
+                    b.ToTable("TaskDependencies");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.TaskItem", b =>
                 {
                     b.Property<int>("Id")
@@ -983,6 +1019,57 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.ToTable("Workspaces");
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.WorkspaceInvitation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InvitedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InvitedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkspaceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitedByUserId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("InvitedUserId", "Status", "CreatedAt");
+
+                    b.HasIndex("WorkspaceId", "InvitedUserId", "Status");
+
+                    b.ToTable("WorkspaceInvitations");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.WorkspaceMember", b =>
                 {
                     b.Property<int>("Id")
@@ -1220,6 +1307,25 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.TaskDependency", b =>
+                {
+                    b.HasOne("TaskManagement.Domain.Entities.TaskItem", "DependsOnTaskItem")
+                        .WithMany("DependentTasks")
+                        .HasForeignKey("DependsOnTaskItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagement.Domain.Entities.TaskItem", "TaskItem")
+                        .WithMany("Dependencies")
+                        .HasForeignKey("TaskItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DependsOnTaskItem");
+
+                    b.Navigation("TaskItem");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.TaskItem", b =>
                 {
                     b.HasOne("TaskManagement.Domain.Entities.User", "CreatedByUser")
@@ -1291,6 +1397,41 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("CreatedByUser");
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.WorkspaceInvitation", b =>
+                {
+                    b.HasOne("TaskManagement.Domain.Entities.User", "InvitedByUser")
+                        .WithMany()
+                        .HasForeignKey("InvitedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagement.Domain.Entities.User", "InvitedUser")
+                        .WithMany()
+                        .HasForeignKey("InvitedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagement.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagement.Domain.Entities.Workspace", "Workspace")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("InvitedByUser");
+
+                    b.Navigation("InvitedUser");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Workspace");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.WorkspaceMember", b =>
                 {
                     b.HasOne("TaskManagement.Domain.Entities.Role", "Role")
@@ -1339,6 +1480,10 @@ namespace TaskManagement.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("TaskManagement.Domain.Entities.TaskItem", b =>
                 {
+                    b.Navigation("Dependencies");
+
+                    b.Navigation("DependentTasks");
+
                     b.Navigation("TaskAssignees");
 
                     b.Navigation("TaskAttachments");

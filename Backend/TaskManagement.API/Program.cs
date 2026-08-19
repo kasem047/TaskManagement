@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using TaskManagement.API.BackgroundServices;
 using TaskManagement.API.ExceptionHandling;
 using TaskManagement.API.Hubs;
+using TaskManagement.API.Serialization;
 using TaskManagement.API.Services;
 using TaskManagement.Application.Interfaces;
 using TaskManagement.Application.Services;
@@ -36,6 +37,11 @@ builder.Services
             .Converters
             .Add(
                 new JsonStringEnumConverter());
+
+        options.JsonSerializerOptions
+            .Converters
+            .Add(
+                new UtcDateTimeJsonConverter());
     })
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -85,7 +91,19 @@ builder.Services
    ========================================================= */
 
 builder.Services
-    .AddSignalR();
+    .AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions
+            .Converters
+            .Add(
+                new JsonStringEnumConverter());
+
+        options.PayloadSerializerOptions
+            .Converters
+            .Add(
+                new UtcDateTimeJsonConverter());
+    });
 
 
 /* =========================================================
@@ -494,6 +512,12 @@ builder.Services
 
 builder.Services
     .AddScoped<
+        IAdminUserProvisioningService,
+        AdminUserProvisioningService>();
+
+
+builder.Services
+    .AddScoped<
         IAdminDashboardExportService,
         AdminDashboardExportService>();
 
@@ -512,6 +536,12 @@ builder.Services
     .AddScoped<
         IWorkspaceMemberService,
         WorkspaceMemberService>();
+
+
+builder.Services
+    .AddScoped<
+        IWorkspaceInvitationService,
+        WorkspaceInvitationService>();
 
 
 /* =========================================================

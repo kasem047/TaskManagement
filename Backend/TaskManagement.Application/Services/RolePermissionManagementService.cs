@@ -3,6 +3,7 @@ using TaskManagement.Application.Common.Exceptions;
 using TaskManagement.Application.DTOs.RolesPermissions;
 using TaskManagement.Application.Interfaces;
 using TaskManagement.Domain.Entities;
+using TaskManagement.Domain.Enums;
 
 namespace TaskManagement.Application.Services;
 
@@ -32,7 +33,9 @@ public sealed class RolePermissionManagementService
             .AsNoTracking()
             .Where(role =>
                 !role.IsDeleted)
-            .OrderBy(role =>
+            .OrderByDescending(role =>
+                role.IsSystemRole)
+            .ThenBy(role =>
                 role.Name)
             .Select(role =>
                 new RoleResponse
@@ -87,6 +90,215 @@ public sealed class RolePermissionManagementService
                         permission.Module
                 })
             .ToListAsync();
+    }
+
+    public async Task<RoleResponse>
+        CreateRoleAsync(
+            CreateRoleRequest request)
+    {
+        await EnsureSystemAdminAsync();
+
+        var normalizedName =
+            request.Name.Trim();
+
+        var roleNameExists =
+            await _dbContext.Roles
+                .AsNoTracking()
+                .AnyAsync(role =>
+                    role.Name ==
+                        normalizedName);
+
+        if (roleNameExists)
+        {
+            throw new ConflictException(
+                "A role with the same name already exists.");
+        }
+
+        var permissionIds =
+            request.PermissionIds
+                .Distinct()
+                .ToHashSet();
+
+        await EnsurePermissionsExistAsync(
+            permissionIds);
+
+        var now =
+            DateTime.UtcNow;
+
+        var role =
+            new Role
+            {
+                Name =
+                    normalizedName,
+
+                Description =
+                    NormalizeOptionalText(
+                        request.Description),
+
+                IsSystemRole =
+                    false,
+
+                CreatedAt =
+                    now
+            };
+
+        _dbContext.Roles.Add(
+            role);
+
+        foreach (var permissionId in
+                 permissionIds)
+        {
+            role.RolePermissions.Add(
+                new RolePermission
+                {
+                    PermissionId =
+                        permissionId,
+
+                    CreatedAt =
+                        now
+                });
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return await GetRoleResponseAsync(
+            role.Id);
+    }
+
+    public async Task<RoleResponse>
+        UpdateRoleAsync(
+            int roleId,
+            UpdateRoleRequest request)
+    {
+        await EnsureSystemAdminAsync();
+
+        var role =
+            await _dbContext.Roles
+                .FirstOrDefaultAsync(role =>
+                    role.Id ==
+                        roleId &&
+                    !role.IsDeleted);
+
+        if (role is null)
+        {
+            throw new NotFoundException(
+                "Role not found.");
+        }
+
+        if (role.IsSystemRole)
+        {
+            throw new ConflictException(
+                "System role metadata cannot be changed. Its permissions can still be managed.");
+        }
+
+        var normalizedName =
+            request.Name.Trim();
+
+        var duplicateName =
+            await _dbContext.Roles
+                .AsNoTracking()
+                .AnyAsync(existingRole =>
+                    existingRole.Id !=
+                        roleId &&
+                    existingRole.Name ==
+                        normalizedName);
+
+        if (duplicateName)
+        {
+            throw new ConflictException(
+                "A role with the same name already exists.");
+        }
+
+        role.Name =
+            normalizedName;
+
+        role.Description =
+            NormalizeOptionalText(
+                request.Description);
+
+        role.UpdatedAt =
+            DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return await GetRoleResponseAsync(
+            role.Id);
+    }
+
+    public async Task DeleteRoleAsync(
+        int roleId)
+    {
+        await EnsureSystemAdminAsync();
+
+        var role =
+            await _dbContext.Roles
+                .FirstOrDefaultAsync(role =>
+                    role.Id ==
+                        roleId &&
+                    !role.IsDeleted);
+
+        if (role is null)
+        {
+            throw new NotFoundException(
+                "Role not found.");
+        }
+
+        if (role.IsSystemRole)
+        {
+            throw new ConflictException(
+                "System roles cannot be deleted.");
+        }
+
+        var isAssignedToActiveMember =
+            await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .AnyAsync(member =>
+                    member.RoleId ==
+                        roleId &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted);
+
+        if (isAssignedToActiveMember)
+        {
+            throw new ConflictException(
+                "This role is assigned to one or more active workspace members. Reassign those members before deleting the role.");
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        role.IsDeleted =
+            true;
+
+        role.DeletedAt =
+            now;
+
+        role.UpdatedAt =
+            now;
+
+        var rolePermissions =
+            await _dbContext.RolePermissions
+                .Where(rolePermission =>
+                    rolePermission.RoleId ==
+                        roleId &&
+                    !rolePermission.IsDeleted)
+                .ToListAsync();
+
+        foreach (var rolePermission in
+                 rolePermissions)
+        {
+            rolePermission.IsDeleted =
+                true;
+
+            rolePermission.DeletedAt =
+                now;
+
+            rolePermission.UpdatedAt =
+                now;
+        }
+
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task<RolePermissionsResponse>
@@ -176,26 +388,8 @@ public sealed class RolePermissionManagementService
                 .Distinct()
                 .ToHashSet();
 
-        if (requestedPermissionIds.Count > 0)
-        {
-            var existingPermissionIds =
-                await _dbContext.Permissions
-                    .AsNoTracking()
-                    .Where(permission =>
-                        requestedPermissionIds.Contains(
-                            permission.Id) &&
-                        !permission.IsDeleted)
-                    .Select(permission =>
-                        permission.Id)
-                    .ToListAsync();
-
-            if (existingPermissionIds.Count !=
-                requestedPermissionIds.Count)
-            {
-                throw new BadRequestException(
-                    "One or more selected permissions do not exist.");
-            }
-        }
+        await EnsurePermissionsExistAsync(
+            requestedPermissionIds);
 
         var currentRolePermissions =
             await _dbContext.RolePermissions
@@ -207,9 +401,6 @@ public sealed class RolePermissionManagementService
         var now =
             DateTime.UtcNow;
 
-        /*
-         * Remove permissions that are no longer selected.
-         */
         foreach (var rolePermission in
                  currentRolePermissions.Where(
                      rolePermission =>
@@ -227,9 +418,6 @@ public sealed class RolePermissionManagementService
                 now;
         }
 
-        /*
-         * Add or reactivate selected permissions.
-         */
         foreach (var permissionId in
                  requestedPermissionIds)
         {
@@ -277,6 +465,76 @@ public sealed class RolePermissionManagementService
             roleId);
     }
 
+    private async Task EnsurePermissionsExistAsync(
+        HashSet<int> permissionIds)
+    {
+        if (permissionIds.Count == 0)
+        {
+            return;
+        }
+
+        var existingPermissionIds =
+            await _dbContext.Permissions
+                .AsNoTracking()
+                .Where(permission =>
+                    permissionIds.Contains(
+                        permission.Id) &&
+                    !permission.IsDeleted)
+                .Select(permission =>
+                    permission.Id)
+                .ToListAsync();
+
+        if (existingPermissionIds.Count !=
+            permissionIds.Count)
+        {
+            throw new BadRequestException(
+                "One or more selected permissions do not exist.");
+        }
+    }
+
+    private async Task<RoleResponse>
+        GetRoleResponseAsync(
+            int roleId)
+    {
+        var role =
+            await _dbContext.Roles
+                .AsNoTracking()
+                .Where(role =>
+                    role.Id ==
+                        roleId &&
+                    !role.IsDeleted)
+                .Select(role =>
+                    new RoleResponse
+                    {
+                        Id =
+                            role.Id,
+
+                        Name =
+                            role.Name,
+
+                        Description =
+                            role.Description,
+
+                        IsSystemRole =
+                            role.IsSystemRole,
+
+                        PermissionCount =
+                            role.RolePermissions.Count(
+                                rolePermission =>
+                                    !rolePermission.IsDeleted &&
+                                    !rolePermission.Permission.IsDeleted)
+                    })
+                .FirstOrDefaultAsync();
+
+        if (role is null)
+        {
+            throw new NotFoundException(
+                "Role not found.");
+        }
+
+        return role;
+    }
+
     private async Task EnsureSystemAdminAsync()
     {
         if (!_currentUserService.IsAuthenticated)
@@ -300,5 +558,16 @@ public sealed class RolePermissionManagementService
             throw new ForbiddenException(
                 "Only the system administrator can manage roles and permissions.");
         }
+    }
+
+    private static string? NormalizeOptionalText(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
     }
 }

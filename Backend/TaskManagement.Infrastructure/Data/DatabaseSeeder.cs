@@ -15,7 +15,9 @@ public static class DatabaseSeeder
         try
         {
             await SeedRolesAsync(context);
+
             await SeedPermissionsAsync(context);
+
             await SeedRolePermissionsAsync(context);
 
             await transaction.CommitAsync();
@@ -23,23 +25,44 @@ public static class DatabaseSeeder
         catch
         {
             await transaction.RollbackAsync();
+
             throw;
         }
     }
 
+
+    /* =========================================================
+       ROLES
+       ========================================================= */
+
     private static async Task SeedRolesAsync(
         ApplicationDbContext context)
     {
-        var roles = await context.Roles.ToListAsync();
+        var roles =
+            await context.Roles
+                .ToListAsync();
 
-        var workspaceOwner = roles.FirstOrDefault(
-            role =>
-                role.Name ==
-                SystemRoles.WorkspaceOwner);
 
-        var oldOwner = roles.FirstOrDefault(
-            role =>
-                role.Name == "Owner");
+        /* =====================================================
+           WORKSPACE OWNER
+           ===================================================== */
+
+        var workspaceOwner =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name ==
+                    SystemRoles.WorkspaceOwner);
+
+
+        /*
+         * Compatibility with old databases
+         * that used "Owner".
+         */
+        var oldOwner =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name == "Owner");
+
 
         if (workspaceOwner is null &&
             oldOwner is not null)
@@ -50,59 +73,91 @@ public static class DatabaseSeeder
             oldOwner.Description =
                 "Own and manage workspace, members and projects";
 
-            oldOwner.IsSystemRole = true;
+            oldOwner.IsSystemRole =
+                true;
 
-            workspaceOwner = oldOwner;
+            workspaceOwner =
+                oldOwner;
         }
         else if (workspaceOwner is null)
         {
-            workspaceOwner = new Role
-            {
-                Name =
-                    SystemRoles.WorkspaceOwner,
+            workspaceOwner =
+                new Role
+                {
+                    Name =
+                        SystemRoles.WorkspaceOwner,
 
-                Description =
-                    "Own and manage workspace, members and projects",
+                    Description =
+                        "Own and manage workspace, members and projects",
 
-                IsSystemRole = true
-            };
+                    IsSystemRole =
+                        true
+                };
+
 
             await context.Roles.AddAsync(
                 workspaceOwner);
         }
         else
         {
-            workspaceOwner.Description =
-                "Own and manage workspace, members and projects";
-
-            workspaceOwner.IsSystemRole = true;
+            /*
+             * System role identity remains protected.
+             *
+             * Its permissions are NOT reset here.
+             */
+            workspaceOwner.IsSystemRole =
+                true;
         }
+
 
         await context.SaveChangesAsync();
 
+
+        /*
+         * Remove legacy duplicate "Owner" role after
+         * transferring all its members.
+         */
         if (oldOwner is not null &&
-            oldOwner.Id != workspaceOwner.Id)
+            oldOwner.Id !=
+                workspaceOwner.Id)
         {
             await MoveMembersToRoleAsync(
                 context,
                 oldOwner.Id,
                 workspaceOwner.Id);
 
+
             await RemoveRoleAsync(
                 context,
                 oldOwner);
         }
 
-        roles = await context.Roles.ToListAsync();
 
-        var projectManager = roles.FirstOrDefault(
-            role =>
-                role.Name ==
-                SystemRoles.ProjectManager);
+        /* =====================================================
+           PROJECT MANAGER
+           ===================================================== */
 
-        var oldAdmin = roles.FirstOrDefault(
-            role =>
-                role.Name == "Admin");
+        roles =
+            await context.Roles
+                .ToListAsync();
+
+
+        var projectManager =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name ==
+                    SystemRoles.ProjectManager);
+
+
+        /*
+         * Compatibility with old databases
+         * that used "Admin".
+         */
+        var oldAdmin =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name == "Admin");
+
 
         if (projectManager is null &&
             oldAdmin is not null)
@@ -113,84 +168,113 @@ public static class DatabaseSeeder
             oldAdmin.Description =
                 "Manage project tasks, assignments and progress";
 
-            oldAdmin.IsSystemRole = true;
+            oldAdmin.IsSystemRole =
+                true;
 
-            projectManager = oldAdmin;
+            projectManager =
+                oldAdmin;
         }
         else if (projectManager is null)
         {
-            projectManager = new Role
-            {
-                Name =
-                    SystemRoles.ProjectManager,
+            projectManager =
+                new Role
+                {
+                    Name =
+                        SystemRoles.ProjectManager,
 
-                Description =
-                    "Manage project tasks, assignments and progress",
+                    Description =
+                        "Manage project tasks, assignments and progress",
 
-                IsSystemRole = true
-            };
+                    IsSystemRole =
+                        true
+                };
+
 
             await context.Roles.AddAsync(
                 projectManager);
         }
         else
         {
-            projectManager.Description =
-                "Manage project tasks, assignments and progress";
-
-            projectManager.IsSystemRole = true;
+            /*
+             * Do not reset its permissions here.
+             */
+            projectManager.IsSystemRole =
+                true;
         }
+
 
         await context.SaveChangesAsync();
 
+
         if (oldAdmin is not null &&
-            oldAdmin.Id != projectManager.Id)
+            oldAdmin.Id !=
+                projectManager.Id)
         {
             await MoveMembersToRoleAsync(
                 context,
                 oldAdmin.Id,
                 projectManager.Id);
 
+
             await RemoveRoleAsync(
                 context,
                 oldAdmin);
         }
 
-        var member = await context.Roles
-            .FirstOrDefaultAsync(
-                role =>
-                    role.Name ==
-                    SystemRoles.Member);
+
+        /* =====================================================
+           MEMBER
+           ===================================================== */
+
+        var member =
+            await context.Roles
+                .FirstOrDefaultAsync(
+                    role =>
+                        role.Name ==
+                        SystemRoles.Member);
+
 
         if (member is null)
         {
-            member = new Role
-            {
-                Name = SystemRoles.Member,
+            member =
+                new Role
+                {
+                    Name =
+                        SystemRoles.Member,
 
-                Description =
-                    "View and execute assigned tasks",
+                    Description =
+                        "View and execute assigned tasks",
 
-                IsSystemRole = true
-            };
+                    IsSystemRole =
+                        true
+                };
+
 
             await context.Roles.AddAsync(
                 member);
         }
         else
         {
-            member.Description =
-                "View and execute assigned tasks";
-
-            member.IsSystemRole = true;
+            /*
+             * Preserve dynamic permissions.
+             */
+            member.IsSystemRole =
+                true;
         }
+
 
         await context.SaveChangesAsync();
 
-        var viewer = await context.Roles
-            .FirstOrDefaultAsync(
-                role =>
-                    role.Name == "Viewer");
+
+        /*
+         * Compatibility with very old Viewer role.
+         */
+        var viewer =
+            await context.Roles
+                .FirstOrDefaultAsync(
+                    role =>
+                        role.Name == "Viewer");
+
 
         if (viewer is not null)
         {
@@ -199,11 +283,17 @@ public static class DatabaseSeeder
                 viewer.Id,
                 member.Id);
 
+
             await RemoveRoleAsync(
                 context,
                 viewer);
         }
     }
+
+
+    /* =========================================================
+       MOVE MEMBERS FROM LEGACY ROLE
+       ========================================================= */
 
     private static async Task MoveMembersToRoleAsync(
         ApplicationDbContext context,
@@ -217,8 +307,10 @@ public static class DatabaseSeeder
                     sourceRoleId)
                 .ToListAsync();
 
-        foreach (var workspaceMember
-                 in workspaceMembers)
+
+        foreach (
+            var workspaceMember
+            in workspaceMembers)
         {
             workspaceMember.RoleId =
                 targetRoleId;
@@ -227,8 +319,14 @@ public static class DatabaseSeeder
                 DateTime.UtcNow;
         }
 
+
         await context.SaveChangesAsync();
     }
+
+
+    /* =========================================================
+       REMOVE LEGACY ROLE
+       ========================================================= */
 
     private static async Task RemoveRoleAsync(
         ApplicationDbContext context,
@@ -241,13 +339,22 @@ public static class DatabaseSeeder
                     role.Id)
                 .ToListAsync();
 
+
         context.RolePermissions.RemoveRange(
             rolePermissions);
 
-        context.Roles.Remove(role);
+
+        context.Roles.Remove(
+            role);
+
 
         await context.SaveChangesAsync();
     }
+
+
+    /* =========================================================
+       PERMISSIONS
+       ========================================================= */
 
     private static async Task SeedPermissionsAsync(
         ApplicationDbContext context)
@@ -256,17 +363,26 @@ public static class DatabaseSeeder
             await context.Permissions
                 .ToListAsync();
 
+
+        /*
+         * Compatibility rename:
+         * task.update
+         *      ↓
+         * task.details.update
+         */
         var oldTaskUpdate =
             permissions.FirstOrDefault(
                 permission =>
                     permission.Name ==
                     "task.update");
 
+
         var taskDetailsUpdate =
             permissions.FirstOrDefault(
                 permission =>
                     permission.Name ==
                     SystemPermissions.TaskDetailsUpdate);
+
 
         if (oldTaskUpdate is not null &&
             taskDetailsUpdate is null)
@@ -281,6 +397,16 @@ public static class DatabaseSeeder
                 "Update task title, description and details";
         }
 
+
+        /*
+         * These are the permission definitions supported
+         * by the application.
+         *
+         * IMPORTANT:
+         * This only ensures that the permission records exist.
+         *
+         * It does NOT decide which role receives them.
+         */
         var requiredPermissions =
             new[]
             {
@@ -296,6 +422,7 @@ public static class DatabaseSeeder
                         "Manage workspace settings"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -307,6 +434,7 @@ public static class DatabaseSeeder
                     Description =
                         "Invite members to workspace"
                 },
+
 
                 new Permission
                 {
@@ -320,6 +448,7 @@ public static class DatabaseSeeder
                         "Remove members from workspace"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -331,6 +460,7 @@ public static class DatabaseSeeder
                     Description =
                         "Change workspace member role"
                 },
+
 
                 new Permission
                 {
@@ -344,6 +474,7 @@ public static class DatabaseSeeder
                         "Create projects inside workspace"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -355,6 +486,7 @@ public static class DatabaseSeeder
                     Description =
                         "View projects"
                 },
+
 
                 new Permission
                 {
@@ -368,6 +500,7 @@ public static class DatabaseSeeder
                         "Update project details"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -379,6 +512,7 @@ public static class DatabaseSeeder
                     Description =
                         "Delete projects"
                 },
+
 
                 new Permission
                 {
@@ -392,6 +526,7 @@ public static class DatabaseSeeder
                         "Create tasks"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -403,6 +538,7 @@ public static class DatabaseSeeder
                     Description =
                         "View tasks"
                 },
+
 
                 new Permission
                 {
@@ -416,6 +552,7 @@ public static class DatabaseSeeder
                         "Update task title, description and details"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -427,6 +564,7 @@ public static class DatabaseSeeder
                     Description =
                         "Update task status and position"
                 },
+
 
                 new Permission
                 {
@@ -440,6 +578,7 @@ public static class DatabaseSeeder
                         "Delete tasks"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -452,6 +591,7 @@ public static class DatabaseSeeder
                         "Assign tasks to workspace members"
                 },
 
+
                 new Permission
                 {
                     Name =
@@ -463,6 +603,7 @@ public static class DatabaseSeeder
                     Description =
                         "Add task comments"
                 },
+
 
                 new Permission
                 {
@@ -477,12 +618,14 @@ public static class DatabaseSeeder
                 }
             };
 
+
         var existingPermissionNames =
             permissions
                 .Select(permission =>
                     permission.Name)
                 .ToHashSet(
                     StringComparer.OrdinalIgnoreCase);
+
 
         var missingPermissions =
             requiredPermissions
@@ -491,48 +634,106 @@ public static class DatabaseSeeder
                         permission.Name))
                 .ToList();
 
+
         if (missingPermissions.Count > 0)
         {
-            await context.Permissions.AddRangeAsync(
-                missingPermissions);
+            await context.Permissions
+                .AddRangeAsync(
+                    missingPermissions);
         }
+
 
         await context.SaveChangesAsync();
     }
 
+
+    /* =========================================================
+       DEFAULT ROLE PERMISSIONS
+       ========================================================= */
+
     private static async Task SeedRolePermissionsAsync(
         ApplicationDbContext context)
     {
-        var roles = await context.Roles
-            .Where(role =>
-                role.Name ==
-                SystemRoles.WorkspaceOwner ||
+        /*
+         * =====================================================
+         * IMPORTANT DYNAMIC-PERMISSION RULE
+         * =====================================================
+         *
+         * Default permissions are assigned ONLY when a system
+         * role has never had RolePermission records before.
+         *
+         * Once initialized, the database becomes the source
+         * of truth.
+         *
+         * This means SystemAdmin is free to:
+         *
+         * - grant permissions
+         * - revoke permissions
+         * - leave a role with zero permissions
+         *
+         * and restarting the API will NOT restore the defaults.
+         *
+         * Soft-deleted RolePermission records still count as
+         * historical initialization. This is important because
+         * a SystemAdmin may intentionally revoke every permission
+         * from a role.
+         * =====================================================
+         */
 
-                role.Name ==
-                SystemRoles.ProjectManager ||
 
-                role.Name ==
-                SystemRoles.Member)
-            .ToListAsync();
+        var roles =
+            await context.Roles
+                .Where(role =>
+                    !role.IsDeleted &&
+                    (
+                        role.Name ==
+                            SystemRoles.WorkspaceOwner ||
+
+                        role.Name ==
+                            SystemRoles.ProjectManager ||
+
+                        role.Name ==
+                            SystemRoles.Member
+                    ))
+                .ToListAsync();
+
+
+        var workspaceOwner =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name ==
+                    SystemRoles.WorkspaceOwner);
+
+
+        var projectManager =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name ==
+                    SystemRoles.ProjectManager);
+
+
+        var member =
+            roles.FirstOrDefault(
+                role =>
+                    role.Name ==
+                    SystemRoles.Member);
+
+
+        if (workspaceOwner is null ||
+            projectManager is null ||
+            member is null)
+        {
+            throw new InvalidOperationException(
+                "One or more required system roles were not found.");
+        }
+
 
         var permissions =
             await context.Permissions
+                .Where(permission =>
+                    !permission.IsDeleted)
                 .ToListAsync();
 
-        var workspaceOwner = roles.First(
-            role =>
-                role.Name ==
-                SystemRoles.WorkspaceOwner);
-
-        var projectManager = roles.First(
-            role =>
-                role.Name ==
-                SystemRoles.ProjectManager);
-
-        var member = roles.First(
-            role =>
-                role.Name ==
-                SystemRoles.Member);
 
         var permissionByName =
             permissions.ToDictionary(
@@ -541,13 +742,13 @@ public static class DatabaseSeeder
 
                 StringComparer.OrdinalIgnoreCase);
 
+
         /*
-         * Workspace Owner:
-         * - manages workspace
-         * - manages members and roles
-         * - creates, updates and deletes projects
-         * - has full task management permissions
+         * Default permissions are ONLY bootstrap values.
+         * They are NOT enforced after initialization.
          */
+
+
         var workspaceOwnerPermissionNames =
             new[]
             {
@@ -572,13 +773,7 @@ public static class DatabaseSeeder
                 SystemPermissions.TaskAttachmentUpload
             };
 
-        /*
-         * Project Manager:
-         * - views the project
-         * - manages project tasks
-         * - cannot create, update or delete projects
-         * - cannot manage workspace members or roles
-         */
+
         var projectManagerPermissionNames =
             new[]
             {
@@ -594,12 +789,7 @@ public static class DatabaseSeeder
                 SystemPermissions.TaskAttachmentUpload
             };
 
-        /*
-         * Member:
-         * - views allowed projects and tasks
-         * - updates task status
-         * - adds comments and attachments
-         */
+
         var memberPermissionNames =
             new[]
             {
@@ -611,106 +801,107 @@ public static class DatabaseSeeder
                 SystemPermissions.TaskAttachmentUpload
             };
 
-        var desiredPermissions =
-            new Dictionary<int, string[]>
-            {
-                [workspaceOwner.Id] =
-                    workspaceOwnerPermissionNames,
 
-                [projectManager.Id] =
-                    projectManagerPermissionNames,
+        await SeedRoleDefaultsOnlyIfNeverInitializedAsync(
+            context,
+            workspaceOwner.Id,
+            workspaceOwnerPermissionNames,
+            permissionByName);
 
-                [member.Id] =
-                    memberPermissionNames
-            };
 
-        var targetRoleIds =
-            desiredPermissions.Keys
-                .ToList();
+        await SeedRoleDefaultsOnlyIfNeverInitializedAsync(
+            context,
+            projectManager.Id,
+            projectManagerPermissionNames,
+            permissionByName);
 
-        var existingRolePermissions =
-            await context.RolePermissions
-                .Where(rolePermission =>
-                    targetRoleIds.Contains(
-                        rolePermission.RoleId))
-                .ToListAsync();
 
-        var desiredPairs =
-            new HashSet<(
-                int RoleId,
-                int PermissionId)>();
+        await SeedRoleDefaultsOnlyIfNeverInitializedAsync(
+            context,
+            member.Id,
+            memberPermissionNames,
+            permissionByName);
 
-        foreach (var rolePermissionGroup
-                 in desiredPermissions)
-        {
-            foreach (var permissionName
-                     in rolePermissionGroup.Value)
-            {
-                if (!permissionByName.TryGetValue(
-                        permissionName,
-                        out var permission))
-                {
-                    throw new InvalidOperationException(
-                        $"Permission '{permissionName}' was not found.");
-                }
-
-                desiredPairs.Add((
-                    rolePermissionGroup.Key,
-                    permission.Id));
-            }
-        }
-
-        var extraRolePermissions =
-            existingRolePermissions
-                .Where(rolePermission =>
-                    !desiredPairs.Contains((
-                        rolePermission.RoleId,
-                        rolePermission.PermissionId)))
-                .ToList();
-
-        if (extraRolePermissions.Count > 0)
-        {
-            context.RolePermissions.RemoveRange(
-                extraRolePermissions);
-        }
-
-        var remainingExistingPairs =
-            existingRolePermissions
-                .Where(rolePermission =>
-                    !extraRolePermissions.Contains(
-                        rolePermission))
-                .Select(rolePermission =>
-                    (
-                        rolePermission.RoleId,
-                        rolePermission.PermissionId
-                    ))
-                .ToHashSet();
-
-        var missingRolePermissions =
-            desiredPairs
-                .Where(pair =>
-                    !remainingExistingPairs.Contains(
-                        pair))
-                .Select(pair =>
-                    new RolePermission
-                    {
-                        RoleId =
-                            pair.RoleId,
-
-                        PermissionId =
-                            pair.PermissionId,
-
-                        CreatedAt =
-                            DateTime.UtcNow
-                    })
-                .ToList();
-
-        if (missingRolePermissions.Count > 0)
-        {
-            await context.RolePermissions.AddRangeAsync(
-                missingRolePermissions);
-        }
 
         await context.SaveChangesAsync();
+    }
+
+
+    /* =========================================================
+       INITIALIZE ROLE DEFAULTS ONCE
+       ========================================================= */
+
+    private static async Task
+        SeedRoleDefaultsOnlyIfNeverInitializedAsync(
+            ApplicationDbContext context,
+            int roleId,
+            IEnumerable<string> defaultPermissionNames,
+            IReadOnlyDictionary<string, Permission>
+                permissionByName)
+    {
+        /*
+         * IMPORTANT:
+         *
+         * We intentionally do NOT filter IsDeleted here.
+         *
+         * Even a soft-deleted RolePermission proves that this
+         * role has already been initialized and subsequently
+         * customized by an administrator.
+         */
+        var roleHasEverBeenInitialized =
+            await context.RolePermissions
+                .AnyAsync(rolePermission =>
+                    rolePermission.RoleId ==
+                    roleId);
+
+
+        if (roleHasEverBeenInitialized)
+        {
+            return;
+        }
+
+
+        var now =
+            DateTime.UtcNow;
+
+
+        var rolePermissions =
+            new List<RolePermission>();
+
+
+        foreach (
+            var permissionName
+            in defaultPermissionNames)
+        {
+            if (!permissionByName.TryGetValue(
+                    permissionName,
+                    out var permission))
+            {
+                throw new InvalidOperationException(
+                    $"Permission '{permissionName}' was not found.");
+            }
+
+
+            rolePermissions.Add(
+                new RolePermission
+                {
+                    RoleId =
+                        roleId,
+
+                    PermissionId =
+                        permission.Id,
+
+                    CreatedAt =
+                        now
+                });
+        }
+
+
+        if (rolePermissions.Count > 0)
+        {
+            await context.RolePermissions
+                .AddRangeAsync(
+                    rolePermissions);
+        }
     }
 }

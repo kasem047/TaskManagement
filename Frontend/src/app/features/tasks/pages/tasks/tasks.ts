@@ -21,12 +21,14 @@ import {
 } from '@angular/cdk/drag-drop';
 
 import {
+  Observable,
   map,
   of,
   switchMap
 } from 'rxjs';
 
 import {
+  TaskDependency,
   TaskPriority,
   TaskPriorityValue,
   TaskStatus,
@@ -47,6 +49,7 @@ import {
 } from '../../../../core/services/activity-logs';
 
 import {
+  TaskAssignee,
   TaskAssignees
 } from '../../../../core/services/task-assignees';
 
@@ -382,6 +385,37 @@ export class TasksPage
 
   readonly assigneePickerLimit =
     8;
+
+
+  /* =========================
+     ASSIGNEE DRAFT
+     ========================= */
+
+  draftAssignee:
+    TaskAssignee | null = null;
+
+  originalAssigneeUserId:
+    number | null = null;
+
+
+  /* =========================
+     DEPENDENCIES DRAFT
+     ========================= */
+
+  taskDependencies:
+    TaskDependency[] = [];
+
+  selectedDependencyIds =
+    new Set<number>();
+
+  initialDependencyIds =
+    new Set<number>();
+
+  dependenciesLoading =
+    false;
+
+  dependencyError =
+    '';
 
 
   /* =========================
@@ -1749,6 +1783,33 @@ export class TasksPage
     }
 
 
+    /*
+     * لا يمكن تغيير حالة مهمة
+     * قبل إسنادها لمستخدم.
+     *
+     * داخل نافذة التعديل نعتمد
+     * المسؤول المؤقت Draft، أما
+     * السحب على اللوحة فيعتمد
+     * المسؤول المحفوظ فعليًا.
+     */
+    const hasAssignee =
+      (
+        this.selectedTask?.id ===
+          task.id &&
+        this.selectedTaskPanel ===
+          'edit'
+      )
+        ? this.draftAssignee !==
+            null
+        : task.assignees.length >
+            0;
+
+
+    if (!hasAssignee) {
+      return false;
+    }
+
+
     const role =
       task.workspaceRole;
 
@@ -2218,7 +2279,7 @@ export class TasksPage
     ) {
 
       this.assigneeError =
-        'لا تملك صلاحية تعديل المسؤولين عن هذه المهمة.';
+        'لا تملك صلاحية تعديل مسؤول هذه المهمة.';
 
       return;
     }
@@ -2240,7 +2301,6 @@ export class TasksPage
       this.workspaceMembers.length >
         0
     ) {
-
       return;
     }
 
@@ -2253,14 +2313,6 @@ export class TasksPage
 
   closeAssigneePicker():
     void {
-
-    if (
-      this.assigneeActionUserId !==
-      null
-    ) {
-      return;
-    }
-
 
     this.showAssigneePicker =
       false;
@@ -2349,8 +2401,7 @@ export class TasksPage
 
 
         error: (
-          error:
-            any
+          error: any
         ) => {
 
           console.error(
@@ -2394,11 +2445,8 @@ export class TasksPage
     return this.workspaceMembers
       .filter(
         member =>
-          !task.assignees.some(
-            assignee =>
-              assignee.userId ===
-              member.userId
-          )
+          member.userId !==
+          this.draftAssignee?.userId
       )
       .filter(
         member => {
@@ -2457,11 +2505,7 @@ export class TasksPage
       this.selectedTask;
 
 
-    if (
-      !task ||
-      this.assigneeActionUserId !==
-        null
-    ) {
+    if (!task) {
       return;
     }
 
@@ -2473,101 +2517,44 @@ export class TasksPage
     ) {
 
       this.assigneeError =
-        'لا تملك صلاحية تعديل المسؤولين عن هذه المهمة.';
+        'لا تملك صلاحية تعديل مسؤول هذه المهمة.';
 
       return;
     }
 
 
-    if (
-      task.assignees.some(
-        assignee =>
-          assignee.userId ===
-          member.userId
-      )
-    ) {
+    /*
+     * Draft فقط.
+     * لا يتم استدعاء Backend هنا.
+     */
+    this.draftAssignee = {
 
-      return;
-    }
+      id: 0,
+
+      taskItemId:
+        task.id,
+
+      userId:
+        member.userId,
+
+      userFullName:
+        member.fullName,
+
+      assignedAt:
+        new Date()
+          .toISOString()
+
+    };
 
 
-    this.assigneeActionUserId =
-      member.userId;
+    this.showAssigneePicker =
+      false;
+
+    this.assigneeSearch =
+      '';
 
     this.assigneeError =
       '';
-
-
-    this.taskAssigneesService
-      .assign(
-        task.workspaceId,
-        task.projectId,
-        task.id,
-        member.userId
-      )
-      .subscribe({
-
-        next: assignee => {
-
-          const latestTask =
-            this.selectedTask
-            ?? task;
-
-
-          const alreadyExists =
-            latestTask.assignees
-              .some(
-                current =>
-                  current.userId ===
-                  assignee.userId
-              );
-
-
-          const updatedTask:
-            BoardTask = {
-
-            ...latestTask,
-
-            assignees:
-              alreadyExists
-                ? latestTask.assignees
-                : [
-                    ...latestTask.assignees,
-                    assignee
-                  ]
-
-          };
-
-
-          this.replaceTask(
-            updatedTask
-          );
-
-
-          this.assigneeActionUserId =
-            null;
-        },
-
-
-        error: error => {
-
-          console.error(
-            'Assign task failed:',
-            error
-          );
-
-
-          this.assigneeError =
-            this.extractApiError(
-              error
-            );
-
-
-          this.assigneeActionUserId =
-            null;
-        }
-
-      });
   }
 
 
@@ -2579,11 +2566,7 @@ export class TasksPage
       this.selectedTask;
 
 
-    if (
-      !task ||
-      this.assigneeActionUserId !==
-        null
-    ) {
+    if (!task) {
       return;
     }
 
@@ -2595,80 +2578,467 @@ export class TasksPage
     ) {
 
       this.assigneeError =
-        'لا تملك صلاحية إزالة مسؤول من هذه المهمة.';
+        'لا تملك صلاحية إزالة مسؤول هذه المهمة.';
 
       return;
     }
 
 
-    this.assigneeActionUserId =
-      userId;
+    if (
+      this.draftAssignee?.userId !==
+      userId
+    ) {
+      return;
+    }
+
+
+    /*
+     * Draft فقط.
+     * الإزالة الحقيقية تحصل عند الحفظ.
+     */
+    this.draftAssignee =
+      null;
 
     this.assigneeError =
       '';
+  }
 
 
-    this.taskAssigneesService
-      .remove(
+  /* =========================
+     TASK DEPENDENCIES
+     ========================= */
+
+  private loadTaskDependencies(
+    task: BoardTask
+  ): void {
+
+    this.dependenciesLoading =
+      true;
+
+    this.dependencyError =
+      '';
+
+    this.taskDependencies =
+      [];
+
+    this.selectedDependencyIds =
+      new Set<number>();
+
+    this.initialDependencyIds =
+      new Set<number>();
+
+
+    this.tasksService
+      .getDependencies(
         task.workspaceId,
         task.projectId,
-        task.id,
-        userId
+        task.id
       )
       .subscribe({
 
-        next: () => {
+        next: dependencies => {
 
-          const latestTask =
-            this.selectedTask
-            ?? task;
-
-
-          const updatedTask:
-            BoardTask = {
-
-            ...latestTask,
-
-            assignees:
-              latestTask.assignees
-                .filter(
-                  assignee =>
-                    assignee.userId !==
-                    userId
-                )
-
-          };
+          this.taskDependencies =
+            dependencies;
 
 
-          this.replaceTask(
-            updatedTask
-          );
+          const ids =
+            dependencies.map(
+              dependency =>
+                dependency.dependsOnTaskId
+            );
 
 
-          this.assigneeActionUserId =
-            null;
+          this.selectedDependencyIds =
+            new Set(ids);
+
+          this.initialDependencyIds =
+            new Set(ids);
+
+          this.dependenciesLoading =
+            false;
         },
 
 
         error: error => {
 
           console.error(
-            'Remove assignee failed:',
+            'Task dependencies failed:',
             error
           );
 
 
-          this.assigneeError =
+          this.dependencyError =
             this.extractApiError(
               error
             );
 
-
-          this.assigneeActionUserId =
-            null;
+          this.dependenciesLoading =
+            false;
         }
 
       });
+  }
+
+
+  canEditDependencies(
+    task:
+      BoardTask | null
+  ): boolean {
+
+    if (!task) {
+      return false;
+    }
+
+
+    return (
+      task.status ===
+        'Todo' &&
+      this.canManageAssignees(
+        task
+      )
+    );
+  }
+
+
+  get dependencyCandidateTasks():
+    BoardTask[] {
+
+    const task =
+      this.selectedTask;
+
+
+    if (!task) {
+      return [];
+    }
+
+
+    return this.tasks
+      .filter(
+        candidate =>
+          candidate.projectId ===
+            task.projectId &&
+          candidate.id !==
+            task.id &&
+          !candidate.projectArchived &&
+          candidate.status !==
+            'Cancelled'
+      )
+      .sort(
+        (a, b) =>
+          a.title.localeCompare(
+            b.title,
+            'ar'
+          )
+      );
+  }
+
+
+  get dependencyDisplayTasks():
+    BoardTask[] {
+
+    const task =
+      this.selectedTask;
+
+
+    if (!task) {
+      return [];
+    }
+
+
+    /*
+     * قبل بدء المهمة نعرض كل المرشحين.
+     * بعد بدء المهمة نعرض الاعتماديات
+     * المسجلة فقط بشكل Read-only.
+     */
+    if (
+      this.canEditDependencies(
+        task
+      )
+    ) {
+      return this.dependencyCandidateTasks;
+    }
+
+
+    return this.tasks
+      .filter(
+        candidate =>
+          candidate.projectId ===
+            task.projectId &&
+          this.selectedDependencyIds
+            .has(
+              candidate.id
+            )
+      )
+      .sort(
+        (a, b) =>
+          a.title.localeCompare(
+            b.title,
+            'ar'
+          )
+      );
+  }
+
+
+  isDependencySelected(
+    taskId: number
+  ): boolean {
+
+    return this
+      .selectedDependencyIds
+      .has(
+        taskId
+      );
+  }
+
+
+  toggleDependency(
+    taskId: number
+  ): void {
+
+    const task =
+      this.selectedTask;
+
+
+    if (
+      !this.canEditDependencies(
+        task
+      )
+    ) {
+
+      this.dependencyError =
+        'يمكن تعديل اعتماديات المهمة فقط عندما تكون حالتها «للعمل».';
+
+      return;
+    }
+
+
+    const candidate =
+      this.tasks.find(
+        item =>
+          item.id === taskId
+      );
+
+
+    if (
+      !candidate ||
+      candidate.status ===
+        'Cancelled'
+    ) {
+
+      this.dependencyError =
+        'لا يمكن اعتماد مهمة ملغاة.';
+
+      return;
+    }
+
+
+    const next =
+      new Set(
+        this.selectedDependencyIds
+      );
+
+
+    if (
+      next.has(
+        taskId
+      )
+    ) {
+      next.delete(
+        taskId
+      );
+    } else {
+      next.add(
+        taskId
+      );
+    }
+
+
+    this.selectedDependencyIds =
+      next;
+
+    this.dependencyError =
+      '';
+  }
+
+
+  selectedDependenciesCount():
+    number {
+
+    return this
+      .selectedDependencyIds
+      .size;
+  }
+
+
+  private selectedDependenciesSatisfied():
+    boolean {
+
+    for (
+      const dependencyId
+      of this.selectedDependencyIds
+    ) {
+
+      const dependencyTask =
+        this.tasks.find(
+          task =>
+            task.id ===
+              dependencyId
+        );
+
+
+      if (
+        !dependencyTask ||
+        dependencyTask.status !==
+          'Done'
+      ) {
+        return false;
+      }
+    }
+
+
+    return true;
+  }
+
+
+  private dependencySetsEqual():
+    boolean {
+
+    if (
+      this.initialDependencyIds.size !==
+      this.selectedDependencyIds.size
+    ) {
+      return false;
+    }
+
+
+    for (
+      const dependencyId
+      of this.initialDependencyIds
+    ) {
+
+      if (
+        !this.selectedDependencyIds
+          .has(
+            dependencyId
+          )
+      ) {
+        return false;
+      }
+    }
+
+
+    return true;
+  }
+
+
+  private persistDependencyDraft(
+    task: BoardTask
+  ): Observable<unknown> {
+
+    if (
+      this.dependencySetsEqual()
+    ) {
+      return of(
+        this.taskDependencies
+      );
+    }
+
+
+    if (
+      !this.canEditDependencies(
+        task
+      )
+    ) {
+
+      this.selectedDependencyIds =
+        new Set(
+          this.initialDependencyIds
+        );
+
+      return of(
+        this.taskDependencies
+      );
+    }
+
+
+    return this.tasksService
+      .setDependencies(
+        task.workspaceId,
+        task.projectId,
+        task.id,
+        Array.from(
+          this.selectedDependencyIds
+        )
+      );
+  }
+
+
+  private persistAssigneeBeforeStatus(
+    task: BoardTask
+  ): Observable<unknown> {
+
+    const draftUserId =
+      this.draftAssignee
+        ?.userId
+      ?? null;
+
+
+    if (
+      draftUserId ===
+      this.originalAssigneeUserId
+    ) {
+      return of(null);
+    }
+
+
+    if (
+      draftUserId !==
+      null
+    ) {
+
+      return this
+        .taskAssigneesService
+        .assign(
+          task.workspaceId,
+          task.projectId,
+          task.id,
+          draftUserId
+        );
+    }
+
+
+    return of(null);
+  }
+
+
+  private persistAssigneeRemovalAfterStatus(
+    task: BoardTask
+  ): Observable<unknown> {
+
+    const draftUserId =
+      this.draftAssignee
+        ?.userId
+      ?? null;
+
+
+    if (
+      draftUserId !== null ||
+      this.originalAssigneeUserId ===
+        null
+    ) {
+      return of(null);
+    }
+
+
+    return this
+      .taskAssigneesService
+      .remove(
+        task.workspaceId,
+        task.projectId,
+        task.id,
+        this.originalAssigneeUserId
+      );
   }
 
 
@@ -2954,6 +3324,9 @@ export class TasksPage
     this.taskHistory =
       [];
 
+    this.dependencyError =
+      '';
+
 
     if (
       panel === 'history'
@@ -2972,6 +3345,25 @@ export class TasksPage
     ) {
       return;
     }
+
+
+    const currentAssignee =
+      task.assignees[0]
+      ?? null;
+
+
+    this.draftAssignee =
+      currentAssignee
+        ? {
+            ...currentAssignee
+          }
+        : null;
+
+
+    this.originalAssigneeUserId =
+      currentAssignee
+        ?.userId
+      ?? null;
 
 
     this.editForm.reset({
@@ -3005,21 +3397,30 @@ export class TasksPage
         ?? ''
 
     });
+
+
+    this.loadTaskDependencies(
+      task
+    );
   }
 
 
   closeTaskPanel(): void {
 
     if (
-      this.editingTask ||
-      this.assigneeActionUserId !==
-        null
+      this.editingTask
     ) {
       return;
     }
 
 
     this.selectedTask =
+      null;
+
+    this.draftAssignee =
+      null;
+
+    this.originalAssigneeUserId =
       null;
 
     this.showAssigneePicker =
@@ -3033,6 +3434,27 @@ export class TasksPage
 
     this.assigneeActionUserId =
       null;
+
+    this.workspaceMembers =
+      [];
+
+    this.loadedMembersWorkspaceId =
+      null;
+
+    this.taskDependencies =
+      [];
+
+    this.selectedDependencyIds =
+      new Set<number>();
+
+    this.initialDependencyIds =
+      new Set<number>();
+
+    this.dependenciesLoading =
+      false;
+
+    this.dependencyError =
+      '';
 
     this.taskHistory =
       [];
@@ -3420,7 +3842,6 @@ export class TasksPage
     }
   }
 
-
   /* =========================
      EDIT
      ========================= */
@@ -3446,6 +3867,28 @@ export class TasksPage
     }
 
 
+    if (
+      this.dependenciesLoading
+    ) {
+
+      this.editError =
+        'انتظر حتى ينتهي تحميل اعتماديات المهمة.';
+
+      return;
+    }
+
+
+    if (
+      this.dependencyError
+    ) {
+
+      this.editError =
+        'تعذر تحميل اعتماديات المهمة. أغلق النافذة وافتحها من جديد ثم حاول مرة أخرى.';
+
+      return;
+    }
+
+
     const value =
       this.editForm
         .getRawValue();
@@ -3459,6 +3902,79 @@ export class TasksPage
       value.status;
 
 
+    const statusChanged =
+      requestedStatus !==
+      currentTask.status;
+
+
+    /*
+     * نحافظ على قيمة الموعد الأصلية
+     * إذا لم يغيرها المستخدم.
+     *
+     * هذا مهم خصوصًا للمهام القديمة
+     * التي أصبح موعدها في الماضي:
+     * لا نريد أن يعتبر Backend مجرد
+     * فتح المهمة وحفظها تعديلًا للموعد.
+     */
+    const originalDueDateLocal =
+      this.toDateTimeLocal(
+        currentTask.dueDate
+      );
+
+
+    const requestedDueDate =
+      value.dueDate ===
+        originalDueDateLocal
+
+        ? currentTask.dueDate
+
+        : value.dueDate
+
+          ? new Date(
+              value.dueDate
+            ).toISOString()
+
+          : null;
+
+
+    /*
+     * لا تغيير حالة بدون مسؤول.
+     */
+    if (
+      statusChanged &&
+      !this.draftAssignee
+    ) {
+
+      this.editError =
+        'يجب إسناد المهمة إلى مستخدم قبل تغيير حالتها.';
+
+      return;
+    }
+
+
+    /*
+     * لا تبدأ/تكتمل المهمة إذا كان
+     * أحد اعتمادياتها غير مكتمل.
+     */
+    if (
+      (
+        requestedStatus ===
+          'InProgress' ||
+        requestedStatus ===
+          'InReview' ||
+        requestedStatus ===
+          'Done'
+      ) &&
+      !this.selectedDependenciesSatisfied()
+    ) {
+
+      this.editError =
+        'لا يمكن تشغيل أو إكمال المهمة قبل اكتمال جميع المهام التي تعتمد عليها.';
+
+      return;
+    }
+
+
     if (
       !this.canMoveTask(
         currentTask,
@@ -3467,7 +3983,12 @@ export class TasksPage
     ) {
 
       this.editError =
-        'لا تسمح صلاحيتك بتغيير المهمة إلى الحالة المحددة.';
+        statusChanged &&
+        !this.draftAssignee
+
+          ? 'يجب إسناد المهمة إلى مستخدم قبل تغيير حالتها.'
+
+          : 'لا تسمح صلاحيتك بتغيير المهمة إلى الحالة المحددة.';
 
       return;
     }
@@ -3482,6 +4003,7 @@ export class TasksPage
         Number(
           value.progressPercentage
         );
+
 
       const note =
         value.progressNote
@@ -3512,11 +4034,6 @@ export class TasksPage
     }
 
 
-    const statusChanged =
-      requestedStatus !==
-      currentTask.status;
-
-
     const reasonResult =
       statusChanged
 
@@ -3531,7 +4048,9 @@ export class TasksPage
           };
 
 
-    if (!reasonResult.allowed) {
+    if (
+      !reasonResult.allowed
+    ) {
       return;
     }
 
@@ -3557,11 +4076,6 @@ export class TasksPage
         : null;
 
 
-    /*
-     * حتى إذا بقيت الحالة نفسها InReview
-     * ولكن تغيرت النسبة أو الملاحظة،
-     * يجب استدعاء status endpoint.
-     */
     const progressChanged =
       requestedStatus ===
         'InReview' &&
@@ -3583,10 +4097,18 @@ export class TasksPage
     this.editingTask =
       true;
 
+
     this.editError =
       '';
 
 
+    /*
+     * لا يتم أي تعديل عند اختيار المسؤول
+     * أو الاعتمادية داخل النافذة.
+     *
+     * كل الطلبات التالية تبدأ حصريًا
+     * عند الضغط على "حفظ التعديلات".
+     */
     this.tasksService
       .update(
         currentTask.workspaceId,
@@ -3595,7 +4117,8 @@ export class TasksPage
         {
 
           title:
-            value.title.trim(),
+            value.title
+              .trim(),
 
           description:
             value.description
@@ -3607,16 +4130,62 @@ export class TasksPage
               value.priority
             ) as TaskPriorityValue,
 
+          /*
+           * المهم هنا:
+           * نستخدم requestedDueDate
+           * وليس value.dueDate مباشرة.
+           */
           dueDate:
-            value.dueDate
-              ? new Date(
-                  value.dueDate
-                ).toISOString()
-              : null
+            requestedDueDate
 
         }
       )
       .pipe(
+
+        /*
+         * الإسناد أولًا لأن Backend
+         * يمنع تغيير الحالة دون مسؤول.
+         */
+        switchMap(
+          updatedDetails =>
+
+            this
+              .persistAssigneeBeforeStatus(
+                currentTask
+              )
+              .pipe(
+
+                map(
+                  () =>
+                    updatedDetails
+                )
+
+              )
+        ),
+
+
+        /*
+         * نحفظ الاعتماديات قبل الحالة
+         * حتى يتحقق Backend من النسخة
+         * الجديدة عند تغيير الحالة.
+         */
+        switchMap(
+          updatedDetails =>
+
+            this
+              .persistDependencyDraft(
+                currentTask
+              )
+              .pipe(
+
+                map(
+                  () =>
+                    updatedDetails
+                )
+
+              )
+        ),
+
 
         switchMap(
           updatedDetails => {
@@ -3679,36 +4248,49 @@ export class TasksPage
 
               );
           }
+        ),
+
+
+        /*
+         * إذا اختير "بدون مسؤول" ولم
+         * تتغير الحالة، تتم الإزالة
+         * في نهاية عملية الحفظ.
+         */
+        switchMap(
+          updatedTask =>
+
+            this
+              .persistAssigneeRemovalAfterStatus(
+                currentTask
+              )
+              .pipe(
+
+                map(
+                  () =>
+                    updatedTask
+                )
+
+              )
         )
 
       )
       .subscribe({
 
-        next: updated => {
-
-          /*
-           * النسبة والملاحظة هنا تأتي
-           * من رد Backend الحقيقي.
-           */
-          const merged:
-            BoardTask = {
-
-            ...currentTask,
-
-            ...updated
-
-          };
-
-
-          this.replaceTask(
-            merged
-          );
-
+        next: () => {
 
           this.editingTask =
             false;
 
+
           this.closeTaskPanel();
+
+
+          /*
+           * إعادة تحميل المصدر الحقيقي
+           * مهم لأن المسؤول والاعتماديات
+           * تم تعديلهما أيضًا.
+           */
+          this.loadTasks();
         },
 
 
@@ -3724,6 +4306,7 @@ export class TasksPage
             this.extractApiError(
               error
             );
+
 
           this.editingTask =
             false;
@@ -3880,9 +4463,11 @@ export class TasksPage
 
 
     return normalized
+
       ? normalized
           .charAt(0)
           .toUpperCase()
+
       : '؟';
   }
 
@@ -3912,7 +4497,9 @@ export class TasksPage
 
   formatDateTime(
     value:
-      string | null | undefined
+      string |
+      null |
+      undefined
   ): string {
 
     if (!value) {
@@ -4009,6 +4596,7 @@ export class TasksPage
         task.dueDate
       );
 
+
     const now =
       new Date();
 
@@ -4021,8 +4609,10 @@ export class TasksPage
       return (
         due.getFullYear() ===
           now.getFullYear() &&
+
         due.getMonth() ===
           now.getMonth() &&
+
         due.getDate() ===
           now.getDate()
       );

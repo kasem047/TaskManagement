@@ -8,68 +8,153 @@ namespace TaskManagement.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/workspaces/{workspaceId:int}/members")]
-public class WorkspaceMembersController : ControllerBase
+public sealed class WorkspaceMembersController
+    : ControllerBase
 {
-    private readonly IWorkspaceMemberService _workspaceMemberService;
+    private readonly IWorkspaceMemberService
+        _workspaceMemberService;
+
 
     public WorkspaceMembersController(
         IWorkspaceMemberService workspaceMemberService)
     {
-        _workspaceMemberService = workspaceMemberService;
+        _workspaceMemberService =
+            workspaceMemberService;
     }
+
+
+    /* =========================================================
+       MEMBERS
+       ========================================================= */
 
     [HttpGet]
-    public async Task<ActionResult<List<WorkspaceMemberResponse>>> GetMembers(
-        int workspaceId)
+    public async Task<
+        ActionResult<List<WorkspaceMemberResponse>>>
+        GetMembers(
+            int workspaceId)
     {
         var response =
-            await _workspaceMemberService.GetMembersAsync(workspaceId);
+            await _workspaceMemberService
+                .GetMembersAsync(
+                    workspaceId);
 
-        return Ok(response);
+        return Ok(
+            response);
     }
+
+
+    /* =========================================================
+       MANAGEMENT OPTIONS
+       ========================================================= */
+
+    [HttpGet("roles")]
+    public async Task<
+        ActionResult<List<WorkspaceRoleOptionResponse>>>
+        GetAvailableRoles(
+            int workspaceId)
+    {
+        var response =
+            await _workspaceMemberService
+                .GetAvailableRolesAsync(
+                    workspaceId);
+
+        return Ok(
+            response);
+    }
+
+
+    [HttpGet("candidates")]
+    public async Task<
+        ActionResult<List<WorkspaceMemberCandidateResponse>>>
+        SearchCandidates(
+            int workspaceId,
+            [FromQuery]
+            string? search = null)
+    {
+        var response =
+            await _workspaceMemberService
+                .SearchCandidatesAsync(
+                    workspaceId,
+                    search);
+
+        return Ok(
+            response);
+    }
+
+
+    /* =========================================================
+       ADD MEMBER
+       ========================================================= */
 
     [HttpPost]
-    public async Task<ActionResult<WorkspaceMemberResponse>> AddMember(
-        int workspaceId,
-        AddWorkspaceMemberRequest request)
+    public async Task<
+        ActionResult<WorkspaceMemberResponse>>
+        AddMember(
+            int workspaceId,
+            [FromBody]
+            AddWorkspaceMemberRequest request)
     {
         var response =
-            await _workspaceMemberService.AddMemberAsync(
-                workspaceId,
-                request);
+            await _workspaceMemberService
+                .AddMemberAsync(
+                    workspaceId,
+                    request);
 
-        return Ok(response);
+        return Ok(
+            response);
     }
+
+
+    /* =========================================================
+       ROLE
+       ========================================================= */
 
     [HttpPut("{memberId:int}/role")]
-    public async Task<ActionResult<WorkspaceMemberResponse>> UpdateMemberRole(
-        int workspaceId,
-        int memberId,
-        UpdateWorkspaceMemberRoleRequest request)
+    public async Task<
+        ActionResult<WorkspaceMemberResponse>>
+        UpdateMemberRole(
+            int workspaceId,
+            int memberId,
+            [FromBody]
+            UpdateWorkspaceMemberRoleRequest request)
     {
         var response =
-            await _workspaceMemberService.UpdateMemberRoleAsync(
-                workspaceId,
-                memberId,
-                request);
+            await _workspaceMemberService
+                .UpdateMemberRoleAsync(
+                    workspaceId,
+                    memberId,
+                    request);
 
-        return Ok(response);
+        return Ok(
+            response);
     }
 
-    [HttpDelete("{memberId:int}")]
-    public async Task<IActionResult> RemoveMember(
-        int workspaceId,
-        int memberId)
-    {
-        await _workspaceMemberService.RemoveMemberAsync(
-            workspaceId,
-            memberId);
 
-        return Ok(new
-        {
-            message = "Workspace member removed successfully.",
-            workspaceId,
-            memberId
-        });
+    /* =========================================================
+       REMOVE MEMBER
+       ========================================================= */
+
+    [HttpDelete("{memberId:int}")]
+    public async Task<IActionResult>
+        RemoveMember(
+            int workspaceId,
+            int memberId)
+    {
+        await _workspaceMemberService
+            .RemoveMemberAsync(
+                workspaceId,
+                memberId);
+
+
+        return Ok(
+            new
+            {
+                message =
+                    "Workspace member removed successfully.",
+
+                workspaceId,
+
+                memberId
+            });
     }
 }

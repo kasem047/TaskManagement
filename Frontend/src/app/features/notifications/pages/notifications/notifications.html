@@ -1,0 +1,1104 @@
+<section
+  class="notifications-page"
+  dir="rtl"
+>
+
+  <!-- ======================================================
+       HEADER
+       ====================================================== -->
+
+  <header
+    class="page-header"
+  >
+
+    <div>
+
+      <h1>
+        الإشعارات
+      </h1>
+
+      <p>
+        متابعة جميع الإشعارات والتنبيهات وإدارة حالة القراءة.
+      </p>
+
+    </div>
+
+
+    <div
+      class="header-actions"
+    >
+
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="
+          unreadCount === 0
+        "
+        (click)="
+          markAllAsRead()
+        "
+      >
+        تعليم الكل كمقروء
+      </button>
+
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="
+          toggleCompose()
+        "
+      >
+        إنشاء إشعار
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <!-- ======================================================
+       MESSAGES
+       ====================================================== -->
+
+  @if (errorMessage) {
+
+    <div
+      class="message error"
+    >
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div
+      class="message success"
+    >
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  <!-- ======================================================
+       WORKSPACE INVITATIONS
+       ====================================================== -->
+
+  @if (
+    invitationsLoading
+  ) {
+
+    <section
+      class="invitations-panel"
+    >
+
+      <div
+        class="invitation-loading"
+      >
+        جارٍ تحميل دعوات مساحات العمل...
+      </div>
+
+    </section>
+
+  } @else if (
+    pendingInvitations.length >
+      0
+  ) {
+
+    <section
+      class="invitations-panel"
+    >
+
+      <header
+        class="invitations-header"
+      >
+
+        <div>
+
+          <span
+            class="invitations-icon"
+          >
+
+            <svg
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M3 6h18v12H3z"
+              />
+
+              <path
+                d="m3 7 9 6 9-6"
+              />
+            </svg>
+
+          </span>
+
+
+          <div>
+
+            <h2>
+              دعوات مساحات العمل
+            </h2>
+
+            <p>
+              لديك
+              {{ pendingInvitations.length }}
+              دعوة بانتظار قرارك.
+            </p>
+
+          </div>
+
+        </div>
+
+      </header>
+
+
+      <div
+        class="invitation-list"
+      >
+
+        @for (
+          invitation
+          of pendingInvitations;
+          track invitation.id
+        ) {
+
+          <article
+            class="invitation-card"
+          >
+
+            <div
+              class="invitation-workspace-icon"
+            >
+              {{
+                invitation.workspaceName
+                  .charAt(0)
+                  .toUpperCase()
+              }}
+            </div>
+
+
+            <div
+              class="invitation-content"
+            >
+
+              <div
+                class="invitation-title-row"
+              >
+
+                <div>
+
+                  <h3>
+                    {{
+                      invitation.workspaceName
+                    }}
+                  </h3>
+
+
+                  <span
+                    class="role-badge"
+                  >
+                    {{ invitation.roleName }}
+                  </span>
+
+                </div>
+
+
+                <time>
+                  {{
+                    formatDate(
+                      invitation.createdAt
+                    )
+                  }}
+                </time>
+
+              </div>
+
+
+              <p>
+
+                قام
+
+                <strong>
+                  {{
+                    invitation.invitedByUserFullName
+                  }}
+                </strong>
+
+                بدعوتك للانضمام إلى مساحة العمل
+
+                <strong>
+                  {{
+                    invitation.workspaceName
+                  }}
+                </strong>
+
+                بالدور
+
+                <strong>
+                  {{
+                    invitation.roleName
+                  }}
+                </strong>.
+
+              </p>
+
+
+              <div
+                class="invitation-actions"
+              >
+
+                <button
+                  type="button"
+                  class="accept-button"
+                  [disabled]="
+                    invitationActionId !==
+                      null
+                  "
+                  (click)="
+                    acceptInvitation(
+                      invitation
+                    )
+                  "
+                >
+
+                  @if (
+                    invitationActionRunning(
+                      invitation.id
+                    )
+                  ) {
+
+                    جارٍ التنفيذ...
+
+                  } @else {
+
+                    قبول الدعوة
+
+                  }
+
+                </button>
+
+
+                <button
+                  type="button"
+                  class="reject-button"
+                  [disabled]="
+                    invitationActionId !==
+                      null
+                  "
+                  (click)="
+                    rejectInvitation(
+                      invitation
+                    )
+                  "
+                >
+
+                  @if (
+                    invitationActionRunning(
+                      invitation.id
+                    )
+                  ) {
+
+                    انتظر...
+
+                  } @else {
+
+                    رفض
+
+                  }
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+        }
+
+      </div>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       COMPOSE
+       ====================================================== -->
+
+  @if (composeOpen) {
+
+    <section
+      class="compose-panel"
+    >
+
+      <header>
+
+        <div>
+
+          <h2>
+            إنشاء إشعار
+          </h2>
+
+          <p>
+            تظهر لك فقط الجهات المسموح لك بالإرسال إليها.
+          </p>
+
+        </div>
+
+      </header>
+
+
+      @if (!isSystemAdmin) {
+
+        <label
+          class="field"
+        >
+
+          <span>
+            مساحة العمل
+          </span>
+
+
+          <select
+            [(ngModel)]="
+              composeWorkspaceId
+            "
+            (ngModelChange)="
+              composeWorkspaceChanged()
+            "
+          >
+
+            <option
+              [ngValue]="0"
+            >
+              اختر مساحة العمل
+            </option>
+
+
+            @for (
+              workspace
+              of workspaces;
+              track workspace.id
+            ) {
+
+              <option
+                [ngValue]="
+                  workspace.id
+                "
+              >
+                {{ workspace.name }}
+              </option>
+
+            }
+
+          </select>
+
+        </label>
+
+      }
+
+
+      @if (
+        isSystemAdmin &&
+        workspaces.length > 0
+      ) {
+
+        <label
+          class="field"
+        >
+
+          <span>
+            ربط الإشعار بمساحة عمل
+            (اختياري)
+          </span>
+
+
+          <select
+            [(ngModel)]="
+              composeWorkspaceId
+            "
+            (ngModelChange)="
+              composeWorkspaceChanged()
+            "
+          >
+
+            <option
+              [ngValue]="0"
+            >
+              إشعار عام
+            </option>
+
+
+            @for (
+              workspace
+              of workspaces;
+              track workspace.id
+            ) {
+
+              <option
+                [ngValue]="
+                  workspace.id
+                "
+              >
+                {{ workspace.name }}
+              </option>
+
+            }
+
+          </select>
+
+        </label>
+
+      }
+
+
+      <div
+        class="compose-grid"
+      >
+
+        <label
+          class="field"
+        >
+
+          <span>
+            العنوان
+          </span>
+
+          <input
+            type="text"
+            maxlength="200"
+            [(ngModel)]="
+              composeTitle
+            "
+            placeholder="عنوان الإشعار"
+          >
+
+        </label>
+
+
+        <label
+          class="field full"
+        >
+
+          <span>
+            الرسالة
+          </span>
+
+          <textarea
+            rows="4"
+            maxlength="1000"
+            [(ngModel)]="
+              composeMessage
+            "
+            placeholder="اكتب نص الإشعار..."
+          ></textarea>
+
+        </label>
+
+      </div>
+
+
+      <div
+        class="recipient-panel"
+      >
+
+        <header>
+
+          <div>
+
+            <strong>
+              المستلمون
+            </strong>
+
+            <span>
+              {{
+                selectedRecipientIds.size
+              }}
+              محدد
+            </span>
+
+          </div>
+
+
+          <input
+            type="search"
+            [(ngModel)]="
+              recipientSearch
+            "
+            placeholder="بحث بالاسم أو البريد..."
+          >
+
+        </header>
+
+
+        @if (recipientsLoading) {
+
+          <div
+            class="empty-state"
+          >
+            جارٍ تحميل المستلمين...
+          </div>
+
+        } @else if (
+          filteredRecipients.length ===
+            0
+        ) {
+
+          <div
+            class="empty-state"
+          >
+            لا يوجد مستخدمون مسموح لك بالإرسال إليهم ضمن هذا السياق.
+          </div>
+
+        } @else {
+
+          <div
+            class="recipient-list"
+          >
+
+            @for (
+              recipient
+              of filteredRecipients;
+              track recipient.userId
+            ) {
+
+              <button
+                type="button"
+                class="recipient"
+                [class.selected]="
+                  isRecipientSelected(
+                    recipient.userId
+                  )
+                "
+                (click)="
+                  toggleRecipient(
+                    recipient.userId
+                  )
+                "
+              >
+
+                <span
+                  class="recipient-avatar"
+                >
+                  {{
+                    recipient.fullName
+                      .charAt(0)
+                  }}
+                </span>
+
+
+                <span
+                  class="recipient-copy"
+                >
+
+                  <strong>
+                    {{
+                      recipient.fullName
+                    }}
+                  </strong>
+
+
+                  <small>
+                    {{ recipient.email }}
+
+                    @if (
+                      recipient.roleName
+                    ) {
+
+                      •
+                      {{ recipient.roleName }}
+
+                    }
+
+                  </small>
+
+                </span>
+
+
+                <span
+                  class="check"
+                >
+                  {{
+                    isRecipientSelected(
+                      recipient.userId
+                    )
+                      ? '✓'
+                      : ''
+                  }}
+                </span>
+
+              </button>
+
+            }
+
+          </div>
+
+        }
+
+      </div>
+
+
+      <footer
+        class="compose-actions"
+      >
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="
+            toggleCompose()
+          "
+        >
+          إلغاء
+        </button>
+
+
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="
+            sending
+          "
+          (click)="
+            sendNotification()
+          "
+        >
+          {{
+            sending
+              ? 'جارٍ الإرسال...'
+              : 'إرسال الإشعار'
+          }}
+        </button>
+
+      </footer>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       FILTERS
+       ====================================================== -->
+
+  <section
+    class="filters"
+  >
+
+    <label>
+
+      <span>
+        الحالة
+      </span>
+
+      <select
+        [(ngModel)]="
+          readFilter
+        "
+      >
+
+        <option
+          value="all"
+        >
+          الكل
+        </option>
+
+        <option
+          value="unread"
+        >
+          غير مقروء
+        </option>
+
+        <option
+          value="read"
+        >
+          مقروء
+        </option>
+
+      </select>
+
+    </label>
+
+
+    <label>
+
+      <span>
+        مساحة العمل
+      </span>
+
+      <select
+        [(ngModel)]="
+          filterWorkspaceId
+        "
+      >
+
+        <option
+          [ngValue]="0"
+        >
+          جميع المساحات
+        </option>
+
+
+        @for (
+          workspace
+          of workspaces;
+          track workspace.id
+        ) {
+
+          <option
+            [ngValue]="
+              workspace.id
+            "
+          >
+            {{ workspace.name }}
+          </option>
+
+        }
+
+      </select>
+
+    </label>
+
+
+    <label>
+
+      <span>
+        المرسل
+      </span>
+
+      <input
+        type="number"
+        min="1"
+        [(ngModel)]="
+          filterActorUserId
+        "
+        placeholder="User ID"
+      >
+
+    </label>
+
+
+    <label>
+
+      <span>
+        المصدر
+      </span>
+
+      <input
+        type="text"
+        [(ngModel)]="
+          filterSource
+        "
+        placeholder="task / workspace / manual..."
+      >
+
+    </label>
+
+
+    <label>
+
+      <span>
+        من تاريخ
+      </span>
+
+      <input
+        type="date"
+        [(ngModel)]="
+          filterFrom
+        "
+      >
+
+    </label>
+
+
+    <label>
+
+      <span>
+        إلى تاريخ
+      </span>
+
+      <input
+        type="date"
+        [(ngModel)]="
+          filterTo
+        "
+      >
+
+    </label>
+
+
+    <div
+      class="filter-actions"
+    >
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="
+          applyFilters()
+        "
+      >
+        تطبيق
+      </button>
+
+
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="
+          resetFilters()
+        "
+      >
+        إعادة ضبط
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- ======================================================
+       LIST
+       ====================================================== -->
+
+  <section
+    class="notifications-panel"
+  >
+
+    <header
+      class="panel-header"
+    >
+
+      <div>
+
+        <h2>
+          سجل الإشعارات
+        </h2>
+
+        <span>
+          {{ totalCount }}
+          إشعار
+        </span>
+
+      </div>
+
+
+      <strong
+        class="unread-summary"
+      >
+        {{ unreadCount }}
+        غير مقروء
+      </strong>
+
+    </header>
+
+
+    @if (loading) {
+
+      <div
+        class="empty-state"
+      >
+        جارٍ تحميل الإشعارات...
+      </div>
+
+    } @else if (
+      notifications.length ===
+        0
+    ) {
+
+      <div
+        class="empty-state"
+      >
+        لا توجد إشعارات مطابقة للفلاتر الحالية.
+      </div>
+
+    } @else {
+
+      <div
+        class="notification-list"
+      >
+
+        @for (
+          notification
+          of notifications;
+          track notification.id
+        ) {
+
+          <article
+            class="notification-card"
+            [class.unread]="
+              !notification.isRead
+            "
+          >
+
+            <div
+              class="notification-status"
+            ></div>
+
+
+            <div
+              class="notification-content"
+            >
+
+              <header>
+
+                <div>
+
+                  <h3>
+                    {{
+                      notification.title
+                    }}
+                  </h3>
+
+                  <span
+                    class="source-badge"
+                  >
+                    {{
+                      sourceLabel(
+                        notification.type
+                      )
+                    }}
+                  </span>
+
+                </div>
+
+
+                <time>
+                  {{
+                    formatDate(
+                      notification.createdAt
+                    )
+                  }}
+                </time>
+
+              </header>
+
+
+              <p>
+                {{ notification.message }}
+              </p>
+
+
+              <footer>
+
+                <div
+                  class="notification-meta"
+                >
+
+                  <span>
+                    المرسل:
+                    <strong>
+                      {{
+                        notification.actorUserFullName
+                        ||
+                        'النظام'
+                      }}
+                    </strong>
+                  </span>
+
+
+                  <span>
+                    النوع:
+                    <strong>
+                      {{ notification.type }}
+                    </strong>
+                  </span>
+
+                </div>
+
+
+                @if (
+                  !notification.isRead
+                ) {
+
+                  <button
+                    type="button"
+                    (click)="
+                      markAsRead(
+                        notification
+                      )
+                    "
+                  >
+                    تعليم كمقروء
+                  </button>
+
+                } @else {
+
+                  <span
+                    class="read-label"
+                  >
+                    مقروء
+                  </span>
+
+                }
+
+              </footer>
+
+            </div>
+
+          </article>
+
+        }
+
+      </div>
+
+    }
+
+
+    <footer
+      class="pagination"
+    >
+
+      <button
+        type="button"
+        [disabled]="
+          page <= 1
+        "
+        (click)="
+          previousPage()
+        "
+      >
+        السابق
+      </button>
+
+
+      <span>
+
+        الصفحة
+        {{ page }}
+
+        من
+
+        {{
+          totalPages > 0
+            ? totalPages
+            : 1
+        }}
+
+      </span>
+
+
+      <button
+        type="button"
+        [disabled]="
+          totalPages <= 0 ||
+          page >= totalPages
+        "
+        (click)="
+          nextPage()
+        "
+      >
+        التالي
+      </button>
+
+    </footer>
+
+  </section>
+
+</section>

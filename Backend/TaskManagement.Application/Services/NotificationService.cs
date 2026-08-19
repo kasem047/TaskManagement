@@ -26,6 +26,10 @@ public sealed class NotificationService
             notificationRealtimeService;
     }
 
+    /* =========================================================
+       ALL NOTIFICATIONS - LEGACY
+       ========================================================= */
+
     public async Task<List<NotificationResponse>>
         GetMyNotificationsAsync()
     {
@@ -38,7 +42,8 @@ public sealed class NotificationService
                 .Include(notification =>
                     notification.ActorUser)
                 .Where(notification =>
-                    notification.UserId == currentUserId &&
+                    notification.UserId ==
+                        currentUserId &&
                     !notification.IsDeleted)
                 .OrderByDescending(notification =>
                     notification.CreatedAt)
@@ -51,17 +56,460 @@ public sealed class NotificationService
             .ToList();
     }
 
-    public async Task<int> GetUnreadCountAsync()
+    /* =========================================================
+       FULL PAGE - FILTERS + PAGINATION
+       ========================================================= */
+
+    public async Task<NotificationPagedResponse>
+        GetMyNotificationsAsync(
+            NotificationQueryRequest request)
+    {
+        var currentUserId =
+            _currentUserService.UserId;
+
+        if (request.From.HasValue &&
+            request.To.HasValue &&
+            request.From.Value >
+            request.To.Value)
+        {
+            throw new BadRequestException(
+                "From date cannot be later than To date.");
+        }
+
+        var query =
+            _dbContext.Notifications
+                .AsNoTracking()
+                .Include(notification =>
+                    notification.ActorUser)
+                .Where(notification =>
+                    notification.UserId ==
+                        currentUserId &&
+                    !notification.IsDeleted);
+
+        if (request.IsRead.HasValue)
+        {
+            query =
+                query.Where(notification =>
+                    notification.IsRead ==
+                        request.IsRead.Value);
+        }
+
+        if (request.ActorUserId.HasValue)
+        {
+            query =
+                query.Where(notification =>
+                    notification.ActorUserId ==
+                        request.ActorUserId.Value);
+        }
+
+        if (request.WorkspaceId.HasValue)
+        {
+            query =
+                query.Where(notification =>
+                    notification.WorkspaceId ==
+                        request.WorkspaceId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Source))
+        {
+            var source =
+                request.Source.Trim();
+
+            query =
+                query.Where(notification =>
+                    notification.Type.Contains(
+                        source));
+        }
+
+        if (request.From.HasValue)
+        {
+            query =
+                query.Where(notification =>
+                    notification.CreatedAt >=
+                        request.From.Value);
+        }
+
+        if (request.To.HasValue)
+        {
+            query =
+                query.Where(notification =>
+                    notification.CreatedAt <=
+                        request.To.Value);
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var totalPages =
+            totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(
+                    totalCount /
+                    (double)request.PageSize);
+
+        var notifications =
+            await query
+                .OrderByDescending(notification =>
+                    notification.CreatedAt)
+                .ThenByDescending(notification =>
+                    notification.Id)
+                .Skip(
+                    (request.Page - 1) *
+                    request.PageSize)
+                .Take(
+                    request.PageSize)
+                .ToListAsync();
+
+        return new NotificationPagedResponse
+        {
+            Items =
+                notifications
+                    .Select(MapToResponse)
+                    .ToList(),
+
+            Page =
+                request.Page,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalPages
+        };
+    }
+
+    /* =========================================================
+       QUICK BELL - UNREAD ONLY
+       ========================================================= */
+
+    public async Task<List<NotificationResponse>>
+        GetMyUnreadNotificationsAsync(
+            int take = 8)
+    {
+        var currentUserId =
+            _currentUserService.UserId;
+
+        if (take < 1)
+        {
+            take = 1;
+        }
+
+        if (take > 20)
+        {
+            take = 20;
+        }
+
+        var notifications =
+            await _dbContext.Notifications
+                .AsNoTracking()
+                .Include(notification =>
+                    notification.ActorUser)
+                .Where(notification =>
+                    notification.UserId ==
+                        currentUserId &&
+                    !notification.IsRead &&
+                    !notification.IsDeleted)
+                .OrderByDescending(notification =>
+                    notification.CreatedAt)
+                .ThenByDescending(notification =>
+                    notification.Id)
+                .Take(take)
+                .ToListAsync();
+
+        return notifications
+            .Select(MapToResponse)
+            .ToList();
+    }
+
+    /* =========================================================
+       UNREAD COUNT
+       ========================================================= */
+
+    public async Task<int>
+        GetUnreadCountAsync()
     {
         var currentUserId =
             _currentUserService.UserId;
 
         return await _dbContext.Notifications
             .CountAsync(notification =>
-                notification.UserId == currentUserId &&
+                notification.UserId ==
+                    currentUserId &&
                 !notification.IsRead &&
                 !notification.IsDeleted);
     }
+
+    /* =========================================================
+       ALLOWED RECIPIENTS
+       ========================================================= */
+
+    public async Task<List<NotificationRecipientResponse>>
+        GetAllowedRecipientsAsync(
+            int? workspaceId)
+    {
+        var senderUserId =
+            _currentUserService.UserId;
+
+        var sender =
+            await _dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(user =>
+                    user.Id ==
+                        senderUserId &&
+                    user.IsActive &&
+                    !user.IsDeleted);
+
+        if (sender is null)
+        {
+            throw new UnauthorizedException(
+                "Sender account is not available.");
+        }
+
+        /*
+         * SystemAdmin:
+         * sees every active normal user.
+         *
+         * WorkspaceId is not required and does not restrict
+         * SystemAdmin because the global administrator may
+         * send to anyone.
+         */
+        if (sender.IsSystemAdmin)
+        {
+            return await _dbContext.Users
+                .AsNoTracking()
+                .Where(user =>
+                    user.Id != senderUserId &&
+                    user.IsActive &&
+                    !user.IsDeleted &&
+                    !user.IsSystemAdmin)
+                .OrderBy(user =>
+                    user.FullName)
+                .Select(user =>
+                    new NotificationRecipientResponse
+                    {
+                        UserId =
+                            user.Id,
+
+                        FullName =
+                            user.FullName,
+
+                        Email =
+                            user.Email ??
+                            string.Empty,
+
+                        WorkspaceId =
+                            null,
+
+                        WorkspaceName =
+                            null,
+
+                        RoleName =
+                            null,
+
+                        Relationship =
+                            "SystemAdmin"
+                    })
+                .ToListAsync();
+        }
+
+        if (!workspaceId.HasValue)
+        {
+            return new List<
+                NotificationRecipientResponse>();
+        }
+
+        var targetWorkspaceId =
+            workspaceId.Value;
+
+        var workspace =
+            await _dbContext.Workspaces
+                .AsNoTracking()
+                .FirstOrDefaultAsync(workspace =>
+                    workspace.Id ==
+                        targetWorkspaceId &&
+                    !workspace.IsDeleted);
+
+        if (workspace is null)
+        {
+            throw new NotFoundException(
+                "Workspace not found.");
+        }
+
+        var senderMembership =
+            await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .Include(member =>
+                    member.Role)
+                .FirstOrDefaultAsync(member =>
+                    member.WorkspaceId ==
+                        targetWorkspaceId &&
+                    member.UserId ==
+                        senderUserId &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted);
+
+        if (senderMembership is null)
+        {
+            throw new ForbiddenException(
+                "You do not have access to this workspace.");
+        }
+
+        /*
+         * WorkspaceOwner:
+         * everyone active below the owner in this workspace.
+         *
+         * Custom roles are allowed here because ownership is
+         * an actual relationship, not an inferred role rank.
+         */
+        if (senderMembership.Role.Name ==
+            SystemRoles.WorkspaceOwner)
+        {
+            return await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .Include(member =>
+                    member.User)
+                .Include(member =>
+                    member.Role)
+                .Where(member =>
+                    member.WorkspaceId ==
+                        targetWorkspaceId &&
+                    member.UserId !=
+                        senderUserId &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted &&
+                    !member.User.IsDeleted &&
+                    member.User.IsActive)
+                .OrderBy(member =>
+                    member.User.FullName)
+                .Select(member =>
+                    new NotificationRecipientResponse
+                    {
+                        UserId =
+                            member.UserId,
+
+                        FullName =
+                            member.User.FullName,
+
+                        Email =
+                            member.User.Email ??
+                            string.Empty,
+
+                        WorkspaceId =
+                            targetWorkspaceId,
+
+                        WorkspaceName =
+                            workspace.Name,
+
+                        RoleName =
+                            member.Role.Name,
+
+                        Relationship =
+                            "WorkspaceOwner"
+                    })
+                .ToListAsync();
+        }
+
+        /*
+         * ProjectManager:
+         * only users actually assigned to active tasks
+         * inside projects managed by this PM.
+         *
+         * We do NOT infer hierarchy from recipient role name.
+         */
+        if (senderMembership.Role.Name ==
+            SystemRoles.ProjectManager)
+        {
+            var recipientUserIds =
+                await _dbContext.TaskAssignees
+                    .AsNoTracking()
+                    .Where(assignment =>
+                        !assignment.IsDeleted &&
+                        assignment.UserId !=
+                            senderUserId &&
+                        !assignment.TaskItem.IsDeleted &&
+                        !assignment.TaskItem.Project.IsDeleted &&
+                        !assignment.TaskItem.Project.IsArchived &&
+                        assignment.TaskItem.Project.WorkspaceId ==
+                            targetWorkspaceId &&
+                        assignment.TaskItem.Project.ManagerUserId ==
+                            senderUserId)
+                    .Select(assignment =>
+                        assignment.UserId)
+                    .Distinct()
+                    .ToListAsync();
+
+            if (recipientUserIds.Count == 0)
+            {
+                return new List<
+                    NotificationRecipientResponse>();
+            }
+
+            return await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .Include(member =>
+                    member.User)
+                .Include(member =>
+                    member.Role)
+                .Where(member =>
+                    member.WorkspaceId ==
+                        targetWorkspaceId &&
+                    recipientUserIds.Contains(
+                        member.UserId) &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted &&
+                    !member.User.IsDeleted &&
+                    member.User.IsActive)
+                .OrderBy(member =>
+                    member.User.FullName)
+                .Select(member =>
+                    new NotificationRecipientResponse
+                    {
+                        UserId =
+                            member.UserId,
+
+                        FullName =
+                            member.User.FullName,
+
+                        Email =
+                            member.User.Email ??
+                            string.Empty,
+
+                        WorkspaceId =
+                            targetWorkspaceId,
+
+                        WorkspaceName =
+                            workspace.Name,
+
+                        RoleName =
+                            member.Role.Name,
+
+                        Relationship =
+                            "ProjectManager"
+                    })
+                .ToListAsync();
+        }
+
+        /*
+         * Member / Custom Role:
+         *
+         * No explicit subordinate relationship currently
+         * exists in the domain model, so returning users here
+         * would invent a hierarchy.
+         */
+        return new List<
+            NotificationRecipientResponse>();
+    }
+
+    /* =========================================================
+       MARK READ
+       ========================================================= */
 
     public async Task MarkAsReadAsync(
         int notificationId)
@@ -72,8 +520,10 @@ public sealed class NotificationService
         var notification =
             await _dbContext.Notifications
                 .FirstOrDefaultAsync(notification =>
-                    notification.Id == notificationId &&
-                    notification.UserId == currentUserId &&
+                    notification.Id ==
+                        notificationId &&
+                    notification.UserId ==
+                        currentUserId &&
                     !notification.IsDeleted);
 
         if (notification is null)
@@ -87,11 +537,17 @@ public sealed class NotificationService
             return;
         }
 
-        var now = DateTime.UtcNow;
+        var now =
+            DateTime.UtcNow;
 
-        notification.IsRead = true;
-        notification.ReadAt = now;
-        notification.UpdatedAt = now;
+        notification.IsRead =
+            true;
+
+        notification.ReadAt =
+            now;
+
+        notification.UpdatedAt =
+            now;
 
         await _dbContext.SaveChangesAsync();
     }
@@ -104,7 +560,8 @@ public sealed class NotificationService
         var notifications =
             await _dbContext.Notifications
                 .Where(notification =>
-                    notification.UserId == currentUserId &&
+                    notification.UserId ==
+                        currentUserId &&
                     !notification.IsRead &&
                     !notification.IsDeleted)
                 .ToListAsync();
@@ -114,17 +571,28 @@ public sealed class NotificationService
             return;
         }
 
-        var now = DateTime.UtcNow;
+        var now =
+            DateTime.UtcNow;
 
-        foreach (var notification in notifications)
+        foreach (var notification
+                 in notifications)
         {
-            notification.IsRead = true;
-            notification.ReadAt = now;
-            notification.UpdatedAt = now;
+            notification.IsRead =
+                true;
+
+            notification.ReadAt =
+                now;
+
+            notification.UpdatedAt =
+                now;
         }
 
         await _dbContext.SaveChangesAsync();
     }
+
+    /* =========================================================
+       MANUAL SEND
+       ========================================================= */
 
     public async Task SendManualAsync(
         ManualNotificationRequest request)
@@ -136,7 +604,8 @@ public sealed class NotificationService
             await _dbContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(user =>
-                    user.Id == senderUserId &&
+                    user.Id ==
+                        senderUserId &&
                     user.IsActive &&
                     !user.IsDeleted);
 
@@ -163,13 +632,26 @@ public sealed class NotificationService
         await EnsureRecipientsExistAsync(
             recipientUserIds);
 
+        /*
+         * SystemAdmin can send to anyone.
+         */
         if (sender.IsSystemAdmin)
         {
             if (request.WorkspaceId.HasValue)
             {
-                await EnsureWorkspaceRecipientsAsync(
-                    request.WorkspaceId.Value,
-                    recipientUserIds);
+                var workspaceExists =
+                    await _dbContext.Workspaces
+                        .AsNoTracking()
+                        .AnyAsync(workspace =>
+                            workspace.Id ==
+                                request.WorkspaceId.Value &&
+                            !workspace.IsDeleted);
+
+                if (!workspaceExists)
+                {
+                    throw new NotFoundException(
+                        "Workspace not found.");
+                }
             }
 
             await CreateManyAsync(
@@ -191,56 +673,26 @@ public sealed class NotificationService
         var workspaceId =
             request.WorkspaceId.Value;
 
-        var workspaceExists =
-            await _dbContext.Workspaces
-                .AsNoTracking()
-                .AnyAsync(workspace =>
-                    workspace.Id == workspaceId &&
-                    !workspace.IsDeleted);
+        var allowedRecipients =
+            await GetAllowedRecipientsAsync(
+                workspaceId);
 
-        if (!workspaceExists)
-        {
-            throw new NotFoundException(
-                "Workspace not found.");
-        }
+        var allowedRecipientIds =
+            allowedRecipients
+                .Select(recipient =>
+                    recipient.UserId)
+                .ToHashSet();
 
-        var senderMembership =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .Include(member =>
-                    member.Role)
-                .FirstOrDefaultAsync(member =>
-                    member.WorkspaceId == workspaceId &&
-                    member.UserId == senderUserId &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted);
+        var containsForbiddenRecipient =
+            recipientUserIds.Any(
+                recipientUserId =>
+                    !allowedRecipientIds.Contains(
+                        recipientUserId));
 
-        if (senderMembership is null)
+        if (containsForbiddenRecipient)
         {
             throw new ForbiddenException(
-                "You do not have access to this workspace.");
-        }
-
-        if (senderMembership.Role.Name ==
-            SystemRoles.WorkspaceOwner)
-        {
-            await EnsureOwnerRecipientsAsync(
-                workspaceId,
-                recipientUserIds);
-        }
-        else if (senderMembership.Role.Name ==
-                 SystemRoles.ProjectManager)
-        {
-            await EnsureProjectManagerRecipientsAsync(
-                workspaceId,
-                senderUserId,
-                recipientUserIds);
-        }
-        else
-        {
-            throw new ForbiddenException(
-                "Members cannot send administrative notifications.");
+                "One or more recipients are not below you in the current workspace hierarchy.");
         }
 
         await CreateManyAsync(
@@ -250,6 +702,10 @@ public sealed class NotificationService
             request.Message,
             "manual.notification");
     }
+
+    /* =========================================================
+       CREATE ACTOR NOTIFICATION
+       ========================================================= */
 
     public async Task CreateAsync(
         int userId,
@@ -261,7 +717,10 @@ public sealed class NotificationService
         int? entityId = null)
     {
         await CreateManyAsync(
-            new[] { userId },
+            new[]
+            {
+                userId
+            },
             workspaceId,
             title,
             message,
@@ -279,17 +738,19 @@ public sealed class NotificationService
         string? entityName = null,
         int? entityId = null)
     {
-        ArgumentNullException.ThrowIfNull(userIds);
+        ArgumentNullException.ThrowIfNull(
+            userIds);
 
         var actorUserId =
             _currentUserService.UserId;
 
-        var recipientUserIds = userIds
-            .Where(userId =>
-                userId > 0 &&
-                userId != actorUserId)
-            .Distinct()
-            .ToList();
+        var recipientUserIds =
+            userIds
+                .Where(userId =>
+                    userId > 0 &&
+                    userId != actorUserId)
+                .Distinct()
+                .ToList();
 
         if (recipientUserIds.Count == 0)
         {
@@ -300,7 +761,8 @@ public sealed class NotificationService
             await _dbContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(user =>
-                    user.Id == actorUserId &&
+                    user.Id ==
+                        actorUserId &&
                     user.IsActive &&
                     !user.IsDeleted);
 
@@ -314,8 +776,10 @@ public sealed class NotificationService
         {
             var workspaceExists =
                 await _dbContext.Workspaces
+                    .AsNoTracking()
                     .AnyAsync(workspace =>
-                        workspace.Id == workspaceId.Value &&
+                        workspace.Id ==
+                            workspaceId.Value &&
                         !workspace.IsDeleted);
 
             if (!workspaceExists)
@@ -329,7 +793,8 @@ public sealed class NotificationService
             await _dbContext.Users
                 .AsNoTracking()
                 .Where(user =>
-                    recipientUserIds.Contains(user.Id) &&
+                    recipientUserIds.Contains(
+                        user.Id) &&
                     user.IsActive &&
                     !user.IsDeleted)
                 .Select(user =>
@@ -357,7 +822,8 @@ public sealed class NotificationService
                 "Notification type");
 
         var normalizedEntityName =
-            string.IsNullOrWhiteSpace(entityName)
+            string.IsNullOrWhiteSpace(
+                entityName)
                 ? null
                 : entityName.Trim();
 
@@ -369,16 +835,35 @@ public sealed class NotificationService
                 .Select(userId =>
                     new Notification
                     {
-                        UserId = userId,
-                        ActorUserId = actorUserId,
-                        WorkspaceId = workspaceId,
-                        Title = normalizedTitle,
-                        Message = normalizedMessage,
-                        Type = normalizedType,
-                        EntityName = normalizedEntityName,
-                        EntityId = entityId,
-                        IsRead = false,
-                        CreatedAt = now
+                        UserId =
+                            userId,
+
+                        ActorUserId =
+                            actorUserId,
+
+                        WorkspaceId =
+                            workspaceId,
+
+                        Title =
+                            normalizedTitle,
+
+                        Message =
+                            normalizedMessage,
+
+                        Type =
+                            normalizedType,
+
+                        EntityName =
+                            normalizedEntityName,
+
+                        EntityId =
+                            entityId,
+
+                        IsRead =
+                            false,
+
+                        CreatedAt =
+                            now
                     })
                 .ToList();
 
@@ -387,30 +872,48 @@ public sealed class NotificationService
 
         await _dbContext.SaveChangesAsync();
 
-        foreach (var notification in notifications)
+        foreach (var notification
+                 in notifications)
         {
             var realtimeNotification =
                 new NotificationResponse
                 {
-                    Id = notification.Id,
-                    UserId = notification.UserId,
+                    Id =
+                        notification.Id,
+
+                    UserId =
+                        notification.UserId,
+
                     ActorUserId =
                         notification.ActorUserId,
+
                     ActorUserFullName =
                         actorUser.FullName,
+
                     WorkspaceId =
                         notification.WorkspaceId,
-                    Title = notification.Title,
-                    Message = notification.Message,
-                    Type = notification.Type,
+
+                    Title =
+                        notification.Title,
+
+                    Message =
+                        notification.Message,
+
+                    Type =
+                        notification.Type,
+
                     EntityName =
                         notification.EntityName,
+
                     EntityId =
                         notification.EntityId,
+
                     IsRead =
                         notification.IsRead,
+
                     ReadAt =
                         notification.ReadAt,
+
                     CreatedAt =
                         notification.CreatedAt
                 };
@@ -422,6 +925,10 @@ public sealed class NotificationService
         }
     }
 
+    /* =========================================================
+       SYSTEM NOTIFICATION
+       ========================================================= */
+
     public async Task CreateSystemManyAsync(
         IEnumerable<int> userIds,
         int? workspaceId,
@@ -431,7 +938,8 @@ public sealed class NotificationService
         string? entityName = null,
         int? entityId = null)
     {
-        ArgumentNullException.ThrowIfNull(userIds);
+        ArgumentNullException.ThrowIfNull(
+            userIds);
 
         var recipientUserIds =
             userIds
@@ -494,7 +1002,8 @@ public sealed class NotificationService
                 "Notification type");
 
         var normalizedEntityName =
-            string.IsNullOrWhiteSpace(entityName)
+            string.IsNullOrWhiteSpace(
+                entityName)
                 ? null
                 : entityName.Trim();
 
@@ -506,16 +1015,35 @@ public sealed class NotificationService
                 .Select(userId =>
                     new Notification
                     {
-                        UserId = userId,
-                        ActorUserId = null,
-                        WorkspaceId = workspaceId,
-                        Title = normalizedTitle,
-                        Message = normalizedMessage,
-                        Type = normalizedType,
-                        EntityName = normalizedEntityName,
-                        EntityId = entityId,
-                        IsRead = false,
-                        CreatedAt = now
+                        UserId =
+                            userId,
+
+                        ActorUserId =
+                            null,
+
+                        WorkspaceId =
+                            workspaceId,
+
+                        Title =
+                            normalizedTitle,
+
+                        Message =
+                            normalizedMessage,
+
+                        Type =
+                            normalizedType,
+
+                        EntityName =
+                            normalizedEntityName,
+
+                        EntityId =
+                            entityId,
+
+                        IsRead =
+                            false,
+
+                        CreatedAt =
+                            now
                     })
                 .ToList();
 
@@ -524,26 +1052,48 @@ public sealed class NotificationService
 
         await _dbContext.SaveChangesAsync();
 
-        foreach (var notification in notifications)
+        foreach (var notification
+                 in notifications)
         {
             var realtimeNotification =
                 new NotificationResponse
                 {
-                    Id = notification.Id,
-                    UserId = notification.UserId,
-                    ActorUserId = null,
-                    ActorUserFullName = "System",
+                    Id =
+                        notification.Id,
+
+                    UserId =
+                        notification.UserId,
+
+                    ActorUserId =
+                        null,
+
+                    ActorUserFullName =
+                        "System",
+
                     WorkspaceId =
                         notification.WorkspaceId,
-                    Title = notification.Title,
-                    Message = notification.Message,
-                    Type = notification.Type,
+
+                    Title =
+                        notification.Title,
+
+                    Message =
+                        notification.Message,
+
+                    Type =
+                        notification.Type,
+
                     EntityName =
                         notification.EntityName,
+
                     EntityId =
                         notification.EntityId,
-                    IsRead = false,
-                    ReadAt = null,
+
+                    IsRead =
+                        false,
+
+                    ReadAt =
+                        null,
+
                     CreatedAt =
                         notification.CreatedAt
                 };
@@ -555,14 +1105,20 @@ public sealed class NotificationService
         }
     }
 
+    /* =========================================================
+       RECIPIENT VALIDATION
+       ========================================================= */
+
     private async Task EnsureRecipientsExistAsync(
-        IReadOnlyCollection<int> recipientUserIds)
+        IReadOnlyCollection<int>
+            recipientUserIds)
     {
         var existingRecipientCount =
             await _dbContext.Users
                 .AsNoTracking()
                 .CountAsync(user =>
-                    recipientUserIds.Contains(user.Id) &&
+                    recipientUserIds.Contains(
+                        user.Id) &&
                     user.IsActive &&
                     !user.IsDeleted);
 
@@ -574,133 +1130,16 @@ public sealed class NotificationService
         }
     }
 
-    private async Task EnsureWorkspaceRecipientsAsync(
-        int workspaceId,
-        IReadOnlyCollection<int> recipientUserIds)
-    {
-        var workspaceExists =
-            await _dbContext.Workspaces
-                .AsNoTracking()
-                .AnyAsync(workspace =>
-                    workspace.Id == workspaceId &&
-                    !workspace.IsDeleted);
-
-        if (!workspaceExists)
-        {
-            throw new NotFoundException(
-                "Workspace not found.");
-        }
-
-        var workspaceRecipientCount =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .CountAsync(member =>
-                    member.WorkspaceId == workspaceId &&
-                    recipientUserIds.Contains(
-                        member.UserId) &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted);
-
-        if (workspaceRecipientCount !=
-            recipientUserIds.Count)
-        {
-            throw new ForbiddenException(
-                "One or more recipients are not active members of this workspace.");
-        }
-    }
-
-    private async Task EnsureOwnerRecipientsAsync(
-        int workspaceId,
-        IReadOnlyCollection<int> recipientUserIds)
-    {
-        var allowedRecipientCount =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .Include(member =>
-                    member.Role)
-                .CountAsync(member =>
-                    member.WorkspaceId == workspaceId &&
-                    recipientUserIds.Contains(
-                        member.UserId) &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted &&
-                    (
-                        member.Role.Name ==
-                            SystemRoles.ProjectManager ||
-                        member.Role.Name ==
-                            SystemRoles.Member
-                    ));
-
-        if (allowedRecipientCount !=
-            recipientUserIds.Count)
-        {
-            throw new ForbiddenException(
-                "Workspace owner can only notify ProjectManagers and Members in this workspace.");
-        }
-    }
-
-    private async Task EnsureProjectManagerRecipientsAsync(
-        int workspaceId,
-        int projectManagerUserId,
-        IReadOnlyCollection<int> recipientUserIds)
-    {
-        var allowedRecipientUserIds =
-            await _dbContext.TaskAssignees
-                .AsNoTracking()
-                .Where(assignment =>
-                    !assignment.IsDeleted &&
-                    recipientUserIds.Contains(
-                        assignment.UserId) &&
-                    !assignment.TaskItem.IsDeleted &&
-                    !assignment.TaskItem.Project.IsDeleted &&
-                    !assignment.TaskItem.Project.IsArchived &&
-                    assignment.TaskItem.Project.WorkspaceId ==
-                        workspaceId &&
-                    assignment.TaskItem.Project.ManagerUserId ==
-                        projectManagerUserId)
-                .Select(assignment =>
-                    assignment.UserId)
-                .Distinct()
-                .ToListAsync();
-
-        var memberRecipientUserIds =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .Include(member =>
-                    member.Role)
-                .Where(member =>
-                    member.WorkspaceId == workspaceId &&
-                    recipientUserIds.Contains(
-                        member.UserId) &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted &&
-                    member.Role.Name ==
-                        SystemRoles.Member)
-                .Select(member =>
-                    member.UserId)
-                .ToListAsync();
-
-        var allowedUserIds =
-            allowedRecipientUserIds
-                .Intersect(memberRecipientUserIds)
-                .ToHashSet();
-
-        if (allowedUserIds.Count !=
-            recipientUserIds.Count)
-        {
-            throw new ForbiddenException(
-                "ProjectManager can only notify Members assigned to tasks in projects they manage.");
-        }
-    }
+    /* =========================================================
+       NORMALIZATION
+       ========================================================= */
 
     private static string NormalizeRequiredText(
         string value,
         string fieldName)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(
+                value))
         {
             throw new BadRequestException(
                 $"{fieldName} cannot be empty.");
@@ -709,26 +1148,56 @@ public sealed class NotificationService
         return value.Trim();
     }
 
-    private static NotificationResponse MapToResponse(
-        Notification notification)
+    /* =========================================================
+       MAPPING
+       ========================================================= */
+
+    private static NotificationResponse
+        MapToResponse(
+            Notification notification)
     {
         return new NotificationResponse
         {
-            Id = notification.Id,
-            UserId = notification.UserId,
-            ActorUserId = notification.ActorUserId,
+            Id =
+                notification.Id,
+
+            UserId =
+                notification.UserId,
+
+            ActorUserId =
+                notification.ActorUserId,
+
             ActorUserFullName =
-                notification.ActorUser?.FullName ??
+                notification.ActorUser?
+                    .FullName ??
                 "System",
-            WorkspaceId = notification.WorkspaceId,
-            Title = notification.Title,
-            Message = notification.Message,
-            Type = notification.Type,
-            EntityName = notification.EntityName,
-            EntityId = notification.EntityId,
-            IsRead = notification.IsRead,
-            ReadAt = notification.ReadAt,
-            CreatedAt = notification.CreatedAt
+
+            WorkspaceId =
+                notification.WorkspaceId,
+
+            Title =
+                notification.Title,
+
+            Message =
+                notification.Message,
+
+            Type =
+                notification.Type,
+
+            EntityName =
+                notification.EntityName,
+
+            EntityId =
+                notification.EntityId,
+
+            IsRead =
+                notification.IsRead,
+
+            ReadAt =
+                notification.ReadAt,
+
+            CreatedAt =
+                notification.CreatedAt
         };
     }
 }

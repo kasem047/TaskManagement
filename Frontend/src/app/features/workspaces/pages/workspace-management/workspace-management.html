@@ -1,0 +1,591 @@
+<section
+  class="workspace-page"
+  dir="rtl"
+>
+
+  <header class="page-header">
+
+    <div>
+
+      <h1>
+        مساحات العمل
+      </h1>
+
+      <p>
+        إدارة المساحات التي تعمل ضمنها والوصول إلى مشاريعها.
+      </p>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="primary-button"
+      [disabled]="!canCreateWorkspace"
+      (click)="openCreate()"
+    >
+      <span>+</span>
+      مساحة عمل جديدة
+    </button>
+
+  </header>
+
+
+  @if (
+    !canCreateWorkspace &&
+    ownedWorkspace
+  ) {
+
+    <div class="owner-info">
+
+      أنت تملك حاليًا مساحة
+      <strong>
+        {{ ownedWorkspace.name }}
+      </strong>
+
+      ولا يمكن للمستخدم امتلاك أكثر من مساحة عمل واحدة.
+
+    </div>
+
+  }
+
+
+  @if (errorMessage) {
+
+    <div class="message error-message">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="message success-message">
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  @if (loading) {
+
+    <div class="state-box">
+
+      <span class="spinner"></span>
+
+      <strong>
+        جارٍ تحميل مساحات العمل...
+      </strong>
+
+    </div>
+
+  } @else if (
+    workspaces.length === 0
+  ) {
+
+    <div class="state-box">
+
+      <h2>
+        لا توجد مساحات عمل
+      </h2>
+
+      <p>
+        أنشئ مساحة العمل الأولى وابدأ بإضافة المشاريع والفريق.
+      </p>
+
+
+    </div>
+
+  } @else {
+
+    <div class="workspace-grid">
+
+      @for (
+        workspace
+        of workspaces;
+        track workspace.id
+      ) {
+
+        <article class="workspace-card">
+
+          <header>
+
+            <span class="workspace-avatar">
+              {{
+                workspace.name
+                  .charAt(0)
+                  .toUpperCase()
+              }}
+            </span>
+
+
+            <span
+              class="role-badge"
+              [class.owner]="isOwner(workspace)"
+            >
+              {{
+                roleLabel(
+                  workspace.currentUserRole
+                )
+              }}
+            </span>
+
+          </header>
+
+
+          <div class="workspace-content">
+
+            <h2>
+              {{ workspace.name }}
+            </h2>
+
+
+            <p>
+              {{
+                workspace.description
+                ||
+                'لا يوجد وصف لمساحة العمل.'
+              }}
+            </p>
+
+          </div>
+
+
+          <div class="workspace-meta">
+
+            <span>
+              أُنشئت في
+            </span>
+
+            <strong>
+              {{ formatDate(workspace.createdAt) }}
+            </strong>
+
+          </div>
+
+
+          <div class="workspace-actions">
+
+            <button
+              type="button"
+              class="open-button"
+              (click)="openProjects(workspace)"
+            >
+              فتح المشاريع
+            </button>
+
+
+            @if (isOwner(workspace)) {
+
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="openEdit(workspace)"
+              >
+                تعديل
+              </button>
+
+
+              <button
+                type="button"
+                class="danger-button"
+                (click)="openDelete(workspace)"
+              >
+                حذف
+              </button>
+
+            }
+
+          </div>
+
+        </article>
+
+      }
+
+    </div>
+
+  }
+
+
+  <!-- ====================================================
+       CREATE
+       ==================================================== -->
+
+  @if (createModalOpen) {
+
+    <button
+      type="button"
+      class="modal-backdrop"
+      aria-label="إغلاق"
+      (click)="closeCreate()"
+    ></button>
+
+
+    <section class="modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            إنشاء مساحة عمل
+          </h2>
+
+          <p>
+            ستصبح المالك الوحيد لهذه المساحة بعد إنشائها.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeCreate()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="workspaceForm"
+        (ngSubmit)="createWorkspace()"
+      >
+
+        <label class="field">
+
+          <span>
+            اسم مساحة العمل
+          </span>
+
+
+          <input
+            type="text"
+            formControlName="name"
+            maxlength="150"
+            placeholder="مثال: فريق تطوير النظام"
+          >
+
+
+          @if (
+            workspaceForm.controls.name.touched &&
+            workspaceForm.controls.name.hasError('required')
+          ) {
+
+            <small class="field-error">
+              اسم مساحة العمل مطلوب.
+            </small>
+
+          }
+
+
+          @if (
+            workspaceForm.controls.name.touched &&
+            workspaceForm.controls.name.hasError('minlength')
+          ) {
+
+            <small class="field-error">
+              يجب أن يتكون الاسم من حرفين على الأقل.
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="field">
+
+          <span>
+            الوصف
+          </span>
+
+
+          <textarea
+            formControlName="description"
+            maxlength="1000"
+            rows="5"
+            placeholder="وصف مختصر عن هدف مساحة العمل..."
+          ></textarea>
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeCreate()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="submitting"
+          >
+            {{
+              submitting
+                ? 'جارٍ الإنشاء...'
+                : 'إنشاء مساحة العمل'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ====================================================
+       EDIT
+       ==================================================== -->
+
+  @if (
+    editModalOpen &&
+    selectedWorkspace
+  ) {
+
+    <button
+      type="button"
+      class="modal-backdrop"
+      aria-label="إغلاق"
+      (click)="closeEdit()"
+    ></button>
+
+
+    <section class="modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            تعديل مساحة العمل
+          </h2>
+
+          <p>
+            حدّث الاسم أو الوصف الخاص بالمساحة.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeEdit()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="workspaceForm"
+        (ngSubmit)="updateWorkspace()"
+      >
+
+        <label class="field">
+
+          <span>
+            الاسم
+          </span>
+
+
+          <input
+            type="text"
+            formControlName="name"
+            maxlength="150"
+          >
+
+
+          @if (
+            workspaceForm.controls.name.touched &&
+            workspaceForm.controls.name.invalid
+          ) {
+
+            <small class="field-error">
+              أدخل اسمًا صحيحًا لمساحة العمل.
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="field">
+
+          <span>
+            الوصف
+          </span>
+
+
+          <textarea
+            formControlName="description"
+            maxlength="1000"
+            rows="5"
+          ></textarea>
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeEdit()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="submitting"
+          >
+            {{
+              submitting
+                ? 'جارٍ الحفظ...'
+                : 'حفظ التعديلات'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ====================================================
+       DELETE
+       ==================================================== -->
+
+  @if (
+    deleteModalOpen &&
+    selectedWorkspace
+  ) {
+
+    <button
+      type="button"
+      class="modal-backdrop"
+      aria-label="إغلاق"
+      (click)="closeDelete()"
+    ></button>
+
+
+    <section class="modal danger-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            حذف مساحة العمل
+          </h2>
+
+          <p>
+            هذه العملية ستلغي مساحة العمل وعضوياتها.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeDelete()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="delete-content">
+
+        <div class="danger-notice">
+
+          سيتم حذف مساحة:
+
+          <strong>
+            {{ selectedWorkspace.name }}
+          </strong>
+
+          ولن تعود متاحة لأعضاء الفريق.
+
+        </div>
+
+
+        <label class="field">
+
+          <span>
+            اكتب اسم مساحة العمل للتأكيد
+          </span>
+
+
+          <input
+            type="text"
+            [value]="deleteConfirmation"
+            (input)="
+              setDeleteConfirmation(
+                $any($event.target).value
+              )
+            "
+            [placeholder]="selectedWorkspace.name"
+            autocomplete="off"
+          >
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeDelete()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="button"
+            class="danger-button"
+            [disabled]="
+              deleting ||
+              !deleteConfirmationValid
+            "
+            (click)="deleteWorkspace()"
+          >
+            {{
+              deleting
+                ? 'جارٍ الحذف...'
+                : 'حذف مساحة العمل'
+            }}
+          </button>
+
+        </footer>
+
+      </div>
+
+    </section>
+
+  }
+
+</section>

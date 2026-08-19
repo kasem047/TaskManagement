@@ -4,11 +4,26 @@ namespace TaskManagement.Application.Interfaces;
 
 public interface INotificationService
 {
-    Task<List<NotificationResponse>> GetMyNotificationsAsync();
+    Task<List<NotificationResponse>>
+        GetMyNotificationsAsync();
 
-    Task<int> GetUnreadCountAsync();
+    Task<NotificationPagedResponse>
+        GetMyNotificationsAsync(
+            NotificationQueryRequest request);
 
-    Task MarkAsReadAsync(int notificationId);
+    Task<List<NotificationResponse>>
+        GetMyUnreadNotificationsAsync(
+            int take = 8);
+
+    Task<int>
+        GetUnreadCountAsync();
+
+    Task<List<NotificationRecipientResponse>>
+        GetAllowedRecipientsAsync(
+            int? workspaceId);
+
+    Task MarkAsReadAsync(
+        int notificationId);
 
     Task MarkAllAsReadAsync();
 

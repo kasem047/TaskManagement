@@ -1,0 +1,769 @@
+<section class="admin-users-page">
+
+  <header class="page-header">
+
+    <div>
+      <h1>
+        إدارة المستخدمين
+      </h1>
+
+      <p>
+        أنشئ الحسابات وتابع المستخدمين وتحكم بحالة الوصول إلى النظام.
+      </p>
+    </div>
+
+
+    <button
+      class="primary-button"
+      type="button"
+      (click)="openCreate()"
+    >
+      <span>+</span>
+      إنشاء مستخدم
+    </button>
+
+  </header>
+
+
+  @if (errorMessage && !createOpen) {
+
+    <div class="message error-message">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="message success-message">
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  <div class="stats-grid">
+
+    <article>
+      <span>
+        جميع المستخدمين
+      </span>
+
+      <strong>
+        {{ totalUsers }}
+      </strong>
+    </article>
+
+
+    <article>
+      <span>
+        الحسابات النشطة
+      </span>
+
+      <strong class="success">
+        {{ activeUsers }}
+      </strong>
+    </article>
+
+
+    <article>
+      <span>
+        الحسابات المعطلة
+      </span>
+
+      <strong class="danger">
+        {{ inactiveUsers }}
+      </strong>
+    </article>
+
+  </div>
+
+
+  <form
+    class="filters"
+    [formGroup]="filterForm"
+    (ngSubmit)="loadUsers()"
+  >
+
+    <div class="search-field">
+
+      <svg viewBox="0 0 24 24">
+        <circle
+          cx="11"
+          cy="11"
+          r="7"
+        />
+        <path d="m20 20-4-4" />
+      </svg>
+
+      <input
+        type="search"
+        formControlName="search"
+        placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+      >
+
+    </div>
+
+
+    <select formControlName="status">
+
+      <option value="all">
+        جميع الحالات
+      </option>
+
+      <option value="active">
+        نشط
+      </option>
+
+      <option value="inactive">
+        معطل
+      </option>
+
+    </select>
+
+
+    <button
+      class="filter-button"
+      type="submit"
+    >
+      بحث
+    </button>
+
+
+    <button
+      class="clear-button"
+      type="button"
+      (click)="clearFilters()"
+    >
+      مسح
+    </button>
+
+  </form>
+
+
+  <section class="users-panel">
+
+    <div class="panel-heading">
+
+      <div>
+        <h2>
+          الحسابات
+        </h2>
+
+        <p>
+          {{ users.length }}
+          مستخدم
+        </p>
+      </div>
+
+    </div>
+
+
+    @if (loading) {
+
+      <div class="loading-state">
+
+        <span class="spinner"></span>
+
+        <strong>
+          جارٍ تحميل المستخدمين...
+        </strong>
+
+      </div>
+
+    } @else if (
+      users.length === 0
+    ) {
+
+      <div class="empty-state">
+
+        <strong>
+          لا يوجد مستخدمون مطابقون
+        </strong>
+
+        <p>
+          جرّب تعديل البحث أو الفلترة.
+        </p>
+
+      </div>
+
+    } @else {
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>المستخدم</th>
+              <th>نوع الحساب</th>
+              <th>الحالة</th>
+              <th>آخر دخول</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+
+
+          <tbody>
+
+            @for (
+              user of users;
+              track user.id
+            ) {
+
+              <tr>
+
+                <td>
+
+                  <div class="user-cell">
+
+                    <span class="user-avatar">
+                      {{ initial(user) }}
+                    </span>
+
+
+                    <div>
+
+                      <strong>
+                        {{ user.fullName }}
+                      </strong>
+
+                      <span>
+                        {{ user.email }}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </td>
+
+
+                <td>
+
+                  <span
+                    class="type-badge"
+                    [class.admin]="user.isSystemAdmin"
+                  >
+                    {{ userTypeLabel(user) }}
+                  </span>
+
+                </td>
+
+
+                <td>
+
+                  <span
+                    class="status-badge"
+                    [class.active]="user.isActive"
+                    [class.inactive]="!user.isActive"
+                  >
+                    {{
+                      user.isActive
+                        ? 'نشط'
+                        : 'معطل'
+                    }}
+                  </span>
+
+                </td>
+
+
+                <td>
+                  {{ formatDate(user.lastLoginAt) }}
+                </td>
+
+
+                <td>
+
+                  <div class="actions">
+
+                    <button
+                      type="button"
+                      class="details-button"
+                      (click)="openUser(user)"
+                    >
+                      التفاصيل
+                    </button>
+
+
+                    @if (!user.isSystemAdmin) {
+
+                      <button
+                        type="button"
+                        class="status-button"
+                        [class.disable]="user.isActive"
+                        [class.enable]="!user.isActive"
+                        [disabled]="updatingUserId === user.id"
+                        (click)="toggleUserStatus(user)"
+                      >
+                        @if (
+                          updatingUserId === user.id
+                        ) {
+                          جارٍ الحفظ...
+                        } @else {
+                          {{
+                            user.isActive
+                              ? 'تعطيل'
+                              : 'تفعيل'
+                          }}
+                        }
+                      </button>
+
+                    }
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    }
+
+  </section>
+
+
+  @if (createOpen) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeCreate()"
+    ></button>
+
+
+    <section class="modal">
+
+      <header>
+
+        <div>
+          <h2>
+            إنشاء حساب جديد
+          </h2>
+
+          <p>
+            سيتمكن المستخدم من تسجيل الدخول مباشرة بالبيانات التي تحددها.
+          </p>
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeCreate()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="createForm"
+        (ngSubmit)="createUser()"
+        novalidate
+      >
+
+        @if (errorMessage) {
+
+          <div class="message error-message">
+            {{ errorMessage }}
+          </div>
+
+        }
+
+
+        <label class="field">
+
+          <span>
+            الاسم الكامل
+          </span>
+
+          <input
+            type="text"
+            formControlName="fullName"
+            placeholder="اسم المستخدم"
+            [class.invalid]="
+              createForm.controls.fullName.touched &&
+              createForm.controls.fullName.invalid
+            "
+          >
+
+
+          @if (
+            createForm.controls.fullName.touched &&
+            createForm.controls.fullName.invalid
+          ) {
+
+            <small class="field-error">
+
+              @if (
+                createForm.controls.fullName.hasError('required')
+              ) {
+                الاسم الكامل مطلوب.
+              } @else if (
+                createForm.controls.fullName.hasError('minlength')
+              ) {
+                الاسم الكامل يجب أن يتكون من حرفين على الأقل.
+              } @else if (
+                createForm.controls.fullName.hasError('maxlength')
+              ) {
+                الاسم الكامل لا يمكن أن يتجاوز 150 حرفًا.
+              }
+
+            </small>
+
+          }
+
+        </label>
+
+
+        <label class="field">
+
+          <span>
+            البريد الإلكتروني
+          </span>
+
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="name@example.com"
+            dir="ltr"
+            [class.invalid]="
+              createForm.controls.email.touched &&
+              createForm.controls.email.invalid
+            "
+          >
+
+
+          @if (
+            createForm.controls.email.touched &&
+            createForm.controls.email.invalid
+          ) {
+
+            <small class="field-error">
+
+              @if (
+                createForm.controls.email.hasError('required')
+              ) {
+                البريد الإلكتروني مطلوب.
+              } @else if (
+                createForm.controls.email.hasError('email')
+              ) {
+                أدخل بريدًا إلكترونيًا صحيحًا.
+              } @else if (
+                createForm.controls.email.hasError('maxlength')
+              ) {
+                البريد الإلكتروني لا يمكن أن يتجاوز 256 حرفًا.
+              }
+
+            </small>
+
+          }
+
+        </label>
+
+
+        <div class="two-columns">
+
+          <label class="field">
+
+            <span>
+              كلمة المرور
+            </span>
+
+            <input
+              type="password"
+              formControlName="password"
+              autocomplete="new-password"
+              placeholder="8 محارف على الأقل"
+              [class.invalid]="
+                createForm.controls.password.touched &&
+                createForm.controls.password.invalid
+              "
+            >
+
+
+            @if (
+              createForm.controls.password.touched &&
+              createForm.controls.password.invalid
+            ) {
+
+              <small class="field-error">
+
+                @if (
+                  createForm.controls.password.hasError('required')
+                ) {
+                  كلمة المرور مطلوبة.
+                } @else if (
+                  createForm.controls.password.hasError('minlength')
+                ) {
+                  كلمة المرور يجب أن تكون 8 محارف على الأقل.
+                } @else if (
+                  createForm.controls.password.hasError('maxlength')
+                ) {
+                  كلمة المرور لا يمكن أن تتجاوز 100 محرف.
+                } @else if (
+                  createForm.controls.password.hasError('pattern')
+                ) {
+                  يجب أن تحتوي كلمة المرور على حرف إنجليزي صغير ورقم واحد على الأقل.
+                }
+
+              </small>
+
+            }
+
+          </label>
+
+
+          <label class="field">
+
+            <span>
+              تأكيد كلمة المرور
+            </span>
+
+            <input
+              type="password"
+              formControlName="confirmPassword"
+              autocomplete="new-password"
+              placeholder="أعد إدخال كلمة المرور"
+              [class.invalid]="
+                createForm.controls.confirmPassword.touched &&
+                createForm.controls.confirmPassword.invalid
+              "
+            >
+
+
+            @if (
+              createForm.controls.confirmPassword.touched &&
+              createForm.controls.confirmPassword.invalid
+            ) {
+
+              <small class="field-error">
+
+                @if (
+                  createForm.controls.confirmPassword.hasError('required')
+                ) {
+                  تأكيد كلمة المرور مطلوب.
+                } @else if (
+                  createForm.controls.confirmPassword.hasError('passwordMismatch')
+                ) {
+                  كلمة المرور وتأكيدها غير متطابقين.
+                }
+
+              </small>
+
+            }
+
+          </label>
+
+        </div>
+
+
+        <small class="password-hint">
+          كلمة المرور يجب أن تكون 8 محارف على الأقل وتحتوي حرفًا إنجليزيًا صغيرًا ورقمًا.
+        </small>
+
+
+        <label class="active-control">
+
+          <input
+            type="checkbox"
+            formControlName="isActive"
+          >
+
+          <span>
+            تفعيل الحساب مباشرة بعد إنشائه
+          </span>
+
+        </label>
+
+
+        <footer>
+
+          <button
+            class="secondary-button"
+            type="button"
+            (click)="closeCreate()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            class="primary-button"
+            type="submit"
+            [disabled]="creating"
+          >
+            {{
+              creating
+                ? 'جارٍ إنشاء الحساب...'
+                : 'إنشاء الحساب'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  @if (selectedUser) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeUserDetails()"
+    ></button>
+
+
+    <section class="modal details-modal">
+
+      <header>
+
+        <div class="details-user">
+
+          <span class="large-avatar">
+            {{ initial(selectedUser) }}
+          </span>
+
+
+          <div>
+            <h2>
+              {{ selectedUser.fullName }}
+            </h2>
+
+            <p>
+              {{ selectedUser.email }}
+            </p>
+          </div>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeUserDetails()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="details-grid">
+
+        <article>
+          <span>
+            رقم المستخدم
+          </span>
+
+          <strong>
+            {{ selectedUser.id }}
+          </strong>
+        </article>
+
+
+        <article>
+          <span>
+            نوع الحساب
+          </span>
+
+          <strong>
+            {{ userTypeLabel(selectedUser) }}
+          </strong>
+        </article>
+
+
+        <article>
+          <span>
+            الحالة
+          </span>
+
+          <strong>
+            {{
+              selectedUser.isActive
+                ? 'نشط'
+                : 'معطل'
+            }}
+          </strong>
+        </article>
+
+
+        <article>
+          <span>
+            تاريخ إنشاء الحساب
+          </span>
+
+          <strong>
+            {{ formatDate(selectedUser.createdAt) }}
+          </strong>
+        </article>
+
+
+        <article>
+          <span>
+            آخر تسجيل دخول
+          </span>
+
+          <strong>
+            {{ formatDate(selectedUser.lastLoginAt) }}
+          </strong>
+        </article>
+
+
+        <article>
+          <span>
+            اسم المستخدم
+          </span>
+
+          <strong>
+            {{ selectedUser.userName }}
+          </strong>
+        </article>
+
+      </div>
+
+
+      @if (!selectedUser.isSystemAdmin) {
+
+        <footer class="details-footer">
+
+          <button
+            type="button"
+            class="status-button"
+            [class.disable]="selectedUser.isActive"
+            [class.enable]="!selectedUser.isActive"
+            [disabled]="updatingUserId === selectedUser.id"
+            (click)="toggleUserStatus(selectedUser)"
+          >
+            {{
+              selectedUser.isActive
+                ? 'تعطيل الحساب'
+                : 'تفعيل الحساب'
+            }}
+          </button>
+
+        </footer>
+
+      }
+
+    </section>
+
+  }
+
+</section>

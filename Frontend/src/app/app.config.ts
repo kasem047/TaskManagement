@@ -12,17 +12,44 @@ import {
   withInterceptors
 } from '@angular/common/http';
 
-import { routes } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth-interceptor';
+import {
+  routes
+} from './app.routes';
 
-export const appConfig: ApplicationConfig = {
+import {
+  authInterceptor
+} from './core/interceptors/auth-interceptor';
+
+import {
+  apiErrorInterceptor
+} from './core/interceptors/api-error-interceptor';
+
+
+export const appConfig:
+  ApplicationConfig = {
+
   providers: [
+
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+
+
+    provideRouter(
+      routes
+    ),
+
+
     provideHttpClient(
+
       withInterceptors([
-        authInterceptor
+
+        authInterceptor,
+
+        apiErrorInterceptor
+
       ])
+
     )
+
   ]
+
 };

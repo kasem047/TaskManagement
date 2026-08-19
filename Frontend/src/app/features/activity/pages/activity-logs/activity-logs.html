@@ -1,0 +1,1143 @@
+<div
+  class="activity-page"
+  dir="rtl"
+>
+
+  <!-- ======================================================
+       HEADER
+       ====================================================== -->
+
+  <header
+    class="page-header"
+  >
+
+    <div>
+
+      <h1>
+        {{
+          isSystemAdmin
+            ? 'سجل التدقيق العام'
+            : 'سجل النشاط'
+        }}
+      </h1>
+
+
+      <p>
+
+        @if (
+          isSystemAdmin
+        ) {
+
+          راقب جميع العمليات والتغييرات المسجلة على مستوى النظام.
+
+        } @else {
+
+          راقب العمليات والتعديلات التي تمت داخل مساحة العمل.
+
+        }
+
+      </p>
+
+    </div>
+
+
+    <button
+      class="refresh-button"
+      type="button"
+      [disabled]="
+        loadingLogs ||
+        (
+          !isSystemAdmin &&
+          selectedWorkspaceId <= 0
+        )
+      "
+      (click)="
+        loadActivity()
+      "
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M20 6v6h-6"
+        />
+        <path
+          d="M18.5 9a7 7 0 1 0 .5 7"
+        />
+      </svg>
+
+      تحديث
+
+    </button>
+
+  </header>
+
+
+  <!-- ======================================================
+       LOADING WORKSPACES
+       ====================================================== -->
+
+  @if (
+    loadingWorkspaces
+  ) {
+
+    <section
+      class="state-panel"
+    >
+
+      <span
+        class="loader"
+      ></span>
+
+      <strong>
+        جارٍ تحميل مساحات العمل...
+      </strong>
+
+    </section>
+
+  } @else if (
+    !isSystemAdmin &&
+    manageableWorkspaces.length === 0
+  ) {
+
+    <section
+      class="state-panel"
+    >
+
+      <div
+        class="state-icon"
+      >
+
+        <svg
+          viewBox="0 0 24 24"
+        >
+
+          <path
+            d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"
+          />
+
+          <path
+            d="M9 12h6"
+          />
+
+        </svg>
+
+      </div>
+
+      <strong>
+        لا توجد مساحة عمل يمكنك إدارة سجلها
+      </strong>
+
+      <p>
+        سجل النشاط متاح لمساحة العمل التي تملك صلاحية إدارتها.
+      </p>
+
+    </section>
+
+  } @else {
+
+    <!-- ====================================================
+         WORKSPACE BAR
+         ==================================================== -->
+
+    <section
+      class="workspace-bar"
+    >
+
+      <div
+        class="workspace-select"
+      >
+
+        <label>
+          مساحة العمل
+        </label>
+
+
+        <select
+          [value]="
+            selectedWorkspaceId
+          "
+          (change)="
+            selectWorkspace(
+              $any(
+                $event.target
+              ).value
+            )
+          "
+        >
+
+          @if (
+            isSystemAdmin
+          ) {
+
+            <option
+              [value]="0"
+            >
+              جميع مساحات العمل
+            </option>
+
+          }
+
+
+          @for (
+            workspace
+            of manageableWorkspaces;
+            track workspace.id
+          ) {
+
+            <option
+              [value]="
+                workspace.id
+              "
+            >
+              {{ workspace.name }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <div
+        class="workspace-current"
+      >
+
+        <span
+          class="workspace-icon"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="16"
+              rx="3"
+            />
+
+            <path
+              d="M8 4v16"
+            />
+
+          </svg>
+
+        </span>
+
+
+        <div>
+
+          <small>
+            {{
+              isSystemAdmin
+                ? 'نطاق التدقيق'
+                : 'السجل الحالي'
+            }}
+          </small>
+
+
+          <strong>
+
+            @if (
+              isSystemAdmin &&
+              selectedWorkspaceId === 0
+            ) {
+
+              النظام بالكامل
+
+            } @else {
+
+              {{
+                selectedWorkspace?.name
+              }}
+
+            }
+
+          </strong>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ====================================================
+         STATS
+         ==================================================== -->
+
+    <section
+      class="stats-grid"
+    >
+
+      <article>
+
+        <span
+          class="stat-icon primary"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <path
+              d="M3 12a9 9 0 1 0 3-6.7L3 8"
+            />
+
+            <path
+              d="M3 4v4h4"
+            />
+
+            <path
+              d="M12 7v5l3 2"
+            />
+
+          </svg>
+
+        </span>
+
+
+        <div>
+
+          <span>
+            إجمالي الأحداث
+          </span>
+
+          <strong>
+            {{ displayedTotalCount }}
+          </strong>
+
+        </div>
+
+      </article>
+
+
+      <article>
+
+        <span
+          class="stat-icon success"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M8 2v4M16 2v4"
+            />
+
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="16"
+              rx="3"
+            />
+
+            <path
+              d="M3 10h18"
+            />
+          </svg>
+
+        </span>
+
+
+        <div>
+
+          <span>
+            أحداث الصفحة الحالية اليوم
+          </span>
+
+          <strong>
+            {{ todayCount }}
+          </strong>
+
+        </div>
+
+      </article>
+
+
+      <article>
+
+        <span
+          class="stat-icon violet"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+            <circle
+              cx="9"
+              cy="7"
+              r="4"
+            />
+
+            <path
+              d="M3 21v-2a6 6 0 0 1 6-6"
+            />
+
+            <path
+              d="M16 3a4 4 0 0 1 0 8"
+            />
+          </svg>
+
+        </span>
+
+
+        <div>
+
+          <span>
+            مستخدمون في الصفحة
+          </span>
+
+          <strong>
+            {{ uniqueUsersCount }}
+          </strong>
+
+        </div>
+
+      </article>
+
+
+      <article>
+
+        <span
+          class="stat-icon warning"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="5"
+            />
+
+            <path
+              d="m8 12 3 3 5-6"
+            />
+
+          </svg>
+
+        </span>
+
+
+        <div>
+
+          <span>
+            أحداث المهام في الصفحة
+          </span>
+
+          <strong>
+            {{ taskEventsCount }}
+          </strong>
+
+        </div>
+
+      </article>
+
+    </section>
+
+
+    <!-- ====================================================
+         GLOBAL FILTERS
+         ==================================================== -->
+
+    @if (
+      isSystemAdmin
+    ) {
+
+      <section
+        class="global-filters-panel"
+      >
+
+        <div
+          class="search-box"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+            />
+
+            <path
+              d="m20 20-4-4"
+            />
+
+          </svg>
+
+
+          <input
+            type="search"
+            [(ngModel)]="
+              search
+            "
+            placeholder="بحث بالمستخدم أو الإجراء أو الوصف أو مساحة العمل..."
+          >
+
+        </div>
+
+
+        <input
+          class="filter-input"
+          type="number"
+          min="1"
+          [(ngModel)]="
+            globalUserId
+          "
+          placeholder="رقم المستخدم"
+        >
+
+
+        <input
+          class="filter-input"
+          type="text"
+          [(ngModel)]="
+            globalAction
+          "
+          placeholder="الإجراء مثل task.created"
+        >
+
+
+        <select
+          class="entity-select"
+          [(ngModel)]="
+            entityFilter
+          "
+        >
+
+          @for (
+            filter
+            of entityFilters;
+            track filter.value
+          ) {
+
+            <option
+              [value]="
+                filter.value
+              "
+            >
+              {{ filter.label }}
+            </option>
+
+          }
+
+        </select>
+
+
+        <label
+          class="date-filter"
+        >
+
+          <span>
+            من تاريخ
+          </span>
+
+          <input
+            type="date"
+            [(ngModel)]="
+              globalFrom
+            "
+          >
+
+        </label>
+
+
+        <label
+          class="date-filter"
+        >
+
+          <span>
+            إلى تاريخ
+          </span>
+
+          <input
+            type="date"
+            [(ngModel)]="
+              globalTo
+            "
+          >
+
+        </label>
+
+
+        <div
+          class="global-filter-actions"
+        >
+
+          <button
+            class="apply-button"
+            type="button"
+            (click)="
+              applyGlobalFilters()
+            "
+          >
+            تطبيق
+          </button>
+
+
+          <button
+            class="clear-button"
+            type="button"
+            (click)="
+              clearFilters()
+            "
+          >
+            إعادة ضبط
+          </button>
+
+        </div>
+
+      </section>
+
+    } @else {
+
+      <!-- ==================================================
+           NORMAL USER FILTERS
+           ================================================== -->
+
+      <section
+        class="filters-panel"
+      >
+
+        <div
+          class="search-box"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+            />
+
+            <path
+              d="m20 20-4-4"
+            />
+
+          </svg>
+
+
+          <input
+            type="search"
+            placeholder="ابحث بالمستخدم أو الإجراء أو الوصف..."
+            [value]="search"
+            (input)="
+              setSearch(
+                $any(
+                  $event.target
+                ).value
+              )
+            "
+          >
+
+        </div>
+
+
+        <select
+          class="entity-select"
+          [value]="
+            entityFilter
+          "
+          (change)="
+            setEntityFilter(
+              $any(
+                $event.target
+              ).value
+            )
+          "
+        >
+
+          @for (
+            filter
+            of entityFilters;
+            track filter.value
+          ) {
+
+            <option
+              [value]="
+                filter.value
+              "
+            >
+              {{ filter.label }}
+            </option>
+
+          }
+
+        </select>
+
+
+        <button
+          class="clear-button"
+          type="button"
+          (click)="
+            clearFilters()
+          "
+        >
+          مسح الفلاتر
+        </button>
+
+      </section>
+
+    }
+
+
+    <!-- ====================================================
+         ERROR
+         ==================================================== -->
+
+    @if (
+      errorMessage
+    ) {
+
+      <section
+        class="error-panel"
+      >
+
+        <span>
+          {{ errorMessage }}
+        </span>
+
+
+        <button
+          type="button"
+          (click)="
+            loadActivity()
+          "
+        >
+          إعادة المحاولة
+        </button>
+
+      </section>
+
+    }
+
+
+    <!-- ====================================================
+         LOADING
+         ==================================================== -->
+
+    @if (
+      loadingLogs
+    ) {
+
+      <section
+        class="state-panel activity-state"
+      >
+
+        <span
+          class="loader"
+        ></span>
+
+        <strong>
+          جارٍ تحميل سجل النشاط...
+        </strong>
+
+      </section>
+
+    } @else if (
+      !errorMessage &&
+      pagedLogs.length === 0
+    ) {
+
+      <section
+        class="state-panel activity-state"
+      >
+
+        <div
+          class="state-icon"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+          >
+
+            <path
+              d="M3 12a9 9 0 1 0 3-6.7L3 8"
+            />
+
+            <path
+              d="M3 4v4h4"
+            />
+
+            <path
+              d="M12 7v5l3 2"
+            />
+
+          </svg>
+
+        </div>
+
+        <strong>
+          لا توجد أحداث مطابقة
+        </strong>
+
+        <p>
+          جرّب تغيير البحث أو الفلاتر.
+        </p>
+
+      </section>
+
+    } @else if (
+      !errorMessage
+    ) {
+
+      <!-- ==================================================
+           ACTIVITY PANEL
+           ================================================== -->
+
+      <section
+        class="activity-panel"
+      >
+
+        <header
+          class="activity-panel-header"
+        >
+
+          <div>
+
+            <span>
+              {{
+                isSystemAdmin
+                  ? 'سجل التدقيق العام'
+                  : 'سجل الأحداث'
+              }}
+            </span>
+
+
+            <strong>
+
+              @if (
+                isSystemAdmin
+              ) {
+
+                {{ globalTotalCount }}
+                حدث
+
+              } @else {
+
+                {{ filteredLogs.length }}
+                حدث
+
+              }
+
+            </strong>
+
+          </div>
+
+
+          <span
+            class="audit-badge"
+          >
+
+            {{
+              isSystemAdmin
+                ? 'GLOBAL AUDIT'
+                : 'AUDIT TRAIL'
+            }}
+
+          </span>
+
+        </header>
+
+
+        <div
+          class="timeline"
+        >
+
+          @for (
+            log
+            of pagedLogs;
+            track log.id
+          ) {
+
+            <article
+              class="activity-event"
+              [class.tone-primary]="
+                activityTone(log) ===
+                  'primary'
+              "
+              [class.tone-success]="
+                activityTone(log) ===
+                  'success'
+              "
+              [class.tone-warning]="
+                activityTone(log) ===
+                  'warning'
+              "
+              [class.tone-danger]="
+                activityTone(log) ===
+                  'danger'
+              "
+              [class.tone-violet]="
+                activityTone(log) ===
+                  'violet'
+              "
+            >
+
+              <div
+                class="timeline-rail"
+              >
+
+                <span></span>
+
+              </div>
+
+
+              <div
+                class="event-card"
+              >
+
+                <header>
+
+                  <div
+                    class="actor"
+                  >
+
+                    <span
+                      class="avatar"
+                    >
+
+                      {{
+                        firstLetter(
+                          log.userFullName
+                        )
+                      }}
+
+                    </span>
+
+
+                    <div>
+
+                      <strong>
+                        {{ log.userFullName }}
+                      </strong>
+
+
+                      <small>
+
+                        @if (
+                          isSystemAdmin
+                        ) {
+
+                          User #{{ log.userId }}
+
+                          @if (
+                            log.workspaceName
+                          ) {
+
+                            • {{ log.workspaceName }}
+
+                          }
+
+                        } @else {
+
+                          نفّذ إجراءً في النظام
+
+                        }
+
+                      </small>
+
+                    </div>
+
+                  </div>
+
+
+                  <time>
+                    {{
+                      formatDateTime(
+                        log.createdAt
+                      )
+                    }}
+                  </time>
+
+                </header>
+
+
+                <div
+                  class="event-body"
+                >
+
+                  <div
+                    class="event-title-row"
+                  >
+
+                    <strong>
+                      {{
+                        activityTitle(
+                          log
+                        )
+                      }}
+                    </strong>
+
+
+                    <div
+                      class="event-badges"
+                    >
+
+                      @if (
+                        isSystemAdmin &&
+                        log.workspaceName
+                      ) {
+
+                        <span
+                          class="workspace-badge"
+                        >
+                          {{ log.workspaceName }}
+                        </span>
+
+                      }
+
+
+                      <span
+                        class="entity-badge"
+                      >
+
+                        {{
+                          entityLabel(
+                            log.entityName
+                          )
+                        }}
+
+                        #{{ log.entityId }}
+
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  <p>
+                    {{
+                      activityDescription(
+                        log
+                      )
+                    }}
+                  </p>
+
+
+                  <div
+                    class="raw-action"
+                  >
+                    {{ log.action }}
+                  </div>
+
+
+                  @if (
+                    log.targetUserFullName
+                  ) {
+
+                    <div
+                      class="target-user"
+                    >
+
+                      <span>
+                        المستخدم المعني
+                      </span>
+
+                      <strong>
+                        {{
+                          log.targetUserFullName
+                        }}
+                      </strong>
+
+                    </div>
+
+                  }
+
+                </div>
+
+              </div>
+
+            </article>
+
+          }
+
+        </div>
+
+
+        <!-- ==================================================
+             PAGINATION
+             ================================================== -->
+
+        @if (
+          pageCount > 1
+        ) {
+
+          <footer
+            class="pagination"
+          >
+
+            <button
+              type="button"
+              [disabled]="
+                currentPage <= 1 ||
+                loadingLogs
+              "
+              (click)="
+                previousPage()
+              "
+            >
+              السابق
+            </button>
+
+
+            <span>
+
+              الصفحة
+
+              <strong>
+                {{ currentPage }}
+              </strong>
+
+              من
+
+              <strong>
+                {{ pageCount }}
+              </strong>
+
+            </span>
+
+
+            <button
+              type="button"
+              [disabled]="
+                currentPage >=
+                  pageCount ||
+                loadingLogs
+              "
+              (click)="
+                nextPage()
+              "
+            >
+              التالي
+            </button>
+
+          </footer>
+
+        }
+
+      </section>
+
+    }
+
+  }
+
+</div>

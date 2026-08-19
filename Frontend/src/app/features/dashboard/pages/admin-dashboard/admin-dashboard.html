@@ -1,0 +1,743 @@
+<div class="admin-page">
+
+  <header class="page-header">
+
+    <div>
+
+      <span class="eyebrow">
+        إدارة النظام
+      </span>
+
+      <h1>
+        لوحة تحكم المسؤول
+      </h1>
+
+      <p>
+        نظرة شاملة على المستخدمين ومساحات العمل والمشاريع والمهام.
+      </p>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="refresh-button"
+      [disabled]="loading"
+      (click)="loadDashboard()"
+    >
+
+      <svg viewBox="0 0 24 24">
+
+        <path
+          d="M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18.8 6L20 11M4 13l1.2 5A7 7 0 0 0 17.9 16"
+        />
+
+      </svg>
+
+      تحديث
+
+    </button>
+
+  </header>
+
+
+  @if (loading) {
+
+    <section class="state-panel">
+
+      <span class="loader"></span>
+
+      <p>
+        جارٍ تحميل بيانات النظام...
+      </p>
+
+    </section>
+
+  } @else if (errorMessage) {
+
+    <section class="state-panel error-state">
+
+      <strong>
+        تعذر تحميل لوحة الإدارة
+      </strong>
+
+      <p>
+        {{ errorMessage }}
+      </p>
+
+      <button
+        type="button"
+        (click)="loadDashboard()"
+      >
+        إعادة المحاولة
+      </button>
+
+    </section>
+
+  } @else if (dashboard) {
+
+    <section class="hero-grid">
+
+      <article class="hero-card primary-card">
+
+        <div class="hero-card-head">
+
+          <span>
+            المستخدمون
+          </span>
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+            />
+
+            <circle
+              cx="9"
+              cy="7"
+              r="4"
+            />
+
+            <path
+              d="M22 21v-2a4 4 0 0 0-3-3.87"
+            />
+
+            <path
+              d="M16 3.13a4 4 0 0 1 0 7.75"
+            />
+
+          </svg>
+
+        </div>
+
+
+        <strong class="hero-number">
+          {{ dashboard.totalUsers }}
+        </strong>
+
+
+        <div class="hero-meta">
+
+          <span>
+            {{ dashboard.activeUsers }}
+            نشط
+          </span>
+
+          <span>
+            {{ dashboard.inactiveUsers }}
+            غير نشط
+          </span>
+
+        </div>
+
+
+        <div class="progress">
+
+          <span
+            [style.width.%]="activeUsersRate"
+          ></span>
+
+        </div>
+
+      </article>
+
+
+      <article class="hero-card">
+
+        <div class="hero-card-head">
+
+          <span>
+            مساحات العمل
+          </span>
+
+          <svg viewBox="0 0 24 24">
+
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="16"
+              rx="3"
+            />
+
+            <path
+              d="M8 4v16"
+            />
+
+          </svg>
+
+        </div>
+
+
+        <strong class="hero-number">
+          {{ dashboard.totalWorkspaces }}
+        </strong>
+
+        <p>
+          إجمالي مساحات العمل المسجلة في النظام.
+        </p>
+
+      </article>
+
+
+      <article class="hero-card">
+
+        <div class="hero-card-head">
+
+          <span>
+            المشاريع
+          </span>
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="M3 7h7l2 2h9v10H3Z"
+            />
+
+            <path
+              d="M3 7V5h7l2 2"
+            />
+
+          </svg>
+
+        </div>
+
+
+        <strong class="hero-number">
+          {{ dashboard.totalProjects }}
+        </strong>
+
+
+        <div class="hero-meta">
+
+          <span>
+            {{ dashboard.activeProjects }}
+            نشط
+          </span>
+
+          <span>
+            {{ dashboard.archivedProjects }}
+            مؤرشف
+          </span>
+
+        </div>
+
+
+        <div class="progress">
+
+          <span
+            [style.width.%]="activeProjectsRate"
+          ></span>
+
+        </div>
+
+      </article>
+
+
+      <article class="hero-card">
+
+        <div class="hero-card-head">
+
+          <span>
+            المهام
+          </span>
+
+          <svg viewBox="0 0 24 24">
+
+            <rect
+              x="4"
+              y="4"
+              width="16"
+              height="16"
+              rx="3"
+            />
+
+            <path
+              d="m8 12 2.5 2.5L16 9"
+            />
+
+          </svg>
+
+        </div>
+
+
+        <strong class="hero-number">
+          {{ dashboard.totalTasks }}
+        </strong>
+
+
+        <div class="hero-meta">
+
+          <span>
+            الإنجاز
+            {{ completionRate }}%
+          </span>
+
+        </div>
+
+
+        <div class="progress">
+
+          <span
+            [style.width.%]="completionRate"
+          ></span>
+
+        </div>
+
+      </article>
+
+    </section>
+
+
+    <section class="content-grid">
+
+      <article class="panel task-panel">
+
+        <header class="panel-header">
+
+          <div>
+
+            <span>
+              حالة المهام
+            </span>
+
+            <h2>
+              توزيع سير العمل
+            </h2>
+
+          </div>
+
+
+          <strong>
+            {{ dashboard.totalTasks }}
+          </strong>
+
+        </header>
+
+
+        <div class="task-status-grid">
+
+          <article>
+
+            <span class="status-dot todo"></span>
+
+            <div>
+
+              <small>
+                للعمل
+              </small>
+
+              <strong>
+                {{ dashboard.todoTasks }}
+              </strong>
+
+            </div>
+
+          </article>
+
+
+          <article>
+
+            <span class="status-dot progress-status"></span>
+
+            <div>
+
+              <small>
+                قيد التنفيذ
+              </small>
+
+              <strong>
+                {{ dashboard.inProgressTasks }}
+              </strong>
+
+            </div>
+
+          </article>
+
+
+          <article>
+
+            <span class="status-dot partial"></span>
+
+            <div>
+
+              <small>
+                مكتملة جزئيًا
+              </small>
+
+              <strong>
+                {{ dashboard.inReviewTasks }}
+              </strong>
+
+            </div>
+
+          </article>
+
+
+          <article>
+
+            <span class="status-dot done"></span>
+
+            <div>
+
+              <small>
+                مكتملة
+              </small>
+
+              <strong>
+                {{ dashboard.doneTasks }}
+              </strong>
+
+            </div>
+
+          </article>
+
+
+          <article>
+
+            <span class="status-dot cancelled"></span>
+
+            <div>
+
+              <small>
+                ملغاة
+              </small>
+
+              <strong>
+                {{ dashboard.cancelledTasks }}
+              </strong>
+
+            </div>
+
+          </article>
+
+        </div>
+
+      </article>
+
+
+      <article class="panel actions-panel">
+
+        <header class="panel-header">
+
+          <div>
+
+            <span>
+              الإدارة
+            </span>
+
+            <h2>
+              إجراءات سريعة
+            </h2>
+
+          </div>
+
+        </header>
+
+
+        <div class="quick-actions">
+
+          <button
+            type="button"
+            (click)="openUsers()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <path
+                  d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                />
+
+                <circle
+                  cx="9"
+                  cy="7"
+                  r="4"
+                />
+
+                <path
+                  d="M19 8v6M16 11h6"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                إدارة المستخدمين
+              </strong>
+
+              <small>
+                الحسابات وحالات المستخدمين
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="openPasswordRecovery()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <rect
+                  x="4"
+                  y="10"
+                  width="16"
+                  height="10"
+                  rx="2"
+                />
+
+                <path
+                  d="M8 10V7a4 4 0 0 1 8 0v3"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                استعادة كلمات المرور
+              </strong>
+
+              <small>
+                مراجعة طلبات الاستعادة
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="openRolesPermissions()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="3"
+                />
+
+                <path
+                  d="M3 20v-2a5 5 0 0 1 10 0v2"
+                />
+
+                <path
+                  d="M16 7h5"
+                />
+
+                <path
+                  d="M18.5 4.5v5"
+                />
+
+                <path
+                  d="M15 14h6"
+                />
+
+                <path
+                  d="M15 18h6"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                الأدوار والصلاحيات
+              </strong>
+
+              <small>
+                إدارة الأدوار وصلاحيات النظام
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="openUserPermissions()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="3"
+                />
+
+                <path
+                  d="M3 20v-2a5 5 0 0 1 10 0v2"
+                />
+
+                <path
+                  d="m16 11 2 2 4-5"
+                />
+
+                <path
+                  d="M15 18h7"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                صلاحيات المستخدمين
+              </strong>
+
+              <small>
+                إدارة الاستثناءات الفردية للصلاحيات
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="openWorkspaces()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <rect
+                  x="3"
+                  y="4"
+                  width="18"
+                  height="16"
+                  rx="3"
+                />
+
+                <path
+                  d="M8 4v16"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                مساحات العمل
+              </strong>
+
+              <small>
+                الانتقال إلى مساحات العمل
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+
+          <button
+            type="button"
+            (click)="openDashboard()"
+          >
+
+            <span class="action-icon">
+
+              <svg viewBox="0 0 24 24">
+
+                <rect
+                  x="3"
+                  y="3"
+                  width="7"
+                  height="7"
+                />
+
+                <rect
+                  x="14"
+                  y="3"
+                  width="7"
+                  height="7"
+                />
+
+                <rect
+                  x="3"
+                  y="14"
+                  width="7"
+                  height="7"
+                />
+
+                <rect
+                  x="14"
+                  y="14"
+                  width="7"
+                  height="7"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <span>
+
+              <strong>
+                لوحة العمل
+              </strong>
+
+              <small>
+                العودة إلى لوحة المستخدم
+              </small>
+
+            </span>
+
+            <b>←</b>
+
+          </button>
+
+        </div>
+
+      </article>
+
+    </section>
+
+  }
+
+</div>

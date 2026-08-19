@@ -1,57 +1,202 @@
-<div class="app-shell">
+<div
+  class="app-shell"
+  dir="rtl"
+>
 
   <main class="app-content">
     <router-outlet />
   </main>
 
 
-  <!-- =========================
-       NOTIFICATION BUTTON
-       ========================= -->
+  <!-- ======================================================
+       TOP QUICK NOTIFICATION BELL
+       ====================================================== -->
 
-  <button
-    class="notification-launcher"
-    type="button"
-    [class.has-unread]="unreadCount > 0"
-    (click)="toggleNotificationCenter()"
-    aria-label="الإشعارات"
-    title="الإشعارات"
-  >
+  <div class="notification-anchor">
 
-    <svg viewBox="0 0 24 24">
-      <path
-        d="
-          M18 8
-          a6 6 0 0 0-12 0
-          c0 7-3 7-3 9
-          h18
-          c0-2-3-2-3-9
-        "
-      />
-      <path d="M10 21h4" />
-    </svg>
+    <button
+      class="notification-launcher"
+      type="button"
+      [class.has-unread]="unreadCount > 0"
+      (click)="toggleQuickNotifications()"
+      aria-label="الإشعارات"
+      title="الإشعارات"
+    >
+
+      <svg viewBox="0 0 24 24">
+        <path
+          d="
+            M18 8
+            a6 6 0 0 0-12 0
+            c0 7-3 7-3 9
+            h18
+            c0-2-3-2-3-9
+          "
+        />
+
+        <path d="M10 21h4" />
+      </svg>
 
 
-    @if (unreadCount > 0) {
+      @if (unreadCount > 0) {
 
-      <span class="notification-badge">
+        <span class="notification-badge">
+          {{
+            unreadCount > 99
+              ? '99+'
+              : unreadCount
+          }}
+        </span>
 
-        {{
-          unreadCount > 99
-            ? '99+'
-            : unreadCount
-        }}
+      }
 
-      </span>
+    </button>
+
+
+    @if (quickOpen) {
+
+      <section class="quick-notifications">
+
+        <header class="quick-header">
+
+          <div>
+            <h2>
+              الإشعارات
+            </h2>
+
+            <span>
+              {{ unreadCount }}
+              غير مقروء
+            </span>
+          </div>
+
+
+          <button
+            type="button"
+            class="quick-close"
+            (click)="closeQuickNotifications()"
+            aria-label="إغلاق"
+          >
+            ×
+          </button>
+
+        </header>
+
+
+        @if (quickError) {
+
+          <div class="quick-state error">
+            {{ quickError }}
+          </div>
+
+        } @else if (quickLoading) {
+
+          <div class="quick-state">
+            جارٍ تحميل الإشعارات...
+          </div>
+
+        } @else if (
+          quickNotifications.length === 0
+        ) {
+
+          <div class="quick-state">
+            لا توجد إشعارات غير مقروءة.
+          </div>
+
+        } @else {
+
+          <div class="quick-list">
+
+            @for (
+              notification
+              of quickNotifications;
+              track notification.id
+            ) {
+
+              <button
+                type="button"
+                class="
+                  quick-item
+                  notification-category-{{
+                    notificationCategory(
+                      notification
+                    )
+                  }}
+                "
+                (click)="
+                  openNotification(
+                    notification
+                  )
+                "
+              >
+
+                <span class="quick-dot"></span>
+
+
+                <span class="quick-content">
+
+                  <strong>
+                    {{
+                      notificationTitle(
+                        notification
+                      )
+                    }}
+                  </strong>
+
+
+                  <small>
+                    {{ notification.message }}
+                  </small>
+
+
+                  <span class="quick-meta">
+                    {{
+                      actorLabel(
+                        notification
+                      )
+                    }}
+
+                    •
+
+                    {{
+                      formatNotificationTime(
+                        notification.createdAt
+                      )
+                    }}
+                  </span>
+
+                </span>
+
+              </button>
+
+            }
+
+          </div>
+
+        }
+
+
+        <footer class="quick-footer">
+
+          <button
+            type="button"
+            (click)="openAllNotifications()"
+          >
+            عرض جميع الإشعارات
+          </button>
+
+        </footer>
+
+      </section>
 
     }
 
-  </button>
+  </div>
 
 
-  <!-- =========================
-       REALTIME TOAST
-       ========================= -->
+  <!-- ======================================================
+       REALTIME TOASTS
+       ====================================================== -->
 
   <div
     class="notification-toast-stack"
@@ -84,6 +229,7 @@
           <span class="toast-icon">
 
             <svg viewBox="0 0 24 24">
+
               <path
                 d="
                   M18 8
@@ -93,7 +239,9 @@
                   c0-2-3-2-3-9
                 "
               />
+
               <path d="M10 21h4" />
+
             </svg>
 
           </span>
@@ -109,9 +257,11 @@
               }}
             </strong>
 
+
             <small>
               {{ notification.message }}
             </small>
+
 
             <span class="toast-meta">
               {{
@@ -119,7 +269,9 @@
                   notification
                 )
               }}
+
               •
+
               {{
                 formatNotificationTime(
                   notification.createdAt
@@ -135,8 +287,12 @@
         <button
           class="toast-close"
           type="button"
-          (click)="dismissToast(notification.id)"
-          aria-label="إغلاق الإشعار"
+          (click)="
+            dismissToast(
+              notification.id
+            )
+          "
+          aria-label="إغلاق"
         >
           ×
         </button>
@@ -148,779 +304,9 @@
   </div>
 
 
-  <!-- =========================
-       NOTIFICATION CENTER
-       ========================= -->
-
-  @if (notificationCenterOpen) {
-
-    <button
-      class="notification-backdrop"
-      type="button"
-      aria-label="إغلاق مركز الإشعارات"
-      (click)="closeNotificationCenter()"
-    ></button>
-
-
-    <section
-      class="notification-center"
-      dir="rtl"
-    >
-
-      <header class="notification-center-header">
-
-        <div>
-
-          <span class="notification-eyebrow">
-            TaskManagement
-          </span>
-
-          <h2>
-            مركز الإشعارات
-          </h2>
-
-          <p>
-            تابع آخر الأحداث وأرسل إشعارات الفريق من مكان واحد.
-          </p>
-
-        </div>
-
-
-        <button
-          class="notification-close"
-          type="button"
-          (click)="closeNotificationCenter()"
-          aria-label="إغلاق"
-        >
-
-          <svg viewBox="0 0 24 24">
-            <path d="M6 6l12 12" />
-            <path d="M18 6 6 18" />
-          </svg>
-
-        </button>
-
-      </header>
-
-
-      <div
-        class="notification-tabs"
-        [class.single-tab]="!canComposeNotifications"
-      >
-
-        <button
-          type="button"
-          [class.active]="notificationTab === 'inbox'"
-          (click)="setNotificationTab('inbox')"
-        >
-
-          <svg viewBox="0 0 24 24">
-            <path
-              d="
-                M18 8
-                a6 6 0 0 0-12 0
-                c0 7-3 7-3 9
-                h18
-                c0-2-3-2-3-9
-              "
-            />
-            <path d="M10 21h4" />
-          </svg>
-
-          <span>
-            الإشعارات
-          </span>
-
-
-          @if (unreadCount > 0) {
-
-            <b>
-              {{ unreadCount }}
-            </b>
-
-          }
-
-        </button>
-
-
-        @if (canComposeNotifications) {
-
-          <button
-            type="button"
-            [class.active]="notificationTab === 'compose'"
-            (click)="setNotificationTab('compose')"
-          >
-
-            <svg viewBox="0 0 24 24">
-              <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
-              <path d="m13.5 6.5 4 4" />
-            </svg>
-
-            <span>
-              إنشاء إشعار
-            </span>
-
-          </button>
-
-        }
-
-      </div>
-
-
-      <!-- =====================
-           INBOX
-           ===================== -->
-
-      @if (notificationTab === 'inbox') {
-
-        <div class="notification-inbox">
-
-          <div class="notification-inbox-toolbar">
-
-            <div>
-
-              <strong>
-                آخر الإشعارات
-              </strong>
-
-              <span>
-                {{ unreadCount }}
-                غير مقروء
-              </span>
-
-            </div>
-
-
-            <div class="notification-toolbar-actions">
-
-              <button
-                type="button"
-                (click)="loadNotifications()"
-                [disabled]="notificationsLoading"
-                title="تحديث"
-              >
-
-                <svg viewBox="0 0 24 24">
-                  <path d="M20 6v6h-6" />
-                  <path d="M18.5 9a7 7 0 1 0 .5 7" />
-                </svg>
-
-              </button>
-
-
-              <button
-                class="mark-all-button"
-                type="button"
-                (click)="markAllNotificationsRead()"
-                [disabled]="
-                  unreadCount === 0 ||
-                  markingAllRead
-                "
-              >
-
-                {{
-                  markingAllRead
-                    ? 'جارٍ التحديث...'
-                    : 'تعليم الكل كمقروء'
-                }}
-
-              </button>
-
-            </div>
-
-          </div>
-
-
-          @if (notificationError) {
-
-            <div class="notification-error">
-              {{ notificationError }}
-            </div>
-
-          }
-
-
-          @if (notificationsLoading) {
-
-            <div class="notification-loading">
-
-              <span></span>
-
-              <p>
-                جارٍ تحميل الإشعارات...
-              </p>
-
-            </div>
-
-          } @else if (
-            notifications.length === 0
-          ) {
-
-            <div class="notification-empty">
-
-              <div class="notification-empty-icon">
-
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="
-                      M18 8
-                      a6 6 0 0 0-12 0
-                      c0 7-3 7-3 9
-                      h18
-                      c0-2-3-2-3-9
-                    "
-                  />
-                  <path d="M10 21h4" />
-                </svg>
-
-              </div>
-
-              <strong>
-                لا توجد إشعارات
-              </strong>
-
-              <p>
-                ستظهر أحداث المهام والتذكيرات والإشعارات الجديدة هنا.
-              </p>
-
-            </div>
-
-          } @else {
-
-            <div class="notification-list">
-
-              @for (
-                notification
-                of notifications;
-                track notification.id
-              ) {
-
-                <article
-                  class="
-                    notification-row
-                    notification-category-{{
-                      notificationCategory(
-                        notification
-                      )
-                    }}
-                  "
-                  [class.unread]="!notification.isRead"
-                >
-
-                  <div class="notification-row-side">
-
-                    <span class="notification-avatar">
-
-                      {{
-                        notificationInitial(
-                          notification
-                        )
-                      }}
-
-                    </span>
-
-
-                    @if (!notification.isRead) {
-
-                      <span
-                        class="notification-unread-dot"
-                        title="غير مقروء"
-                      ></span>
-
-                    }
-
-                  </div>
-
-
-                  <div class="notification-row-content">
-
-                    <div class="notification-row-heading">
-
-                      <strong>
-                        {{
-                          notificationTitle(
-                            notification
-                          )
-                        }}
-                      </strong>
-
-                      <time>
-                        {{
-                          formatNotificationTime(
-                            notification.createdAt
-                          )
-                        }}
-                      </time>
-
-                    </div>
-
-
-                    <p>
-                      {{ notification.message }}
-                    </p>
-
-
-                    <footer>
-
-                      <span>
-                        {{
-                          actorLabel(
-                            notification
-                          )
-                        }}
-                      </span>
-
-
-                      @if (
-                        notification.entityName &&
-                        notification.entityId
-                      ) {
-
-                        <span class="notification-entity">
-
-                          {{
-                            notification.entityName ===
-                              'TaskItem'
-                              ? 'مهمة'
-                              : notification.entityName
-                          }}
-
-                          #{{ notification.entityId }}
-
-                        </span>
-
-                      }
-
-
-                      @if (!notification.isRead) {
-
-                        <button
-                          type="button"
-                          (click)="markNotificationRead(notification)"
-                          [disabled]="
-                            markingNotificationId ===
-                            notification.id
-                          "
-                        >
-                          تعليم كمقروء
-                        </button>
-
-                      }
-
-                    </footer>
-
-                  </div>
-
-                </article>
-
-              }
-
-            </div>
-
-          }
-
-        </div>
-
-      }
-
-
-      <!-- =====================
-           COMPOSE
-           ===================== -->
-
-      @if (
-        notificationTab === 'compose' &&
-        canComposeNotifications
-      ) {
-
-        <div class="notification-compose">
-
-          <div class="compose-intro">
-
-            <div class="compose-intro-icon">
-
-              <svg viewBox="0 0 24 24">
-                <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
-                <path d="m13.5 6.5 4 4" />
-              </svg>
-
-            </div>
-
-
-            <div>
-
-              <strong>
-                إنشاء إشعار جديد
-              </strong>
-
-              <p>
-                اختر مساحة العمل والمستلمين ثم اكتب الإشعار.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          @if (composeError) {
-
-            <div class="notification-error">
-              {{ composeError }}
-            </div>
-
-          }
-
-
-          @if (composeSuccess) {
-
-            <div class="notification-success">
-              {{ composeSuccess }}
-            </div>
-
-          }
-
-
-          <label class="compose-field">
-
-            <span>
-              مساحة العمل
-            </span>
-
-            <select
-              [value]="selectedWorkspaceId"
-              (change)="
-                selectNotificationWorkspace(
-                  $any($event.target).value
-                )
-              "
-            >
-
-              <option value="0">
-                اختر مساحة العمل
-              </option>
-
-
-              @for (
-                workspace
-                of notificationComposeWorkspaces;
-                track workspace.id
-              ) {
-
-                <option
-                  [value]="workspace.id"
-                >
-
-                  {{ workspace.name }}
-                  —
-                  {{
-                    memberRoleLabel(
-                      workspace.currentUserRole
-                    )
-                  }}
-
-                </option>
-
-              }
-
-            </select>
-
-          </label>
-
-
-          @if (
-            selectedWorkspaceId > 0
-          ) {
-
-            <div class="permission-hint">
-
-              <svg viewBox="0 0 24 24">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="9"
-                />
-                <path d="M12 11v5" />
-                <path d="M12 8h.01" />
-              </svg>
-
-              <span>
-                {{ composeRecipientRuleText }}
-              </span>
-
-            </div>
-
-
-            <div class="recipient-section">
-
-              <div class="recipient-section-heading">
-
-                <div>
-
-                  <strong>
-                    المستلمون
-                  </strong>
-
-                  <span>
-                    {{
-                      selectedRecipientIds.size
-                    }}
-                    محدد
-                  </span>
-
-                </div>
-
-
-                <div>
-
-                  <button
-                    type="button"
-                    (click)="selectAllVisibleRecipients()"
-                  >
-                    تحديد الظاهر
-                  </button>
-
-                  <button
-                    type="button"
-                    (click)="clearRecipients()"
-                  >
-                    إلغاء التحديد
-                  </button>
-
-                </div>
-
-              </div>
-
-
-              <div class="recipient-search">
-
-                <svg viewBox="0 0 24 24">
-
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="7"
-                  />
-
-                  <path d="m20 20-4-4" />
-
-                </svg>
-
-
-                <input
-                  type="search"
-                  placeholder="ابحث بالاسم أو البريد أو الدور..."
-                  [value]="recipientSearch"
-                  (input)="
-                    setRecipientSearch(
-                      $any($event.target).value
-                    )
-                  "
-                >
-
-              </div>
-
-
-              @if (membersLoading) {
-
-                <div class="recipient-loading">
-                  جارٍ تحميل أعضاء مساحة العمل...
-                </div>
-
-              } @else if (
-                filteredNotificationMembers.length ===
-                0
-              ) {
-
-                <div class="recipient-empty">
-                  لا يوجد مستلمون مسموح لهم ضمن صلاحيتك.
-                </div>
-
-              } @else {
-
-                <div class="recipient-list">
-
-                  @for (
-                    member
-                    of filteredNotificationMembers;
-                    track member.userId
-                  ) {
-
-                    <button
-                      type="button"
-                      class="recipient-card"
-                      [class.selected]="
-                        isRecipientSelected(
-                          member.userId
-                        )
-                      "
-                      (click)="
-                        toggleNotificationRecipient(
-                          member.userId
-                        )
-                      "
-                    >
-
-                      <span class="recipient-avatar">
-
-                        {{
-                          member.fullName
-                            .charAt(0)
-                            .toUpperCase()
-                        }}
-
-                      </span>
-
-
-                      <span class="recipient-info">
-
-                        <strong>
-                          {{ member.fullName }}
-                        </strong>
-
-                        <small>
-                          {{ member.email }}
-                        </small>
-
-                      </span>
-
-
-                      <span class="recipient-role">
-
-                        {{
-                          memberRoleLabel(
-                            member.roleName
-                          )
-                        }}
-
-                      </span>
-
-
-                      <span class="recipient-check">
-
-                        @if (
-                          isRecipientSelected(
-                            member.userId
-                          )
-                        ) {
-
-                          <svg viewBox="0 0 24 24">
-                            <path d="m6 12 4 4 8-9" />
-                          </svg>
-
-                        }
-
-                      </span>
-
-                    </button>
-
-                  }
-
-                </div>
-
-              }
-
-            </div>
-
-          }
-
-
-          <label class="compose-field">
-
-            <span>
-              عنوان الإشعار
-            </span>
-
-            <input
-              type="text"
-              maxlength="200"
-              placeholder="مثال: تحديث مهم بخصوص المشروع"
-              [value]="composeTitle"
-              (input)="
-                setComposeTitle(
-                  $any($event.target).value
-                )
-              "
-            >
-
-          </label>
-
-
-          <label class="compose-field">
-
-            <span>
-              محتوى الإشعار
-            </span>
-
-            <textarea
-              rows="6"
-              maxlength="1000"
-              placeholder="اكتب الرسالة التي تريد إرسالها للفريق..."
-              [value]="composeMessage"
-              (input)="
-                setComposeMessage(
-                  $any($event.target).value
-                )
-              "
-            ></textarea>
-
-            <small>
-              {{ composeMessage.length }}/1000
-            </small>
-
-          </label>
-
-
-          <div class="compose-footer">
-
-            <div>
-
-              <strong>
-                {{
-                  selectedRecipientIds.size
-                }}
-              </strong>
-
-              <span>
-                مستلم
-              </span>
-
-            </div>
-
-
-            <button
-              class="send-notification-button"
-              type="button"
-              (click)="sendNotification()"
-              [disabled]="sendingNotification"
-            >
-
-              <svg viewBox="0 0 24 24">
-                <path d="m22 2-7 20-4-9-9-4 20-7Z" />
-                <path d="m22 2-11 11" />
-              </svg>
-
-              {{
-                sendingNotification
-                  ? 'جارٍ الإرسال...'
-                  : 'إرسال الإشعار'
-              }}
-
-            </button>
-
-          </div>
-
-        </div>
-
-      }
-
-    </section>
-
-  }
-
-
-  <!-- =========================
+  <!-- ======================================================
        SIDEBAR
-       ========================= -->
+       ====================================================== -->
 
   <aside class="sidebar">
 
@@ -957,13 +343,15 @@
       </a>
 
 
-      <button
-        type="button"
+      <a
+        routerLink="/projects"
+        [class.active]="isProjectsRoute()"
         aria-label="المشاريع"
         title="المشاريع"
       >
 
         <svg viewBox="0 0 24 24">
+
           <rect
             x="3"
             y="5"
@@ -971,19 +359,23 @@
             height="15"
             rx="3"
           />
+
           <path d="M8 5V3h8v2" />
+
         </svg>
 
-      </button>
+      </a>
 
 
-      <button
-        type="button"
+      <a
+        routerLink="/tasks"
+        [class.active]="isTasksRoute()"
         aria-label="المهام"
         title="المهام"
       >
 
         <svg viewBox="0 0 24 24">
+
           <rect
             x="3"
             y="3"
@@ -991,19 +383,23 @@
             height="18"
             rx="5"
           />
+
           <path d="m8 12 3 3 5-6" />
+
         </svg>
 
-      </button>
+      </a>
 
 
-      <button
-        type="button"
+      <a
+        routerLink="/team"
+        routerLinkActive="active"
         aria-label="الفريق"
         title="الفريق"
       >
 
         <svg viewBox="0 0 24 24">
+
           <circle
             cx="9"
             cy="7"
@@ -1017,9 +413,106 @@
           <path
             d="M16 3a4 4 0 0 1 0 8"
           />
+
         </svg>
 
-      </button>
+      </a>
+
+
+      <a
+        routerLink="/activity"
+        routerLinkActive="active"
+        aria-label="سجل النشاط"
+        title="سجل النشاط"
+      >
+
+        <svg viewBox="0 0 24 24">
+
+          <path
+            d="M3 12a9 9 0 1 0 3-6.7L3 8"
+          />
+
+          <path d="M3 4v4h4" />
+          <path d="M12 7v5l3 2" />
+
+        </svg>
+
+      </a>
+
+
+      <a
+        routerLink="/notifications"
+        routerLinkActive="active"
+        aria-label="الإشعارات"
+        title="الإشعارات"
+      >
+
+        <svg viewBox="0 0 24 24">
+
+          <path
+            d="
+              M18 8
+              a6 6 0 0 0-12 0
+              c0 7-3 7-3 9
+              h18
+              c0-2-3-2-3-9
+            "
+          />
+
+          <path d="M10 21h4" />
+
+        </svg>
+
+
+        @if (unreadCount > 0) {
+
+          <span class="sidebar-badge">
+            {{
+              unreadCount > 9
+                ? '9+'
+                : unreadCount
+            }}
+          </span>
+
+        }
+
+      </a>
+
+
+      @if (isSystemAdmin) {
+
+        <a
+          routerLink="/admin"
+          routerLinkActive="active"
+          aria-label="إدارة النظام"
+          title="إدارة النظام"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="
+                M12 3
+                4 6
+                v5
+                c0 5
+                3.4 8.6
+                8 10
+                4.6-1.4
+                8-5
+                8-10
+                V6
+                l-8-3Z
+              "
+            />
+
+            <path d="m9 12 2 2 4-5" />
+
+          </svg>
+
+        </a>
+
+      }
 
     </nav>
 
@@ -1035,11 +528,11 @@
       >
 
         @if (
-          theme.current() ===
-          'light'
+          theme.current() === 'light'
         ) {
 
           <svg viewBox="0 0 24 24">
+
             <path
               d="
                 M21 12.8
@@ -1047,6 +540,7 @@
                 6.6 6.6 0 0 0 21 12.8Z
               "
             />
+
           </svg>
 
         } @else {
@@ -1079,18 +573,19 @@
       </button>
 
 
-      <div
+      <a
         class="avatar"
+        routerLink="/account"
+        routerLinkActive="active"
         title="الحساب الشخصي"
         aria-label="الحساب الشخصي"
       >
-
         {{
-          user?.fullName?.charAt(0)
+          user?.fullName
+            ?.charAt(0)
           || 'U'
         }}
-
-      </div>
+      </a>
 
     </div>
 

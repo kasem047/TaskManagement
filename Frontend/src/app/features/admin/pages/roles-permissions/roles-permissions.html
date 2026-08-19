@@ -1,0 +1,489 @@
+<div
+  class="roles-page"
+  dir="rtl"
+>
+
+  <header class="page-header">
+
+    <div>
+
+      <span class="eyebrow">
+        إدارة النظام
+      </span>
+
+      <h1>
+        الأدوار والصلاحيات
+      </h1>
+
+      <p>
+        إدارة الأدوار المخصصة وتحديد الصلاحيات المرتبطة بكل دور.
+      </p>
+
+    </div>
+
+
+    <div class="header-actions">
+
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="loading"
+        (click)="loadData()"
+      >
+        تحديث
+      </button>
+
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="openCreateRole()"
+      >
+        + دور جديد
+      </button>
+
+    </div>
+
+  </header>
+
+
+  @if (errorMessage) {
+
+    <div class="message error">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="message success">
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  @if (loading) {
+
+    <section class="state-box">
+
+      <span class="spinner"></span>
+
+      <strong>
+        جارٍ تحميل الأدوار والصلاحيات...
+      </strong>
+
+    </section>
+
+  } @else {
+
+    <section class="management-grid">
+
+      <aside class="roles-panel">
+
+        <header>
+
+          <div>
+            <span>
+              الأدوار
+            </span>
+
+            <strong>
+              {{ roles.length }}
+            </strong>
+          </div>
+
+        </header>
+
+
+        <div class="roles-list">
+
+          @for (
+            role of roles;
+            track role.id
+          ) {
+
+            <button
+              type="button"
+              class="role-card"
+              [class.active]="
+                selectedRole?.id ===
+                  role.id
+              "
+              (click)="selectRole(role)"
+            >
+
+              <div class="role-card-head">
+
+                <strong>
+                  {{ role.name }}
+                </strong>
+
+
+                <span
+                  [class.system]="
+                    role.isSystemRole
+                  "
+                >
+                  {{
+                    roleTypeLabel(role)
+                  }}
+                </span>
+
+              </div>
+
+
+              <p>
+                {{
+                  role.description
+                  || 'لا يوجد وصف لهذا الدور.'
+                }}
+              </p>
+
+
+              <footer>
+
+                <span>
+                  {{ role.permissionCount }}
+                  صلاحية
+                </span>
+
+
+                @if (
+                  !role.isSystemRole
+                ) {
+
+                  <span class="role-actions">
+
+                    <button
+                      type="button"
+                      title="تعديل الدور"
+                      (click)="
+                        $event.stopPropagation();
+                        openEditRole(role)
+                      "
+                    >
+                      تعديل
+                    </button>
+
+
+                    <button
+                      type="button"
+                      class="danger-link"
+                      title="حذف الدور"
+                      (click)="
+                        $event.stopPropagation();
+                        deleteRole(role)
+                      "
+                    >
+                      حذف
+                    </button>
+
+                  </span>
+
+                }
+
+              </footer>
+
+            </button>
+
+          }
+
+        </div>
+
+      </aside>
+
+
+      <main class="permissions-panel">
+
+        @if (
+          !selectedRole
+        ) {
+
+          <div class="state-box compact">
+
+            اختر دورًا لعرض صلاحياته.
+
+          </div>
+
+        } @else {
+
+          <header class="permissions-header">
+
+            <div>
+
+              <span>
+                صلاحيات الدور
+              </span>
+
+              <h2>
+                {{ selectedRole.name }}
+              </h2>
+
+              @if (
+                selectedRole.isSystemRole
+              ) {
+
+                <p>
+                  هذا دور نظام أساسي، لذلك لا يمكن تعديل صلاحياته من الواجهة.
+                </p>
+
+              } @else {
+
+                <p>
+                  فعّل أو ألغِ الصلاحيات ثم احفظ التغييرات.
+                </p>
+
+              }
+
+            </div>
+
+
+            @if (
+              !selectedRole.isSystemRole
+            ) {
+
+              <button
+                type="button"
+                class="primary-button"
+                [disabled]="
+                  saving ||
+                  roleLoading
+                "
+                (click)="savePermissions()"
+              >
+                {{
+                  saving
+                    ? 'جارٍ الحفظ...'
+                    : 'حفظ الصلاحيات'
+                }}
+              </button>
+
+            }
+
+          </header>
+
+
+          @if (roleLoading) {
+
+            <div class="state-box compact">
+              جارٍ تحميل الصلاحيات...
+            </div>
+
+          } @else {
+
+            <div class="modules">
+
+              @for (
+                module of modules;
+                track module
+              ) {
+
+                <section class="module-card">
+
+                  <header>
+
+                    <h3>
+                      {{ module }}
+                    </h3>
+
+                    <span>
+                      {{
+                        permissionsByModule(
+                          module
+                        ).length
+                      }}
+                    </span>
+
+                  </header>
+
+
+                  <div class="permission-list">
+
+                    @for (
+                      permission
+                      of permissionsByModule(
+                        module
+                      );
+                      track permission.id
+                    ) {
+
+                      <label
+                        class="permission-row"
+                        [class.disabled]="
+                          selectedRole.isSystemRole
+                        "
+                      >
+
+                        <input
+                          type="checkbox"
+                          [checked]="
+                            permissionChecked(
+                              permission.id
+                            )
+                          "
+                          [disabled]="
+                            selectedRole.isSystemRole
+                          "
+                          (change)="
+                            togglePermission(
+                              permission.id
+                            )
+                          "
+                        >
+
+
+                        <span>
+
+                          <strong>
+                            {{ permission.name }}
+                          </strong>
+
+
+                          <small>
+                            {{
+                              permission.description
+                              || 'بدون وصف'
+                            }}
+                          </small>
+
+                        </span>
+
+                      </label>
+
+                    }
+
+                  </div>
+
+                </section>
+
+              }
+
+            </div>
+
+          }
+
+        }
+
+      </main>
+
+    </section>
+
+  }
+
+
+  @if (showRoleForm) {
+
+    <div
+      class="modal-backdrop"
+      (click)="closeRoleForm()"
+    >
+
+      <section
+        class="modal"
+        (click)="
+          $event.stopPropagation()
+        "
+      >
+
+        <header>
+
+          <div>
+
+            <span>
+              {{
+                editingRole
+                  ? 'تعديل الدور'
+                  : 'دور جديد'
+              }}
+            </span>
+
+            <h2>
+              {{
+                editingRole?.name
+                || 'إنشاء دور مخصص'
+              }}
+            </h2>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="modal-close"
+            (click)="closeRoleForm()"
+          >
+            ×
+          </button>
+
+        </header>
+
+
+        <div class="form-field">
+
+          <label>
+            اسم الدور
+          </label>
+
+          <input
+            type="text"
+            maxlength="100"
+            [(ngModel)]="roleName"
+            placeholder="مثال: TeamLead"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label>
+            الوصف
+          </label>
+
+          <textarea
+            rows="4"
+            maxlength="500"
+            [(ngModel)]="roleDescription"
+            placeholder="وصف مختصر للدور..."
+          ></textarea>
+
+        </div>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="saving"
+            (click)="closeRoleForm()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="saving"
+            (click)="saveRole()"
+          >
+            {{
+              saving
+                ? 'جارٍ الحفظ...'
+                : 'حفظ'
+            }}
+          </button>
+
+        </footer>
+
+      </section>
+
+    </div>
+
+  }
+
+</div>

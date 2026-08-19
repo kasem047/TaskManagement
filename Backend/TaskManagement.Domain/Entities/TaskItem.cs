@@ -33,32 +33,12 @@ public class TaskItem : BaseEntity
        PROGRESS
        ========================================================= */
 
-    /// <summary>
-    /// نسبة إنجاز المهمة.
-    ///
-    /// null:
-    /// لا يوجد إنجاز جزئي مسجل.
-    ///
-    /// 1 - 99:
-    /// المهمة مكتملة جزئيًا.
-    ///
-    /// 100:
-    /// يمكن استخدامها عند اكتمال المهمة بالكامل.
-    /// </summary>
     [Range(0, 100)]
     public int? ProgressPercentage { get; set; }
 
-
-    /// <summary>
-    /// وصف مختصر لما تم إنجازه.
-    /// </summary>
     [MaxLength(1000)]
     public string? ProgressNote { get; set; }
 
-
-    /// <summary>
-    /// آخر وقت تم فيه تحديث معلومات الإنجاز.
-    /// </summary>
     public DateTime? ProgressUpdatedAt { get; set; }
 
 
@@ -74,4 +54,28 @@ public class TaskItem : BaseEntity
 
     public ICollection<TaskAttachment> TaskAttachments { get; set; } =
         new List<TaskAttachment>();
+
+
+    /*
+     * المهام التي تعتمد عليها هذه المهمة.
+     *
+     * مثال:
+     * B تعتمد على A
+     *
+     * B.Dependencies يحتوي العلاقة B -> A
+     */
+    public ICollection<TaskDependency> Dependencies { get; set; } =
+        new List<TaskDependency>();
+
+
+    /*
+     * المهام الأخرى التي تعتمد على هذه المهمة.
+     *
+     * إذا:
+     * B تعتمد على A
+     *
+     * A.DependentTasks يحتوي العلاقة B -> A
+     */
+    public ICollection<TaskDependency> DependentTasks { get; set; } =
+        new List<TaskDependency>();
 }

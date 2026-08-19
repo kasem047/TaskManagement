@@ -1,0 +1,895 @@
+<section
+  class="account-page"
+  dir="rtl"
+>
+
+  <header class="account-header">
+
+    <div class="account-identity">
+
+      <div class="account-avatar">
+        {{ accountInitial() }}
+      </div>
+
+
+      <div>
+
+        <h1>
+          {{
+            profile?.fullName
+            || 'الحساب الشخصي'
+          }}
+        </h1>
+
+        <p dir="ltr">
+          {{ profile?.email }}
+        </p>
+
+      </div>
+
+    </div>
+
+
+    @if (
+      profile?.isSystemAdmin
+    ) {
+
+      <span class="admin-badge">
+        مسؤول النظام
+      </span>
+
+    }
+
+  </header>
+
+
+  <nav class="account-tabs">
+
+    <button
+      type="button"
+      [class.active]="
+        activeTab === 'profile'
+      "
+      (click)="setTab('profile')"
+    >
+      البيانات الشخصية
+    </button>
+
+
+    <button
+      type="button"
+      [class.active]="
+        activeTab === 'security'
+      "
+      (click)="setTab('security')"
+    >
+      الأمان وكلمة المرور
+    </button>
+
+
+    <button
+      type="button"
+      [class.active]="
+        activeTab === 'sessions'
+      "
+      (click)="setTab('sessions')"
+    >
+      الأجهزة والجلسات
+    </button>
+
+  </nav>
+
+
+  @if (profileError) {
+
+    <div class="message error-message">
+      {{ profileError }}
+    </div>
+
+  }
+
+
+  @if (
+    activeTab === 'profile'
+  ) {
+
+    <div class="account-grid">
+
+      <section class="account-card">
+
+        <div class="card-heading">
+
+          <div>
+
+            <h2>
+              المعلومات الشخصية
+            </h2>
+
+            <p>
+              يمكنك تعديل اسمك مباشرة.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        @if (profileLoading) {
+
+          <div class="loading-box">
+            جارٍ تحميل بيانات الحساب...
+          </div>
+
+        } @else {
+
+          <form
+            [formGroup]="profileForm"
+            (ngSubmit)="saveProfile()"
+            novalidate
+          >
+
+            <label class="field">
+
+              <span>
+                الاسم الكامل
+              </span>
+
+              <input
+                type="text"
+                formControlName="fullName"
+                autocomplete="name"
+              >
+
+            </label>
+
+
+            @if (profileSuccess) {
+
+              <div class="message success-message">
+                {{ profileSuccess }}
+              </div>
+
+            }
+
+
+            <div class="form-actions">
+
+              <button
+                class="primary-button"
+                type="submit"
+                [disabled]="profileSaving"
+              >
+
+                {{
+                  profileSaving
+                    ? 'جارٍ الحفظ...'
+                    : 'حفظ التعديلات'
+                }}
+
+              </button>
+
+            </div>
+
+          </form>
+
+        }
+
+      </section>
+
+
+      <section class="account-card">
+
+        <div class="card-heading">
+
+          <div>
+
+            <h2>
+              البريد الإلكتروني
+            </h2>
+
+            <p>
+              تغيير البريد يحتاج إلى كلمة المرور الحالية.
+            </p>
+
+          </div>
+
+          <span class="sensitive-badge">
+            بيانات حساسة
+          </span>
+
+        </div>
+
+
+        <form
+          [formGroup]="emailForm"
+          (ngSubmit)="changeEmail()"
+          novalidate
+        >
+
+          <label class="field">
+
+            <span>
+              البريد الإلكتروني الجديد
+            </span>
+
+            <input
+              type="email"
+              formControlName="newEmail"
+              autocomplete="email"
+              dir="ltr"
+            >
+
+          </label>
+
+
+          <label class="field">
+
+            <span>
+              كلمة المرور الحالية
+            </span>
+
+
+            <div class="password-field">
+
+              <input
+                [type]="
+                  showCurrentPasswordForEmail
+                    ? 'text'
+                    : 'password'
+                "
+                formControlName="currentPassword"
+                autocomplete="current-password"
+              >
+
+
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="toggleEmailPassword()"
+              >
+                {{
+                  showCurrentPasswordForEmail
+                    ? 'إخفاء'
+                    : 'إظهار'
+                }}
+              </button>
+
+            </div>
+
+          </label>
+
+
+          @if (emailSuccess) {
+
+            <div class="message success-message">
+              {{ emailSuccess }}
+            </div>
+
+          }
+
+
+          <div class="form-actions">
+
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="emailSaving"
+            >
+
+              {{
+                emailSaving
+                  ? 'جارٍ التغيير...'
+                  : 'تغيير البريد'
+              }}
+
+            </button>
+
+          </div>
+
+        </form>
+
+      </section>
+
+
+      <section class="account-card account-summary">
+
+        <div class="card-heading">
+
+          <div>
+
+            <h2>
+              معلومات الحساب
+            </h2>
+
+            <p>
+              بيانات أساسية عن الحساب الحالي.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="summary-grid">
+
+          <div>
+            <span>رقم المستخدم</span>
+            <strong>
+              {{
+                profile?.userId
+                ?? profile?.id
+                ?? '—'
+              }}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>نوع الحساب</span>
+            <strong>
+              {{
+                profile?.isSystemAdmin
+                  ? 'مسؤول النظام'
+                  : 'مستخدم'
+              }}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>تاريخ إنشاء الحساب</span>
+            <strong>
+              {{
+                formatDate(
+                  profile?.createdAt
+                )
+              }}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>آخر تسجيل دخول</span>
+            <strong>
+              {{
+                formatDate(
+                  profile?.lastLoginAt
+                )
+              }}
+            </strong>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  }
+
+
+  @if (
+    activeTab === 'security'
+  ) {
+
+    <div class="security-layout">
+
+      <section class="account-card">
+
+        <div class="card-heading">
+
+          <div>
+
+            <h2>
+              تغيير كلمة المرور
+            </h2>
+
+            <p>
+              أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <form
+          [formGroup]="passwordForm"
+          (ngSubmit)="changePassword()"
+          novalidate
+        >
+
+          <label class="field">
+
+            <span>
+              كلمة المرور الحالية
+            </span>
+
+
+            <div class="password-field">
+
+              <input
+                [type]="
+                  showCurrentPassword
+                    ? 'text'
+                    : 'password'
+                "
+                formControlName="currentPassword"
+                autocomplete="current-password"
+              >
+
+
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="toggleCurrentPassword()"
+              >
+                {{
+                  showCurrentPassword
+                    ? 'إخفاء'
+                    : 'إظهار'
+                }}
+              </button>
+
+            </div>
+
+          </label>
+
+
+          <div class="forgot-password-box">
+
+            <div>
+
+              <strong>
+                نسيت كلمة المرور الحالية؟
+              </strong>
+
+              <span>
+                استخدم مسار الاستعادة المعتمد لإعادة تعيينها بعد مراجعة مسؤول النظام.
+              </span>
+
+            </div>
+
+
+            <button
+              type="button"
+              (click)="openForgotPassword()"
+            >
+              استعادة كلمة المرور
+            </button>
+
+          </div>
+
+
+          <label class="field">
+
+            <span>
+              كلمة المرور الجديدة
+            </span>
+
+
+            <div class="password-field">
+
+              <input
+                [type]="
+                  showNewPassword
+                    ? 'text'
+                    : 'password'
+                "
+                formControlName="newPassword"
+                autocomplete="new-password"
+              >
+
+
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="toggleNewPassword()"
+              >
+                {{
+                  showNewPassword
+                    ? 'إخفاء'
+                    : 'إظهار'
+                }}
+              </button>
+
+            </div>
+
+
+            @if (
+              passwordForm.controls.newPassword.touched &&
+              passwordForm.controls.newPassword.invalid
+            ) {
+
+              <small class="field-error">
+
+                @if (
+                  passwordForm.controls.newPassword.hasError('required')
+                ) {
+                  كلمة المرور الجديدة مطلوبة.
+                } @else if (
+                  passwordForm.controls.newPassword.hasError('minlength')
+                ) {
+                  كلمة المرور يجب أن تكون 8 محارف على الأقل.
+                } @else if (
+                  passwordForm.controls.newPassword.hasError('maxlength')
+                ) {
+                  كلمة المرور لا يمكن أن تتجاوز 100 محرف.
+                } @else if (
+                  passwordForm.controls.newPassword.hasError('pattern')
+                ) {
+                  يجب أن تحتوي كلمة المرور على حرف إنجليزي صغير ورقم واحد على الأقل.
+                } @else if (
+                  passwordForm.controls.newPassword.hasError('sameAsCurrent')
+                ) {
+                  كلمة المرور الجديدة يجب أن تختلف عن كلمة المرور الحالية.
+                }
+
+              </small>
+
+            } @else {
+
+              <small class="field-hint">
+                8 محارف على الأقل، وتتضمن حرفًا إنجليزيًا صغيرًا ورقمًا.
+              </small>
+
+            }
+
+          </label>
+
+
+          <label class="field">
+
+            <span>
+              تأكيد كلمة المرور الجديدة
+            </span>
+
+
+            <div class="password-field">
+
+              <input
+                [type]="
+                  showConfirmPassword
+                    ? 'text'
+                    : 'password'
+                "
+                formControlName="confirmNewPassword"
+                autocomplete="new-password"
+              >
+
+
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="toggleConfirmPassword()"
+              >
+                {{
+                  showConfirmPassword
+                    ? 'إخفاء'
+                    : 'إظهار'
+                }}
+              </button>
+
+            </div>
+
+          </label>
+
+
+          @if (passwordSuccess) {
+
+            <div class="message success-message">
+              {{ passwordSuccess }}
+            </div>
+
+          }
+
+
+          <div class="form-actions">
+
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="passwordSaving"
+            >
+
+              {{
+                passwordSaving
+                  ? 'جارٍ تغيير كلمة المرور...'
+                  : 'تغيير كلمة المرور'
+              }}
+
+            </button>
+
+          </div>
+
+        </form>
+
+      </section>
+
+
+      <section class="security-note">
+
+        <div class="security-icon">
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="M12 3 4 6v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-3Z"
+            />
+
+            <path d="m9 12 2 2 4-5" />
+
+          </svg>
+
+        </div>
+
+
+        <h2>
+          حماية الحساب
+        </h2>
+
+        <p>
+          عند تغيير كلمة المرور سيتم إنهاء الجلسات الأخرى النشطة، بينما تبقى جلستك الحالية قيد الاستخدام.
+        </p>
+
+
+        <ul>
+
+          <li>
+            لا تستخدم كلمة المرور القديمة نفسها.
+          </li>
+
+          <li>
+            لا تشارك كلمة المرور أو رموز الاستعادة مع أي شخص.
+          </li>
+
+          <li>
+            يمكنك مراجعة جميع الأجهزة النشطة من قسم الجلسات.
+          </li>
+
+        </ul>
+
+      </section>
+
+    </div>
+
+  }
+
+
+  @if (
+    activeTab === 'sessions'
+  ) {
+
+    <section class="account-card sessions-card">
+
+      <div class="card-heading sessions-heading">
+
+        <div>
+
+          <h2>
+            الأجهزة والجلسات
+          </h2>
+
+          <p>
+            راجع الأجهزة التي تم تسجيل الدخول إلى حسابك منها.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="loadSessions()"
+          [disabled]="sessionsLoading"
+        >
+          تحديث القائمة
+        </button>
+
+      </div>
+
+
+      @if (sessionsError) {
+
+        <div class="message error-message">
+          {{ sessionsError }}
+        </div>
+
+      }
+
+
+      @if (sessionsLoading) {
+
+        <div class="loading-box">
+          جارٍ تحميل الجلسات...
+        </div>
+
+      } @else {
+
+        <div class="sessions-list">
+
+          @for (
+            session
+            of sessions;
+            track session.id
+          ) {
+
+            <article
+              class="session-card"
+              [class.current]="
+                session.isCurrentSession
+              "
+            >
+
+              <div class="session-icon">
+
+                <svg viewBox="0 0 24 24">
+
+                  <rect
+                    x="3"
+                    y="4"
+                    width="18"
+                    height="14"
+                    rx="2"
+                  />
+
+                  <path d="M8 21h8" />
+                  <path d="M12 18v3" />
+
+                </svg>
+
+              </div>
+
+
+              <div class="session-main">
+
+                <div class="session-title">
+
+                  <strong>
+                    {{
+                      sessionDeviceName(
+                        session
+                      )
+                    }}
+                  </strong>
+
+
+                  @if (
+                    session.isCurrentSession
+                  ) {
+
+                    <span class="current-session">
+                      الجلسة الحالية
+                    </span>
+
+                  }
+
+                </div>
+
+
+                <div class="session-details">
+
+                  <span>
+                    آخر نشاط:
+                    {{
+                      sessionActivity(
+                        session
+                      )
+                    }}
+                  </span>
+
+
+                  <span>
+                    IP:
+                    {{
+                      session.ipAddress
+                      || 'غير متوفر'
+                    }}
+                  </span>
+
+
+                  <span>
+                    تنتهي:
+                    {{
+                      formatDate(
+                        session.expiresAt
+                      )
+                    }}
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              @if (
+                !session.isCurrentSession
+              ) {
+
+                <button
+                  type="button"
+                  class="revoke-button"
+                  [disabled]="
+                    revokingSessionId !==
+                    null
+                  "
+                  (click)="revokeSession(session)"
+                >
+
+                  {{
+                    revokingSessionId ===
+                    session.id
+                      ? 'جارٍ الإنهاء...'
+                      : 'إنهاء الجلسة'
+                  }}
+
+                </button>
+
+              }
+
+            </article>
+
+          }
+
+        </div>
+
+      }
+
+
+      <div class="danger-zone">
+
+        <div>
+
+          <h3>
+            إدارة تسجيل الخروج
+          </h3>
+
+          <p>
+            يمكنك إنهاء الجلسة الحالية فقط أو إنهاء جميع الجلسات المرتبطة بالحساب.
+          </p>
+
+        </div>
+
+
+        <div class="danger-actions">
+
+          <button
+            type="button"
+            class="logout-button"
+            [disabled]="loggingOut"
+            (click)="logoutCurrent()"
+          >
+
+            {{
+              loggingOut
+                ? 'جارٍ تسجيل الخروج...'
+                : 'تسجيل الخروج من هذا الجهاز'
+            }}
+
+          </button>
+
+
+          <button
+            type="button"
+            class="logout-all-button"
+            [disabled]="loggingOutAll"
+            (click)="logoutAll()"
+          >
+
+            {{
+              loggingOutAll
+                ? 'جارٍ إنهاء الجلسات...'
+                : 'تسجيل الخروج من جميع الأجهزة'
+            }}
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  }
+
+</section>

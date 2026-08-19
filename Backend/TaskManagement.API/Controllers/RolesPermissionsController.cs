@@ -33,6 +33,48 @@ public sealed class RolesPermissionsController
         return Ok(roles);
     }
 
+    [HttpPost("roles")]
+    public async Task<ActionResult<RoleResponse>>
+        CreateRole(
+            [FromBody]
+            CreateRoleRequest request)
+    {
+        var role =
+            await _rolePermissionManagementService
+                .CreateRoleAsync(
+                    request);
+
+        return Ok(role);
+    }
+
+    [HttpPut("roles/{roleId:int}")]
+    public async Task<ActionResult<RoleResponse>>
+        UpdateRole(
+            int roleId,
+            [FromBody]
+            UpdateRoleRequest request)
+    {
+        var role =
+            await _rolePermissionManagementService
+                .UpdateRoleAsync(
+                    roleId,
+                    request);
+
+        return Ok(role);
+    }
+
+    [HttpDelete("roles/{roleId:int}")]
+    public async Task<IActionResult>
+        DeleteRole(
+            int roleId)
+    {
+        await _rolePermissionManagementService
+            .DeleteRoleAsync(
+                roleId);
+
+        return NoContent();
+    }
+
     [HttpGet("permissions")]
     public async Task<
         ActionResult<List<PermissionResponse>>>

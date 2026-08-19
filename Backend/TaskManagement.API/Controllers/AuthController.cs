@@ -30,14 +30,26 @@ public sealed class AuthController
 
 
     /* =========================================================
-       PUBLIC AUTH
+       SYSTEM ADMIN AUTH
        ========================================================= */
 
+    [Authorize]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>>
         Register(
             RegisterRequest request)
     {
+        var currentUser =
+            await _authService
+                .GetProfileAsync();
+
+
+        if (!currentUser.IsSystemAdmin)
+        {
+            return Forbid();
+        }
+
+
         var response =
             await _authService
                 .RegisterAsync(
@@ -48,6 +60,10 @@ public sealed class AuthController
             response);
     }
 
+
+    /* =========================================================
+       PUBLIC AUTH
+       ========================================================= */
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>>

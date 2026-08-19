@@ -30,6 +30,17 @@ public interface ITaskService
         int taskId,
         UpdateTaskStatusRequest request);
 
+    Task<List<TaskDependencyResponse>> GetTaskDependenciesAsync(
+        int workspaceId,
+        int projectId,
+        int taskId);
+
+    Task<List<TaskDependencyResponse>> SetTaskDependenciesAsync(
+        int workspaceId,
+        int projectId,
+        int taskId,
+        SetTaskDependenciesRequest request);
+
     Task DeleteTaskAsync(
         int workspaceId,
         int projectId,

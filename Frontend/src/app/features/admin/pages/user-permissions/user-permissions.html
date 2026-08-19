@@ -1,0 +1,455 @@
+<section
+  class="permissions-page"
+  dir="rtl"
+>
+
+  <header class="page-header">
+
+    <div>
+
+      <span class="eyebrow">
+        إدارة النظام
+      </span>
+
+      <h1>
+        صلاحيات المستخدمين
+      </h1>
+
+      <p>
+        إدارة الاستثناءات الفردية لصلاحيات المستخدم داخل مساحة عمل محددة.
+      </p>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="secondary-button"
+      [disabled]="
+        loadingWorkspaces ||
+        loadingMembers ||
+        loadingPermissions
+      "
+      (click)="loadWorkspaces()"
+    >
+      تحديث
+    </button>
+
+  </header>
+
+
+  @if (errorMessage) {
+
+    <div class="message error">
+      {{ errorMessage }}
+    </div>
+
+  }
+
+
+  @if (successMessage) {
+
+    <div class="message success">
+      {{ successMessage }}
+    </div>
+
+  }
+
+
+  <section class="context-panel">
+
+    <label>
+
+      <span>
+        مساحة العمل
+      </span>
+
+
+      @if (loadingWorkspaces) {
+
+        <strong>
+          جارٍ التحميل...
+        </strong>
+
+      } @else {
+
+        <select
+          [(ngModel)]="
+            selectedWorkspaceId
+          "
+          (ngModelChange)="
+            workspaceChanged()
+          "
+        >
+
+          <option
+            [ngValue]="0"
+          >
+            اختر مساحة العمل
+          </option>
+
+
+          @for (
+            workspace
+            of workspaces;
+            track workspace.id
+          ) {
+
+            <option
+              [ngValue]="
+                workspace.id
+              "
+            >
+              {{ workspace.name }}
+            </option>
+
+          }
+
+        </select>
+
+      }
+
+    </label>
+
+
+    <label>
+
+      <span>
+        المستخدم
+      </span>
+
+
+      @if (loadingMembers) {
+
+        <strong>
+          جارٍ تحميل الأعضاء...
+        </strong>
+
+      } @else {
+
+        <select
+          [(ngModel)]="
+            selectedUserId
+          "
+          [disabled]="
+            selectedWorkspaceId <= 0
+          "
+          (ngModelChange)="
+            memberChanged()
+          "
+        >
+
+          <option
+            [ngValue]="0"
+          >
+            اختر المستخدم
+          </option>
+
+
+          @for (
+            member
+            of members;
+            track member.userId
+          ) {
+
+            <option
+              [ngValue]="
+                member.userId
+              "
+            >
+              {{ member.fullName }}
+              —
+              {{ roleLabel(member.roleName) }}
+            </option>
+
+          }
+
+        </select>
+
+      }
+
+    </label>
+
+  </section>
+
+
+  @if (selectedMember) {
+
+    <section class="user-summary">
+
+      <div class="avatar">
+        {{
+          selectedMember.fullName
+            .charAt(0)
+            .toUpperCase()
+        }}
+      </div>
+
+
+      <div>
+
+        <strong>
+          {{ selectedMember.fullName }}
+        </strong>
+
+        <span>
+          {{ selectedMember.email }}
+        </span>
+
+      </div>
+
+
+      <div class="summary-role">
+
+        <span>
+          الدور الأساسي
+        </span>
+
+        <strong>
+          {{
+            roleLabel(
+              selectedMember.roleName
+            )
+          }}
+        </strong>
+
+      </div>
+
+    </section>
+
+  }
+
+
+  @if (loadingPermissions) {
+
+    <section class="state-box">
+
+      <span class="spinner"></span>
+
+      <strong>
+        جارٍ تحميل الصلاحيات...
+      </strong>
+
+    </section>
+
+  } @else if (
+    selectedUserId > 0 &&
+    permissions.length === 0
+  ) {
+
+    <section class="state-box">
+
+      <strong>
+        لا توجد صلاحيات متاحة.
+      </strong>
+
+    </section>
+
+  } @else if (
+    permissions.length > 0
+  ) {
+
+    <div class="modules">
+
+      @for (
+        module
+        of modules;
+        track module
+      ) {
+
+        <section class="module-card">
+
+          <header>
+
+            <div>
+
+              <h2>
+                {{ module }}
+              </h2>
+
+              <span>
+                {{
+                  permissionsByModule(
+                    module
+                  ).length
+                }}
+                صلاحية
+              </span>
+
+            </div>
+
+          </header>
+
+
+          <div class="permission-list">
+
+            @for (
+              permission
+              of permissionsByModule(
+                module
+              );
+              track permission.permissionId
+            ) {
+
+              <article class="permission-row">
+
+                <div class="permission-copy">
+
+                  <div class="permission-title">
+
+                    <strong>
+                      {{ permission.permissionName }}
+                    </strong>
+
+
+                    <span
+                      class="effective-badge"
+                      [class.allowed]="
+                        permission.effectiveGranted
+                      "
+                      [class.denied]="
+                        !permission.effectiveGranted
+                      "
+                    >
+                      {{
+                        effectiveStateLabel(
+                          permission
+                        )
+                      }}
+                    </span>
+
+                  </div>
+
+
+                  <p>
+                    {{
+                      permission.description
+                      ||
+                      'لا يوجد وصف لهذه الصلاحية.'
+                    }}
+                  </p>
+
+
+                  <small>
+                    الحالة:
+                    {{
+                      permissionStateLabel(
+                        permission
+                      )
+                    }}
+                  </small>
+
+                </div>
+
+
+                <div class="override-editor">
+
+                  <input
+                    type="text"
+                    maxlength="500"
+                    [(ngModel)]="
+                      permissionReasons[
+                        permission.permissionId
+                      ]
+                    "
+                    placeholder="سبب الاستثناء - اختياري"
+                  >
+
+
+                  <div class="permission-actions">
+
+                    <button
+                      type="button"
+                      class="allow-button"
+                      [disabled]="
+                        updatingPermissionId !==
+                          null
+                      "
+                      (click)="
+                        grantOverride(
+                          permission
+                        )
+                      "
+                    >
+                      سماح
+                    </button>
+
+
+                    <button
+                      type="button"
+                      class="deny-button"
+                      [disabled]="
+                        updatingPermissionId !==
+                          null
+                      "
+                      (click)="
+                        denyOverride(
+                          permission
+                        )
+                      "
+                    >
+                      منع
+                    </button>
+
+
+                    <button
+                      type="button"
+                      class="reset-button"
+                      [disabled]="
+                        updatingPermissionId !==
+                          null ||
+                        permission.overrideGranted ===
+                          null
+                      "
+                      (click)="
+                        removeOverride(
+                          permission
+                        )
+                      "
+                    >
+                      حسب الدور
+                    </button>
+
+                  </div>
+
+
+                  @if (
+                    updatingPermissionId ===
+                    permission.permissionId
+                  ) {
+
+                    <small class="saving">
+                      جارٍ حفظ التغيير...
+                    </small>
+
+                  }
+
+                </div>
+
+              </article>
+
+            }
+
+          </div>
+
+        </section>
+
+      }
+
+    </div>
+
+  } @else if (
+    !loadingWorkspaces
+  ) {
+
+    <section class="state-box">
+
+      <strong>
+        اختر مساحة العمل والمستخدم لعرض الصلاحيات.
+      </strong>
+
+    </section>
+
+  }
+
+</section>

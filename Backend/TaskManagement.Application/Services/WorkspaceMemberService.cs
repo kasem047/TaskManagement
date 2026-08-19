@@ -8,7 +8,8 @@ using TaskManagement.Domain.Enums;
 
 namespace TaskManagement.Application.Services;
 
-public sealed class WorkspaceMemberService : IWorkspaceMemberService
+public sealed class WorkspaceMemberService
+    : IWorkspaceMemberService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
@@ -30,27 +31,30 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         _notificationService = notificationService;
     }
 
-    public async Task<List<WorkspaceMemberResponse>> GetMembersAsync(
-        int workspaceId)
+    /* =========================================================
+       GET MEMBERS
+       ========================================================= */
+
+    public async Task<List<WorkspaceMemberResponse>>
+        GetMembersAsync(int workspaceId)
     {
         var currentUserId =
             _currentUserService.UserId;
 
-        await EnsureActiveWorkspaceMemberAsync(
+        await EnsureActiveWorkspaceMemberOrSystemAdminAsync(
             workspaceId,
             currentUserId);
 
         var members =
             await _dbContext.WorkspaceMembers
+                .AsNoTracking()
                 .Include(member => member.User)
                 .Include(member => member.Role)
                 .Where(member =>
                     member.WorkspaceId == workspaceId &&
                     !member.IsDeleted &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active)
-                .OrderBy(member =>
-                    member.User.FullName)
+                    member.Status == WorkspaceMemberStatus.Active)
+                .OrderBy(member => member.User.FullName)
                 .ToListAsync();
 
         return members
@@ -58,9 +62,12 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             .ToList();
     }
 
-    public async Task<WorkspaceMemberResponse> AddMemberAsync(
-        int workspaceId,
-        AddWorkspaceMemberRequest request)
+    /* =========================================================
+       AVAILABLE ROLES
+       ========================================================= */
+
+    public async Task<List<WorkspaceRoleOptionResponse>>
+        GetAvailableRolesAsync(int workspaceId)
     {
         var currentUserId =
             _currentUserService.UserId;
@@ -72,13 +79,159 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         EnsureWorkspaceExists(
             workspace);
 
-        EnsureOwner(
+        await EnsureOwnerOrSystemAdminAsync(
             workspace!,
             currentUserId);
 
-        await _permissionService.EnsurePermissionAsync(
-            workspaceId,
-            SystemPermissions.MemberInvite);
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.MemberChangeRole);
+
+        /*
+         * Dynamic role model:
+         *
+         * Every active role can be assigned to a member
+         * except WorkspaceOwner.
+         *
+         * Ownership is changed only through the dedicated
+         * transfer-ownership operation.
+         */
+        var roles =
+            await _dbContext.Roles
+                .AsNoTracking()
+                .Where(role =>
+                    !role.IsDeleted &&
+                    role.Name != SystemRoles.WorkspaceOwner)
+                .OrderBy(role =>
+                    role.Name == SystemRoles.ProjectManager
+                        ? 1
+                        : role.Name == SystemRoles.Member
+                            ? 2
+                            : 3)
+                .ThenBy(role => role.Name)
+                .Select(role =>
+                    new WorkspaceRoleOptionResponse
+                    {
+                        Id = role.Id,
+                        Name = role.Name
+                    })
+                .ToListAsync();
+
+        return roles;
+    }
+
+    /* =========================================================
+       CANDIDATE USERS
+       ========================================================= */
+
+    public async Task<List<WorkspaceMemberCandidateResponse>>
+        SearchCandidatesAsync(
+            int workspaceId,
+            string? search = null)
+    {
+        var currentUserId =
+            _currentUserService.UserId;
+
+        var workspace =
+            await GetWorkspaceWithMembersAsync(
+                workspaceId);
+
+        EnsureWorkspaceExists(
+            workspace);
+
+        await EnsureOwnerOrSystemAdminAsync(
+            workspace!,
+            currentUserId);
+
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.MemberInvite);
+
+        var activeWorkspaceUserIds =
+            _dbContext.WorkspaceMembers
+                .Where(member =>
+                    member.WorkspaceId == workspaceId &&
+                    !member.IsDeleted &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active)
+                .Select(member =>
+                    member.UserId);
+
+        var query =
+            _dbContext.Users
+                .AsNoTracking()
+                .Where(user =>
+                    user.IsActive &&
+                    !user.IsDeleted &&
+                    !user.IsSystemAdmin &&
+                    !activeWorkspaceUserIds.Contains(
+                        user.Id));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch =
+                search.Trim();
+
+            query =
+                query.Where(user =>
+                    user.FullName.Contains(
+                        normalizedSearch) ||
+                    (
+                        user.Email != null &&
+                        user.Email.Contains(
+                            normalizedSearch)
+                    ) ||
+                    (
+                        user.UserName != null &&
+                        user.UserName.Contains(
+                            normalizedSearch)
+                    ));
+        }
+
+        return await query
+            .OrderBy(user => user.FullName)
+            .Take(30)
+            .Select(user =>
+                new WorkspaceMemberCandidateResponse
+                {
+                    UserId = user.Id,
+                    FullName = user.FullName,
+                    Email =
+                        user.Email ??
+                        string.Empty
+                })
+            .ToListAsync();
+    }
+
+    /* =========================================================
+       LEGACY DIRECT ADD
+       ========================================================= */
+
+    public async Task<WorkspaceMemberResponse>
+        AddMemberAsync(
+            int workspaceId,
+            AddWorkspaceMemberRequest request)
+    {
+        var currentUserId =
+            _currentUserService.UserId;
+
+        var workspace =
+            await GetWorkspaceWithMembersAsync(
+                workspaceId);
+
+        EnsureWorkspaceExists(
+            workspace);
+
+        await EnsureOwnerOrSystemAdminAsync(
+            workspace!,
+            currentUserId);
+
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.MemberInvite);
 
         var userToAdd =
             await _dbContext.Users
@@ -93,6 +246,12 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                 "User not found or inactive.");
         }
 
+        if (userToAdd.IsSystemAdmin)
+        {
+            throw new BadRequestException(
+                "The system administrator cannot be added as a workspace member.");
+        }
+
         var role =
             await _dbContext.Roles
                 .FirstOrDefaultAsync(role =>
@@ -105,15 +264,32 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                 "Role not found.");
         }
 
-        EnsureValidWorkspaceRole(
+        EnsureValidMemberManagementRole(
             role);
 
-        if (role.Name ==
-            SystemRoles.WorkspaceOwner)
+        var hasAnotherActiveWorkspace =
+            await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .AnyAsync(member =>
+                    member.UserId == userToAdd.Id &&
+                    member.WorkspaceId != workspaceId &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted &&
+                    !member.Workspace.IsDeleted);
+
+        /*
+         * This legacy endpoint can still directly add
+         * users who are not currently active elsewhere.
+         *
+         * If the user already belongs to another workspace,
+         * the invitation workflow must be used so the user
+         * explicitly accepts or rejects.
+         */
+        if (hasAnotherActiveWorkspace)
         {
-            await EnsureUserCanOwnWorkspaceAsync(
-                request.UserId,
-                workspaceId);
+            throw new ConflictException(
+                "This user belongs to another active workspace. Use the workspace invitation workflow instead.");
         }
 
         var now =
@@ -121,15 +297,11 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
 
         var existingMember =
             await _dbContext.WorkspaceMembers
-                .Include(member =>
-                    member.User)
-                .Include(member =>
-                    member.Role)
+                .Include(member => member.User)
+                .Include(member => member.Role)
                 .FirstOrDefaultAsync(member =>
-                    member.WorkspaceId ==
-                        workspaceId &&
-                    member.UserId ==
-                        request.UserId);
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == request.UserId);
 
         if (existingMember is not null)
         {
@@ -142,7 +314,7 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             }
 
             existingMember.RoleId =
-                request.RoleId;
+                role.Id;
 
             existingMember.Role =
                 role;
@@ -195,7 +367,7 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                     request.UserId,
 
                 RoleId =
-                    request.RoleId,
+                    role.Id,
 
                 Status =
                     WorkspaceMemberStatus.Active,
@@ -239,6 +411,10 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             member.Id);
     }
 
+    /* =========================================================
+       UPDATE ROLE
+       ========================================================= */
+
     public async Task<WorkspaceMemberResponse>
         UpdateMemberRoleAsync(
             int workspaceId,
@@ -255,24 +431,22 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         EnsureWorkspaceExists(
             workspace);
 
-        EnsureOwner(
+        await EnsureOwnerOrSystemAdminAsync(
             workspace!,
             currentUserId);
 
-        await _permissionService.EnsurePermissionAsync(
-            workspaceId,
-            SystemPermissions.MemberChangeRole);
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.MemberChangeRole);
 
         var member =
             await _dbContext.WorkspaceMembers
-                .Include(member =>
-                    member.User)
-                .Include(member =>
-                    member.Role)
+                .Include(member => member.User)
+                .Include(member => member.Role)
                 .FirstOrDefaultAsync(member =>
                     member.Id == memberId &&
-                    member.WorkspaceId ==
-                        workspaceId &&
+                    member.WorkspaceId == workspaceId &&
                     !member.IsDeleted &&
                     member.Status ==
                         WorkspaceMemberStatus.Active);
@@ -281,6 +455,13 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         {
             throw new NotFoundException(
                 "Workspace member not found.");
+        }
+
+        if (member.Role.Name ==
+            SystemRoles.WorkspaceOwner)
+        {
+            throw new ConflictException(
+                "Workspace owner role cannot be changed through member management. Use ownership transfer instead.");
         }
 
         var newRole =
@@ -295,47 +476,21 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                 "Role not found.");
         }
 
-        EnsureValidWorkspaceRole(
+        EnsureValidMemberManagementRole(
             newRole);
-
-        var memberIsOwner =
-            member.Role.Name ==
-            SystemRoles.WorkspaceOwner;
-
-        var assigningOwnerRole =
-            newRole.Name ==
-            SystemRoles.WorkspaceOwner;
-
-        /*
-         * A user may own only one active workspace.
-         * No check is required when the member is already
-         * the owner of this same workspace.
-         */
-        if (assigningOwnerRole &&
-            !memberIsOwner)
-        {
-            await EnsureUserCanOwnWorkspaceAsync(
-                member.UserId,
-                workspaceId);
-        }
-
-        if (memberIsOwner &&
-            !assigningOwnerRole)
-        {
-            await EnsureNotLastOwnerAsync(
-                workspaceId,
-                member.Id);
-        }
 
         var previousRoleName =
             member.Role.Name;
 
-        var roleChanged =
-            member.RoleId !=
-            request.RoleId;
+        if (member.RoleId ==
+            request.RoleId)
+        {
+            return MapToResponse(
+                member);
+        }
 
         member.RoleId =
-            request.RoleId;
+            newRole.Id;
 
         member.Role =
             newRole;
@@ -352,22 +507,23 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             member.Id,
             $"Changed role for {member.User.FullName} from {previousRoleName} to {newRole.Name}.");
 
-        if (roleChanged)
-        {
-            await _notificationService.CreateAsync(
-                member.UserId,
-                workspaceId,
-                "Workspace role changed",
-                $"Your workspace role changed from {previousRoleName} to {newRole.Name}.",
-                "workspace.member_role_changed",
-                nameof(WorkspaceMember),
-                member.Id);
-        }
+        await _notificationService.CreateAsync(
+            member.UserId,
+            workspaceId,
+            "Workspace role changed",
+            $"Your workspace role changed from {previousRoleName} to {newRole.Name}.",
+            "workspace.member_role_changed",
+            nameof(WorkspaceMember),
+            member.Id);
 
         return await GetMemberResponseAsync(
             workspaceId,
             member.Id);
     }
+
+    /* =========================================================
+       REMOVE MEMBER
+       ========================================================= */
 
     public async Task RemoveMemberAsync(
         int workspaceId,
@@ -383,24 +539,22 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         EnsureWorkspaceExists(
             workspace);
 
-        EnsureOwner(
+        await EnsureOwnerOrSystemAdminAsync(
             workspace!,
             currentUserId);
 
-        await _permissionService.EnsurePermissionAsync(
-            workspaceId,
-            SystemPermissions.MemberRemove);
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.MemberRemove);
 
         var member =
             await _dbContext.WorkspaceMembers
-                .Include(member =>
-                    member.User)
-                .Include(member =>
-                    member.Role)
+                .Include(member => member.User)
+                .Include(member => member.Role)
                 .FirstOrDefaultAsync(member =>
                     member.Id == memberId &&
-                    member.WorkspaceId ==
-                        workspaceId &&
+                    member.WorkspaceId == workspaceId &&
                     !member.IsDeleted &&
                     member.Status ==
                         WorkspaceMemberStatus.Active);
@@ -414,10 +568,52 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         if (member.Role.Name ==
             SystemRoles.WorkspaceOwner)
         {
-            await EnsureNotLastOwnerAsync(
-                workspaceId,
-                member.Id);
+            throw new ConflictException(
+                "Workspace owner cannot be removed directly. Transfer ownership first.");
         }
+
+        /*
+         * Do not allow a member with unfinished assigned
+         * tasks to be removed either.
+         *
+         * Otherwise an active task could retain an assignee
+         * who is no longer a workspace member.
+         */
+        var hasActiveAssignedTasks =
+            await _dbContext.TaskAssignees
+                .AsNoTracking()
+                .AnyAsync(assignment =>
+                    assignment.UserId ==
+                        member.UserId &&
+                    !assignment.IsDeleted &&
+                    !assignment.TaskItem.IsDeleted &&
+                    !assignment.TaskItem.Project.IsDeleted &&
+                    assignment.TaskItem.Project.WorkspaceId ==
+                        workspaceId &&
+                    assignment.TaskItem.Status !=
+                        TaskItemStatus.Done &&
+                    assignment.TaskItem.Status !=
+                        TaskItemStatus.Cancelled);
+
+        if (hasActiveAssignedTasks)
+        {
+            throw new ConflictException(
+                "This member cannot be removed while they still have unfinished assigned tasks.");
+        }
+
+        var managedProjects =
+            await _dbContext.Projects
+                .Where(project =>
+                    project.WorkspaceId ==
+                        workspaceId &&
+                    project.ManagerUserId ==
+                        member.UserId &&
+                    !project.IsDeleted)
+                .ToListAsync();
+
+        var ownerUserId =
+            await GetWorkspaceOwnerUserIdAsync(
+                workspaceId);
 
         var removedUserId =
             member.UserId;
@@ -430,6 +626,15 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
 
         var now =
             DateTime.UtcNow;
+
+        foreach (var project in managedProjects)
+        {
+            project.ManagerUserId =
+                null;
+
+            project.UpdatedAt =
+                now;
+        }
 
         member.Status =
             WorkspaceMemberStatus.Removed;
@@ -460,7 +665,23 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             "workspace.member_removed",
             nameof(WorkspaceMember),
             member.Id);
+
+        foreach (var project in managedProjects)
+        {
+            await _notificationService.CreateAsync(
+                ownerUserId,
+                workspaceId,
+                "Project requires a new manager",
+                $"{removedUserFullName} is no longer managing project \"{project.Name}\". Please assign a new project manager.",
+                "project.manager_required",
+                nameof(Project),
+                project.Id);
+        }
     }
+
+    /* =========================================================
+       WORKSPACE
+       ========================================================= */
 
     private async Task<Workspace?>
         GetWorkspaceWithMembersAsync(
@@ -469,23 +690,23 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         return await _dbContext.Workspaces
             .Include(workspace =>
                 workspace.WorkspaceMembers)
-                .ThenInclude(member =>
-                    member.Role)
+            .ThenInclude(member =>
+                member.Role)
             .FirstOrDefaultAsync(workspace =>
-                workspace.Id ==
-                    workspaceId &&
+                workspace.Id == workspaceId &&
                 !workspace.IsDeleted);
     }
 
-    private async Task EnsureActiveWorkspaceMemberAsync(
-        int workspaceId,
-        int userId)
+    private async Task
+        EnsureActiveWorkspaceMemberOrSystemAdminAsync(
+            int workspaceId,
+            int userId)
     {
         var workspaceExists =
             await _dbContext.Workspaces
+                .AsNoTracking()
                 .AnyAsync(workspace =>
-                    workspace.Id ==
-                        workspaceId &&
+                    workspace.Id == workspaceId &&
                     !workspace.IsDeleted);
 
         if (!workspaceExists)
@@ -494,26 +715,18 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                 "Workspace not found.");
         }
 
-        var isSystemAdmin =
-            await _dbContext.Users
-                .AnyAsync(user =>
-                    user.Id == userId &&
-                    user.IsSystemAdmin &&
-                    user.IsActive &&
-                    !user.IsDeleted);
-
-        if (isSystemAdmin)
+        if (await IsSystemAdminAsync(
+                userId))
         {
             return;
         }
 
         var isMember =
             await _dbContext.WorkspaceMembers
+                .AsNoTracking()
                 .AnyAsync(member =>
-                    member.WorkspaceId ==
-                        workspaceId &&
-                    member.UserId ==
-                        userId &&
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == userId &&
                     !member.IsDeleted &&
                     member.Status ==
                         WorkspaceMemberStatus.Active);
@@ -525,73 +738,21 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
         }
     }
 
-    private async Task EnsureUserCanOwnWorkspaceAsync(
-        int userId,
-        int targetWorkspaceId)
-    {
-        /*
-         * First protection:
-         * the user must not already own another
-         * active workspace through membership.
-         */
-        var ownsAnotherWorkspace =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .AnyAsync(member =>
-                    member.UserId == userId &&
-                    member.WorkspaceId !=
-                        targetWorkspaceId &&
-                    !member.IsDeleted &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.Workspace.IsDeleted &&
-                    !member.Role.IsDeleted &&
-                    member.Role.Name ==
-                        SystemRoles.WorkspaceOwner);
+    /* =========================================================
+       OWNER / SYSTEM ADMIN
+       ========================================================= */
 
-        if (ownsAnotherWorkspace)
+    private async Task
+        EnsureOwnerOrSystemAdminAsync(
+            Workspace workspace,
+            int userId)
+    {
+        if (await IsSystemAdminAsync(
+                userId))
         {
-            throw new ConflictException(
-                "A user cannot own more than one active workspace.");
+            return;
         }
 
-        /*
-         * Second protection:
-         * also cover inconsistent legacy data where
-         * a workspace was created by the user but its
-         * owner membership is missing.
-         */
-        var createdAnotherWorkspace =
-            await _dbContext.Workspaces
-                .AsNoTracking()
-                .AnyAsync(workspace =>
-                    workspace.CreatedByUserId ==
-                        userId &&
-                    workspace.Id !=
-                        targetWorkspaceId &&
-                    !workspace.IsDeleted);
-
-        if (createdAnotherWorkspace)
-        {
-            throw new ConflictException(
-                "A user who already has an active workspace cannot become owner of another workspace.");
-        }
-    }
-
-    private static void EnsureWorkspaceExists(
-        Workspace? workspace)
-    {
-        if (workspace is null)
-        {
-            throw new NotFoundException(
-                "Workspace not found.");
-        }
-    }
-
-    private static void EnsureOwner(
-        Workspace workspace,
-        int userId)
-    {
         var member =
             GetCurrentMember(
                 workspace,
@@ -602,25 +763,47 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
                 SystemRoles.WorkspaceOwner)
         {
             throw new ForbiddenException(
-                "Only workspace owner can manage workspace members.");
+                "Only workspace owner or system administrator can manage workspace members.");
         }
     }
 
-    private static void EnsureValidWorkspaceRole(
-        Role role)
+    private async Task<bool>
+        IsSystemAdminAsync(
+            int userId)
     {
-        var isValid =
-            role.Name ==
-                SystemRoles.WorkspaceOwner ||
-            role.Name ==
-                SystemRoles.ProjectManager ||
-            role.Name ==
-                SystemRoles.Member;
+        return await _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(user =>
+                user.Id == userId &&
+                user.IsSystemAdmin &&
+                user.IsActive &&
+                !user.IsDeleted);
+    }
 
-        if (!isValid)
+    /* =========================================================
+       ROLE RULE
+       ========================================================= */
+
+    private static void
+        EnsureValidMemberManagementRole(
+            Role role)
+    {
+        if (role.Name ==
+            SystemRoles.WorkspaceOwner)
         {
-            throw new BadRequestException(
-                "The selected role is not a valid workspace role.");
+            throw new ConflictException(
+                "Workspace owner cannot be assigned through member management. Use ownership transfer instead.");
+        }
+    }
+
+    private static void
+        EnsureWorkspaceExists(
+            Workspace? workspace)
+    {
+        if (workspace is null)
+        {
+            throw new NotFoundException(
+                "Workspace not found.");
         }
     }
 
@@ -631,38 +814,48 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
     {
         return workspace.WorkspaceMembers
             .FirstOrDefault(member =>
-                member.UserId ==
-                    userId &&
+                member.UserId == userId &&
                 !member.IsDeleted &&
                 member.Status ==
                     WorkspaceMemberStatus.Active);
     }
 
-    private async Task EnsureNotLastOwnerAsync(
-        int workspaceId,
-        int ownerMemberId)
+    /* =========================================================
+       OWNER
+       ========================================================= */
+
+    private async Task<int>
+        GetWorkspaceOwnerUserIdAsync(
+            int workspaceId)
     {
-        var activeOwnersCount =
+        var ownerUserId =
             await _dbContext.WorkspaceMembers
-                .Include(member =>
-                    member.Role)
-                .CountAsync(member =>
+                .AsNoTracking()
+                .Where(member =>
                     member.WorkspaceId ==
                         workspaceId &&
-                    member.Id !=
-                        ownerMemberId &&
-                    !member.IsDeleted &&
                     member.Status ==
                         WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted &&
+                    !member.Role.IsDeleted &&
                     member.Role.Name ==
-                        SystemRoles.WorkspaceOwner);
+                        SystemRoles.WorkspaceOwner)
+                .Select(member =>
+                    member.UserId)
+                .FirstOrDefaultAsync();
 
-        if (activeOwnersCount == 0)
+        if (ownerUserId <= 0)
         {
             throw new ConflictException(
-                "Cannot remove or demote the last workspace owner.");
+                "Workspace does not have an active owner.");
         }
+
+        return ownerUserId;
     }
+
+    /* =========================================================
+       RESPONSE
+       ========================================================= */
 
     private async Task<WorkspaceMemberResponse>
         GetMemberResponseAsync(
@@ -671,13 +864,13 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
     {
         var member =
             await _dbContext.WorkspaceMembers
+                .AsNoTracking()
                 .Include(member =>
                     member.User)
                 .Include(member =>
                     member.Role)
                 .FirstOrDefaultAsync(member =>
-                    member.Id ==
-                        memberId &&
+                    member.Id == memberId &&
                     member.WorkspaceId ==
                         workspaceId);
 
@@ -691,38 +884,27 @@ public sealed class WorkspaceMemberService : IWorkspaceMemberService
             member);
     }
 
-    private static WorkspaceMemberResponse MapToResponse(
-        WorkspaceMember member)
+    private static WorkspaceMemberResponse
+        MapToResponse(
+            WorkspaceMember member)
     {
         return new WorkspaceMemberResponse
         {
-            Id =
-                member.Id,
-
-            WorkspaceId =
-                member.WorkspaceId,
-
-            UserId =
-                member.UserId,
-
+            Id = member.Id,
+            WorkspaceId = member.WorkspaceId,
+            UserId = member.UserId,
             FullName =
                 member.User?.FullName ??
                 string.Empty,
-
             Email =
                 member.User?.Email ??
                 string.Empty,
-
-            RoleId =
-                member.RoleId,
-
+            RoleId = member.RoleId,
             RoleName =
                 member.Role?.Name ??
                 string.Empty,
-
             Status =
                 member.Status.ToString(),
-
             JoinedAt =
                 member.JoinedAt
         };

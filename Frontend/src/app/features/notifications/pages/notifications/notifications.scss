@@ -1,0 +1,1297 @@
+:host {
+  display: block;
+}
+
+
+.notifications-page {
+  max-width: 1500px;
+
+  margin: 0 auto;
+
+  padding:
+    32px 36px 64px;
+
+  color:
+    var(--text);
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.page-header {
+  display: flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap: 24px;
+
+  margin-bottom: 24px;
+}
+
+
+.page-header h1 {
+  margin: 0;
+
+  font-size: 30px;
+
+  font-weight: 850;
+}
+
+
+.page-header p {
+  margin:
+    8px 0 0;
+
+  color:
+    var(--muted);
+
+  font-size: 14px;
+}
+
+
+.header-actions,
+.compose-actions,
+.filter-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+
+.primary-button,
+.secondary-button {
+  min-height: 42px;
+
+  padding:
+    0 16px;
+
+  border-radius: 11px;
+
+  cursor: pointer;
+}
+
+
+.primary-button {
+  border:
+    1px solid
+    var(--primary);
+
+  color: #ffffff;
+
+  background:
+    var(--primary);
+}
+
+
+.secondary-button {
+  border:
+    1px solid
+    var(--border);
+
+  color:
+    var(--text);
+
+  background:
+    var(--surface);
+}
+
+
+button:disabled {
+  opacity: 0.5;
+
+  cursor:
+    not-allowed;
+}
+
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.message {
+  margin-bottom: 18px;
+
+  padding:
+    13px 15px;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+}
+
+
+.message.error {
+  color: #b42318;
+
+  background:
+    rgba(
+      180,
+      35,
+      24,
+      0.08
+    );
+}
+
+
+.message.success {
+  color: #067647;
+
+  background:
+    rgba(
+      6,
+      118,
+      71,
+      0.08
+    );
+}
+
+
+/* =========================================================
+   WORKSPACE INVITATIONS
+   ========================================================= */
+
+.invitations-panel {
+  margin-bottom: 22px;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 30%,
+      var(--border)
+    );
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(
+        in srgb,
+        var(--primary) 5%,
+        var(--surface)
+      ),
+      var(--surface)
+    );
+}
+
+
+.invitations-header {
+  padding:
+    18px 20px;
+
+  border-bottom:
+    1px solid
+    var(--border);
+}
+
+
+.invitations-header > div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+}
+
+
+.invitations-icon {
+  width: 44px;
+  height: 44px;
+
+  flex: none;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 13px;
+
+  color:
+    var(--primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 12%,
+      transparent
+    );
+}
+
+
+.invitations-icon svg {
+  width: 21px;
+  height: 21px;
+
+  fill: none;
+
+  stroke:
+    currentColor;
+
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+
+  stroke-linejoin: round;
+}
+
+
+.invitations-header h2 {
+  margin: 0;
+
+  font-size: 18px;
+}
+
+
+.invitations-header p {
+  margin:
+    4px 0 0;
+
+  color:
+    var(--muted);
+
+  font-size: 12px;
+}
+
+
+.invitation-list {
+  display: grid;
+}
+
+
+.invitation-card {
+  display: flex;
+
+  align-items:
+    flex-start;
+
+  gap: 15px;
+
+  padding:
+    18px 20px;
+
+  border-bottom:
+    1px solid
+    var(--border);
+}
+
+
+.invitation-card:last-child {
+  border-bottom: 0;
+}
+
+
+.invitation-workspace-icon {
+  width: 48px;
+  height: 48px;
+
+  flex: none;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 14px;
+
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--primary),
+      var(--violet)
+    );
+
+  font-size: 16px;
+
+  font-weight: 900;
+}
+
+
+.invitation-content {
+  min-width: 0;
+
+  flex: 1;
+}
+
+
+.invitation-title-row {
+  display: flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap: 20px;
+}
+
+
+.invitation-title-row > div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  flex-wrap: wrap;
+}
+
+
+.invitation-title-row h3 {
+  margin: 0;
+
+  font-size: 16px;
+}
+
+
+.invitation-title-row time {
+  flex: none;
+
+  color:
+    var(--muted);
+
+  font-size: 11px;
+}
+
+
+.role-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  min-height: 24px;
+
+  padding:
+    0 8px;
+
+  border-radius: 99px;
+
+  color:
+    var(--primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 10%,
+      transparent
+    );
+
+  font-size: 10px;
+
+  font-weight: 800;
+}
+
+
+.invitation-content > p {
+  margin:
+    10px 0 14px;
+
+  color:
+    var(--muted);
+
+  font-size: 13px;
+
+  line-height: 1.8;
+}
+
+
+.invitation-content > p strong {
+  color:
+    var(--text);
+}
+
+
+.invitation-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+
+.accept-button,
+.reject-button {
+  min-height: 38px;
+
+  padding:
+    0 14px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+}
+
+
+.accept-button {
+  border:
+    1px solid
+    var(--primary);
+
+  color: #ffffff;
+
+  background:
+    var(--primary);
+}
+
+
+.reject-button {
+  border:
+    1px solid
+    var(--border);
+
+  color:
+    var(--text);
+
+  background:
+    transparent;
+}
+
+
+.reject-button:hover:not(:disabled) {
+  border-color:
+    color-mix(
+      in srgb,
+      #d92d20 45%,
+      var(--border)
+    );
+
+  color: #d92d20;
+}
+
+
+.invitation-loading {
+  padding: 32px 20px;
+
+  color:
+    var(--muted);
+
+  text-align: center;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   COMMON PANELS
+   ========================================================= */
+
+.compose-panel,
+.filters,
+.notifications-panel {
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+  background:
+    var(--surface);
+}
+
+
+/* =========================================================
+   COMPOSE
+   ========================================================= */
+
+.compose-panel {
+  margin-bottom: 22px;
+
+  padding: 22px;
+}
+
+
+.compose-panel > header h2 {
+  margin: 0;
+
+  font-size: 19px;
+}
+
+
+.compose-panel > header p {
+  margin:
+    6px 0 20px;
+
+  color:
+    var(--muted);
+
+  font-size: 13px;
+}
+
+
+.compose-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 16px;
+
+  margin-top: 16px;
+}
+
+
+.field {
+  display: grid;
+
+  gap: 7px;
+}
+
+
+.field.full {
+  grid-column:
+    1 / -1;
+}
+
+
+.field span,
+.filters label span {
+  color:
+    var(--muted);
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+
+.field input,
+.field select,
+.field textarea,
+.filters input,
+.filters select,
+.recipient-panel input {
+  width: 100%;
+
+  box-sizing:
+    border-box;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 10px;
+
+  color:
+    var(--text);
+
+  background:
+    var(--bg);
+
+  outline: none;
+}
+
+
+.field input,
+.field select,
+.filters input,
+.filters select,
+.recipient-panel input {
+  min-height: 42px;
+
+  padding:
+    0 12px;
+}
+
+
+.field textarea {
+  padding: 12px;
+
+  resize: vertical;
+}
+
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.filters input:focus,
+.filters select:focus,
+.recipient-panel input:focus {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--primary) 60%,
+      var(--border)
+    );
+
+  box-shadow:
+    0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--primary) 8%,
+      transparent
+    );
+}
+
+
+/* =========================================================
+   RECIPIENTS
+   ========================================================= */
+
+.recipient-panel {
+  margin-top: 18px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 14px;
+
+  overflow: hidden;
+}
+
+
+.recipient-panel > header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  gap: 20px;
+
+  padding: 14px;
+
+  border-bottom:
+    1px solid
+    var(--border);
+}
+
+
+.recipient-panel > header div {
+  display: grid;
+
+  gap: 3px;
+}
+
+
+.recipient-panel > header span {
+  color:
+    var(--muted);
+
+  font-size: 12px;
+}
+
+
+.recipient-panel input {
+  max-width: 280px;
+}
+
+
+.recipient-list {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 1px;
+
+  background:
+    var(--border);
+}
+
+
+.recipient {
+  min-width: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 13px;
+
+  border: 0;
+
+  color:
+    var(--text);
+
+  background:
+    var(--surface);
+
+  text-align: right;
+
+  cursor: pointer;
+}
+
+
+.recipient:hover {
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 5%,
+      var(--surface)
+    );
+}
+
+
+.recipient.selected {
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 9%,
+      var(--surface)
+    );
+}
+
+
+.recipient-avatar {
+  width: 38px;
+  height: 38px;
+
+  flex: none;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 50%;
+
+  color:
+    var(--primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 12%,
+      transparent
+    );
+
+  font-weight: 850;
+}
+
+
+.recipient-copy {
+  min-width: 0;
+
+  flex: 1;
+
+  display: grid;
+
+  gap: 3px;
+}
+
+
+.recipient-copy small {
+  overflow: hidden;
+
+  color:
+    var(--muted);
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+.check {
+  width: 24px;
+
+  color:
+    var(--primary);
+
+  font-weight: 900;
+}
+
+
+.compose-actions {
+  justify-content:
+    flex-end;
+
+  margin-top: 18px;
+}
+
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.filters {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 14px;
+
+  margin-bottom: 22px;
+
+  padding: 18px;
+}
+
+
+.filters label {
+  min-width: 0;
+
+  display: grid;
+
+  gap: 6px;
+}
+
+
+.filter-actions {
+  align-self: end;
+}
+
+
+/* =========================================================
+   NOTIFICATION LIST
+   ========================================================= */
+
+.notifications-panel {
+  overflow: hidden;
+}
+
+
+.panel-header {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items: center;
+
+  gap: 20px;
+
+  padding:
+    18px 20px;
+
+  border-bottom:
+    1px solid
+    var(--border);
+}
+
+
+.panel-header h2 {
+  margin: 0;
+
+  font-size: 18px;
+}
+
+
+.panel-header span {
+  display: block;
+
+  margin-top: 4px;
+
+  color:
+    var(--muted);
+
+  font-size: 12px;
+}
+
+
+.unread-summary {
+  color:
+    var(--primary);
+
+  font-size: 13px;
+}
+
+
+.notification-list {
+  display: grid;
+}
+
+
+.notification-card {
+  position: relative;
+
+  display: flex;
+
+  border-bottom:
+    1px solid
+    var(--border);
+
+  background:
+    var(--surface);
+}
+
+
+.notification-card:last-child {
+  border-bottom: 0;
+}
+
+
+.notification-card.unread {
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 4%,
+      var(--surface)
+    );
+}
+
+
+.notification-status {
+  width: 4px;
+
+  flex: none;
+
+  background:
+    transparent;
+}
+
+
+.notification-card.unread
+.notification-status {
+  background:
+    var(--primary);
+}
+
+
+.notification-content {
+  min-width: 0;
+
+  flex: 1;
+
+  padding:
+    17px 19px;
+}
+
+
+.notification-content > header {
+  display: flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap: 20px;
+}
+
+
+.notification-content h3 {
+  display: inline;
+
+  margin:
+    0 0 0 8px;
+
+  font-size: 15px;
+}
+
+
+.notification-content time {
+  flex: none;
+
+  color:
+    var(--muted);
+
+  font-size: 12px;
+}
+
+
+.notification-content p {
+  margin:
+    10px 0 14px;
+
+  color:
+    var(--text);
+
+  opacity: 0.86;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+}
+
+
+.source-badge {
+  display: inline-flex;
+
+  padding:
+    3px 8px;
+
+  border-radius: 99px;
+
+  color:
+    var(--primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 10%,
+      transparent
+    );
+
+  font-size: 11px;
+}
+
+
+.notification-content footer {
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  gap: 16px;
+}
+
+
+.notification-meta {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap:
+    8px 16px;
+
+  color:
+    var(--muted);
+
+  font-size: 11px;
+}
+
+
+.notification-content footer button {
+  border: 0;
+
+  color:
+    var(--primary);
+
+  background:
+    transparent;
+
+  cursor: pointer;
+}
+
+
+.read-label {
+  color:
+    var(--muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   EMPTY
+   ========================================================= */
+
+.empty-state {
+  padding:
+    50px 20px;
+
+  color:
+    var(--muted);
+
+  text-align: center;
+}
+
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+
+.pagination {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 18px;
+
+  padding: 15px;
+
+  border-top:
+    1px solid
+    var(--border);
+}
+
+
+.pagination button {
+  min-height: 36px;
+
+  padding:
+    0 14px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 9px;
+
+  color:
+    var(--text);
+
+  background:
+    var(--surface);
+
+  cursor: pointer;
+}
+
+
+.pagination span {
+  color:
+    var(--muted);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE - TABLET
+   ========================================================= */
+
+@media (
+  max-width: 1000px
+) {
+
+  .filters {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+
+  .recipient-list {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+
+/* =========================================================
+   RESPONSIVE - MOBILE
+   ========================================================= */
+
+@media (
+  max-width: 720px
+) {
+
+  .notifications-page {
+    padding:
+      20px 16px 48px;
+  }
+
+
+  .page-header {
+    flex-direction: column;
+  }
+
+
+  .header-actions {
+    width: 100%;
+  }
+
+
+  .header-actions button {
+    flex: 1;
+  }
+
+
+  .invitation-card {
+    align-items:
+      flex-start;
+
+    padding:
+      16px;
+  }
+
+
+  .invitation-title-row {
+    flex-direction:
+      column;
+
+    gap: 6px;
+  }
+
+
+  .invitation-workspace-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+
+  .invitation-actions {
+    width: 100%;
+  }
+
+
+  .invitation-actions button {
+    flex: 1;
+  }
+
+
+  .compose-grid,
+  .filters {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .recipient-panel > header {
+    align-items:
+      stretch;
+
+    flex-direction:
+      column;
+  }
+
+
+  .recipient-panel input {
+    max-width: none;
+  }
+
+
+  .notification-content > header,
+  .notification-content footer {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+}
