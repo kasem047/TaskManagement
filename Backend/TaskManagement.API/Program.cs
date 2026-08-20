@@ -25,6 +25,7 @@ var builder =
         args);
 
 
+
 /* =========================================================
    CONTROLLERS
    ========================================================= */
@@ -68,10 +69,12 @@ builder.Services
                     };
 
 
+
                 problemDetails.Extensions[
                     "traceId"] =
                         context.HttpContext
                             .TraceIdentifier;
+
 
 
                 return new BadRequestObjectResult(
@@ -84,6 +87,7 @@ builder.Services
                 };
             };
     });
+
 
 
 /* =========================================================
@@ -104,6 +108,7 @@ builder.Services
             .Add(
                 new UtcDateTimeJsonConverter());
     });
+
 
 
 /* =========================================================
@@ -128,6 +133,7 @@ builder.Services
     });
 
 
+
 /* =========================================================
    BACKGROUND SERVICES
    ========================================================= */
@@ -135,6 +141,7 @@ builder.Services
 builder.Services
     .AddHostedService<
         TaskReminderBackgroundService>();
+
 
 
 /* =========================================================
@@ -147,6 +154,7 @@ builder.Services
 
 builder.Services
     .AddProblemDetails();
+
 
 
 /* =========================================================
@@ -163,6 +171,7 @@ builder.Services
                         "DefaultConnection")));
 
 
+
 builder.Services
     .AddScoped<
         IApplicationDbContext>(
@@ -172,6 +181,7 @@ builder.Services
                     ApplicationDbContext>());
 
 
+
 /* =========================================================
    TIME
    ========================================================= */
@@ -179,6 +189,7 @@ builder.Services
 builder.Services
     .AddSingleton(
         TimeProvider.System);
+
 
 
 /* =========================================================
@@ -213,6 +224,7 @@ builder.Services
     .AddDefaultTokenProviders();
 
 
+
 /* =========================================================
    JWT
    ========================================================= */
@@ -230,12 +242,14 @@ var jwtAudience =
         "Jwt:Audience"];
 
 
+
 if (string.IsNullOrWhiteSpace(
         jwtKey))
 {
     throw new InvalidOperationException(
         "JWT Key is not configured.");
 }
+
 
 
 /* =========================================================
@@ -289,6 +303,7 @@ builder.Services
                 };
 
 
+
             options.Events =
                 new JwtBearerEvents
                 {
@@ -300,9 +315,11 @@ builder.Services
                                     "access_token"];
 
 
+
                             var path =
                                 context.HttpContext
                                     .Request.Path;
+
 
 
                             if (
@@ -316,8 +333,10 @@ builder.Services
                             }
 
 
+
                             return Task.CompletedTask;
                         },
+
 
 
                     OnTokenValidated =
@@ -334,16 +353,19 @@ builder.Services
                                         "sub");
 
 
+
                             var sessionIdValue =
                                 context.Principal?
                                     .FindFirstValue(
                                         "sessionId");
 
 
+
                             var tokenVersionValue =
                                 context.Principal?
                                     .FindFirstValue(
                                         "tokenVersion");
+
 
 
                             if (
@@ -364,11 +386,13 @@ builder.Services
                             }
 
 
+
                             var dbContext =
                                 context.HttpContext
                                     .RequestServices
                                     .GetRequiredService<
                                         ApplicationDbContext>();
+
 
 
                             var user =
@@ -378,6 +402,7 @@ builder.Services
                                         user =>
                                             user.Id ==
                                             userId);
+
 
 
                             if (
@@ -392,6 +417,7 @@ builder.Services
                             }
 
 
+
                             if (
                                 user.TokenVersion !=
                                 tokenVersion)
@@ -401,6 +427,7 @@ builder.Services
 
                                 return;
                             }
+
 
 
                             var session =
@@ -419,6 +446,7 @@ builder.Services
                                                 DateTime.UtcNow);
 
 
+
                             if (session is null)
                             {
                                 context.Fail(
@@ -428,8 +456,10 @@ builder.Services
                             }
 
 
+
                             session.LastUsedAt =
                                 DateTime.UtcNow;
+
 
 
                             await dbContext
@@ -437,6 +467,7 @@ builder.Services
                         }
                 };
         });
+
 
 
 /* =========================================================
@@ -447,12 +478,14 @@ builder.Services
     .AddAuthorization();
 
 
+
 /* =========================================================
    HTTP CONTEXT
    ========================================================= */
 
 builder.Services
     .AddHttpContextAccessor();
+
 
 
 /* =========================================================
@@ -466,10 +499,12 @@ builder.Services
                 SmtpEmailOptions.SectionName));
 
 
+
 builder.Services
     .AddScoped<
         IEmailService,
         SmtpEmailService>();
+
 
 
 /* =========================================================
@@ -482,10 +517,12 @@ builder.Services
         CurrentUserService>();
 
 
+
 builder.Services
     .AddScoped<
         IJwtTokenService,
         JwtTokenService>();
+
 
 
 builder.Services
@@ -494,10 +531,12 @@ builder.Services
         AuthService>();
 
 
+
 builder.Services
     .AddScoped<
         IPasswordRecoveryService,
         PasswordRecoveryService>();
+
 
 
 /* =========================================================
@@ -510,16 +549,19 @@ builder.Services
         AdminService>();
 
 
+
 builder.Services
     .AddScoped<
         IAdminUserProvisioningService,
         AdminUserProvisioningService>();
 
 
+
 builder.Services
     .AddScoped<
         IAdminDashboardExportService,
         AdminDashboardExportService>();
+
 
 
 /* =========================================================
@@ -532,16 +574,19 @@ builder.Services
         WorkspaceService>();
 
 
+
 builder.Services
     .AddScoped<
         IWorkspaceMemberService,
         WorkspaceMemberService>();
 
 
+
 builder.Services
     .AddScoped<
         IWorkspaceInvitationService,
         WorkspaceInvitationService>();
+
 
 
 /* =========================================================
@@ -554,16 +599,19 @@ builder.Services
         PermissionService>();
 
 
+
 builder.Services
     .AddScoped<
         IRolePermissionManagementService,
         RolePermissionManagementService>();
 
 
+
 builder.Services
     .AddScoped<
         IUserPermissionManagementService,
         UserPermissionManagementService>();
+
 
 
 /* =========================================================
@@ -576,6 +624,7 @@ builder.Services
         ProjectService>();
 
 
+
 /* =========================================================
    TASKS
    ========================================================= */
@@ -586,16 +635,19 @@ builder.Services
         TaskService>();
 
 
+
 builder.Services
     .AddScoped<
         ITaskAssigneeService,
         TaskAssigneeService>();
 
 
+
 builder.Services
     .AddScoped<
         ITaskCommentService,
         TaskCommentService>();
+
 
 
 /* =========================================================
@@ -615,15 +667,18 @@ builder.Services
                     "TaskAttachments");
 
 
+
             return new FileStorageService(
                 storageRootPath);
         });
+
 
 
 builder.Services
     .AddScoped<
         ITaskAttachmentService,
         TaskAttachmentService>();
+
 
 
 /* =========================================================
@@ -636,6 +691,7 @@ builder.Services
         ActivityLogService>();
 
 
+
 /* =========================================================
    NOTIFICATIONS
    ========================================================= */
@@ -646,10 +702,12 @@ builder.Services
         NotificationService>();
 
 
+
 builder.Services
     .AddScoped<
         INotificationRealtimeService,
         SignalRNotificationRealtimeService>();
+
 
 
 /* =========================================================
@@ -658,6 +716,7 @@ builder.Services
 
 builder.Services
     .AddEndpointsApiExplorer();
+
 
 
 builder.Services
@@ -674,6 +733,7 @@ builder.Services
                     Version =
                         "v1"
                 });
+
 
 
             options.AddSecurityDefinition(
@@ -700,6 +760,7 @@ builder.Services
                 });
 
 
+
             options.AddSecurityRequirement(
                 new OpenApiSecurityRequirement
                 {
@@ -723,8 +784,10 @@ builder.Services
         });
 
 
+
 var app =
     builder.Build();
+
 
 
 /* =========================================================
@@ -741,10 +804,12 @@ using (
                 ApplicationDbContext>();
 
 
+
     await DatabaseSeeder
         .SeedAsync(
             dbContext);
 }
+
 
 
 /* =========================================================
@@ -754,16 +819,30 @@ using (
 app.UseExceptionHandler();
 
 
+
 app.UseSwagger();
 
 app.UseSwaggerUI();
 
 
+
 app.UseHttpsRedirection();
+
+
+
+/* =========================================================
+   ANGULAR STATIC FILES
+   ========================================================= */
+
+app.UseDefaultFiles();
+
+app.UseStaticFiles();
+
 
 
 app.UseCors(
     "FrontendPolicy");
+
 
 
 app.UseAuthentication();
@@ -771,13 +850,76 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 
+
 app.MapControllers();
+
 
 
 app.MapHub<NotificationHub>(
         "/hubs/notifications")
     .RequireCors(
         "FrontendPolicy");
+
+
+
+/* =========================================================
+   ANGULAR SPA FALLBACK
+   ========================================================= */
+
+app.MapFallback(
+    async context =>
+    {
+        var path =
+            context.Request.Path;
+
+
+
+        if (
+            path.StartsWithSegments(
+                "/api")
+            ||
+            path.StartsWithSegments(
+                "/hubs")
+            ||
+            path.StartsWithSegments(
+                "/swagger"))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status404NotFound;
+
+            return;
+        }
+
+
+
+        var indexPath =
+            Path.Combine(
+                app.Environment.WebRootPath,
+                "index.html");
+
+
+
+        if (!File.Exists(
+                indexPath))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status404NotFound;
+
+            return;
+        }
+
+
+
+        context.Response.ContentType =
+            "text/html; charset=utf-8";
+
+
+
+        await context.Response
+            .SendFileAsync(
+                indexPath);
+    });
+
 
 
 app.Run();

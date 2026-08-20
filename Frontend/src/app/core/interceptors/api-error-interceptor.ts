@@ -1,4 +1,6 @@
 import {
+  HttpBackend,
+  HttpClient,
   HttpErrorResponse,
   HttpInterceptorFn
 } from '@angular/common/http';
@@ -13,8 +15,15 @@ import {
 
 import {
   catchError,
+  map,
+  of,
+  switchMap,
   throwError
 } from 'rxjs';
+
+import {
+  environment
+} from '../../../environments/environment';
 
 import {
   TokenStorage
@@ -33,6 +42,41 @@ export const apiErrorInterceptor:
 
     const router =
       inject(Router);
+
+
+    /*
+     * HttpClient خام يتجاوز جميع Interceptors.
+     *
+     * نستخدمه فقط للتحقق من صلاحية الجلسة
+     * عند استقبال 401، حتى لا ندخل في Loop
+     * داخل apiErrorInterceptor نفسه.
+     */
+    const httpBackend =
+      inject(HttpBackend);
+
+
+    const rawHttpClient =
+      new HttpClient(
+        httpBackend
+      );
+
+
+    const clearSessionAndRedirect =
+      (): void => {
+
+        tokenStorage.clear();
+
+
+        if (
+          router.url !==
+          '/login'
+        ) {
+
+          void router.navigateByUrl(
+            '/login'
+          );
+        }
+      };
 
 
     return next(req)
@@ -89,10 +133,9 @@ export const apiErrorInterceptor:
             ) {
 
               /*
-               * لا نتدخل في محاولات تسجيل الدخول
-               * أو استعادة كلمة المرور؛
-               * هذه الصفحات يجب أن تعرض خطأ الـAPI
-               * للمستخدم بشكل طبيعي.
+               * تسجيل الدخول واستعادة كلمة المرور
+               * Endpoints عامة، لذلك لا نطبق عليها
+               * منطق التحقق من الجلسة.
                */
               const isPublicAuthRequest =
                 req.url.includes(
@@ -104,28 +147,153 @@ export const apiErrorInterceptor:
                 );
 
 
-              const hasToken =
-                tokenStorage.hasToken();
-
-
               if (
-                hasToken &&
-                !isPublicAuthRequest
+                isPublicAuthRequest
               ) {
 
-                tokenStorage.clear();
-
-
-                void router.navigateByUrl(
-                  '/login'
+                return throwError(
+                  () =>
+                    error
                 );
               }
 
 
-              return throwError(
-                () =>
-                  error
-              );
+              const token =
+                tokenStorage.getToken();
+
+
+              /*
+               * إذا لم يكن هناك Token أصلًا،
+               * لا يوجد Session محلية نمسحها.
+               */
+              if (!token) {
+
+                return throwError(
+                  () =>
+                    error
+                );
+              }
+
+
+              /*
+               * إذا كان /profile نفسه هو الذي
+               * أعاد 401، فهذا دليل مباشر أن
+               * الجلسة الحالية لم تعد صالحة.
+               */
+              const isProfileRequest =
+                req.url.includes(
+                  '/api/Auth/profile'
+                );
+
+
+              if (
+                isProfileRequest
+              ) {
+
+                clearSessionAndRedirect();
+
+
+                return throwError(
+                  () =>
+                    error
+                );
+              }
+
+
+              /*
+               * لا نسجل خروج المستخدم بسبب 401
+               * من Endpoint عادي مباشرة.
+               *
+               * أولًا نتحقق من الجلسة عبر Profile
+               * باستخدام HttpClient يتجاوز
+               * الـInterceptors.
+               */
+              const apiBaseUrl =
+                environment.apiBaseUrl
+                  .replace(
+                    /\/+$/,
+                    ''
+                  );
+
+
+              return rawHttpClient
+                .get(
+                  `${apiBaseUrl}/api/Auth/profile`,
+                  {
+                    headers: {
+                      Authorization:
+                        `Bearer ${token}`
+                    }
+                  }
+                )
+                .pipe(
+
+                  /*
+                   * Profile نجح:
+                   * الـToken والجلسة صالحان.
+                   */
+                  map(
+                    () => true
+                  ),
+
+
+                  /*
+                   * لا نسجل خروج المستخدم إلا
+                   * إذا Profile نفسه أكد ذلك بـ401.
+                   *
+                   * مشاكل الشبكة و500 وغيرها
+                   * لا تعتبر دليلًا على انتهاء
+                   * الجلسة.
+                   */
+                  catchError(
+                    profileError => {
+
+                      if (
+                        profileError
+                          instanceof
+                            HttpErrorResponse
+                        &&
+                        profileError.status ===
+                          401
+                      ) {
+
+                        return of(
+                          false
+                        );
+                      }
+
+
+                      return of(
+                        true
+                      );
+                    }
+                  ),
+
+
+                  switchMap(
+                    sessionIsValid => {
+
+                      if (
+                        !sessionIsValid
+                      ) {
+
+                        clearSessionAndRedirect();
+                      }
+
+
+                      /*
+                       * نحافظ على الخطأ الأصلي
+                       * حتى تستطيع الصفحة نفسها
+                       * التعامل معه وعرض سببه.
+                       */
+                      return throwError(
+                        () =>
+                          error
+                      );
+                    }
+                  )
+
+                );
             }
 
 
@@ -133,16 +301,6 @@ export const apiErrorInterceptor:
                EXPECTED API ERRORS
                ============================================= */
 
-            /*
-             * 400 Validation / Bad Request
-             * 403 Forbidden
-             * 404 Not Found
-             * 409 Conflict
-             *
-             * الـBackend عندنا يعيد ProblemDetails
-             * ورسائل Business واضحة، لذلك نحافظ
-             * عليها كما هي كي تعرضها الصفحة.
-             */
             if (
               error.status === 400
               ||
@@ -174,15 +332,12 @@ export const apiErrorInterceptor:
                 error?.error?.message;
 
 
-              /*
-               * إذا رجع الـBackend رسالة حقيقية
-               * فلا نستبدلها.
-               */
               if (
                 typeof existingDetail ===
                   'string'
                 &&
-                existingDetail.trim()
+                existingDetail
+                  .trim()
                   .length > 0
               ) {
 

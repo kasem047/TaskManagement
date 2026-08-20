@@ -98,15 +98,23 @@
       </svg>
 
       <input
+        id="adminUserSearch"
+        name="adminUserSearch"
         type="search"
         formControlName="search"
         placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+        aria-label="البحث عن مستخدم"
       >
 
     </div>
 
 
-    <select formControlName="status">
+    <select
+      id="adminUserStatus"
+      name="adminUserStatus"
+      formControlName="status"
+      aria-label="تصفية المستخدمين حسب الحالة"
+    >
 
       <option value="all">
         جميع الحالات
@@ -389,8 +397,11 @@
           </span>
 
           <input
+            id="adminCreateFullName"
+            name="adminCreateFullName"
             type="text"
             formControlName="fullName"
+            autocomplete="name"
             placeholder="اسم المستخدم"
             [class.invalid]="
               createForm.controls.fullName.touched &&
@@ -434,6 +445,8 @@
           </span>
 
           <input
+            id="adminCreateEmail"
+            name="adminCreateEmail"
             type="email"
             formControlName="email"
             placeholder="name@example.com"
@@ -482,6 +495,8 @@
             </span>
 
             <input
+              id="adminCreatePassword"
+              name="adminCreatePassword"
               type="password"
               formControlName="password"
               autocomplete="new-password"
@@ -532,6 +547,8 @@
             </span>
 
             <input
+              id="adminCreateConfirmPassword"
+              name="adminCreateConfirmPassword"
               type="password"
               formControlName="confirmPassword"
               autocomplete="new-password"
@@ -577,6 +594,8 @@
         <label class="active-control">
 
           <input
+            id="adminCreateIsActive"
+            name="adminCreateIsActive"
             type="checkbox"
             formControlName="isActive"
           >

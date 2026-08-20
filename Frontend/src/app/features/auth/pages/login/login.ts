@@ -69,6 +69,9 @@ export class Login
   private readonly resetTokenKey =
     'taskmanagement_password_recovery_reset_token';
 
+  private readonly deviceIdKey =
+    'taskmanagement_device_id';
+
 
   loading = false;
 
@@ -223,6 +226,7 @@ export class Login
     return this.form.controls.email;
   }
 
+
   get password() {
     return this.form.controls.password;
   }
@@ -238,11 +242,13 @@ export class Login
       .accountEmail;
   }
 
+
   get recoveryEmail() {
     return this.recoveryRequestForm
       .controls
       .recoveryEmail;
   }
+
 
   get recoveryReason() {
     return this.recoveryRequestForm
@@ -250,17 +256,20 @@ export class Login
       .reason;
   }
 
+
   get recoveryCode() {
     return this.recoveryCodeForm
       .controls
       .code;
   }
 
+
   get newPassword() {
     return this.resetPasswordForm
       .controls
       .newPassword;
   }
+
 
   get confirmNewPassword() {
     return this.resetPasswordForm
@@ -274,18 +283,21 @@ export class Login
      ========================= */
 
   togglePassword(): void {
+
     this.showPassword =
       !this.showPassword;
   }
 
 
   toggleNewPassword(): void {
+
     this.showNewPassword =
       !this.showNewPassword;
   }
 
 
   toggleConfirmPassword(): void {
+
     this.showConfirmPassword =
       !this.showConfirmPassword;
   }
@@ -296,10 +308,12 @@ export class Login
      ========================= */
 
   submit(): void {
+
     if (
       this.form.invalid ||
       this.loading
     ) {
+
       this.form.markAllAsTouched();
 
       return;
@@ -317,6 +331,14 @@ export class Login
       this.form.getRawValue();
 
 
+    const deviceId =
+      this.getOrCreateDeviceId();
+
+
+    const deviceName =
+      this.getDeviceName();
+
+
     this.auth
       .login({
         email:
@@ -325,25 +347,29 @@ export class Login
         password:
           value.password,
 
-        deviceId:
-          'web-browser',
+        deviceId,
 
-        deviceName:
-          'TaskManagement Web'
+        deviceName
       })
       .subscribe({
+
         next: () => {
+
           this.loading =
             false;
 
-          this.router.navigateByUrl(
+
+          void this.router.navigateByUrl(
             '/dashboard'
           );
         },
 
+
         error: error => {
+
           this.loading =
             false;
+
 
           this.errorMessage =
             this.readError(
@@ -351,7 +377,145 @@ export class Login
               'تعذر تسجيل الدخول. تحقق من البريد الإلكتروني وكلمة المرور.'
             );
         }
+
       });
+  }
+
+
+  /* =========================
+     DEVICE IDENTITY
+     ========================= */
+
+  private getOrCreateDeviceId():
+    string {
+
+    const existingDeviceId =
+      localStorage.getItem(
+        this.deviceIdKey
+      );
+
+
+    if (
+      existingDeviceId &&
+      existingDeviceId.trim()
+    ) {
+
+      return existingDeviceId;
+    }
+
+
+    const generatedDeviceId =
+      this.generateDeviceId();
+
+
+    localStorage.setItem(
+      this.deviceIdKey,
+      generatedDeviceId
+    );
+
+
+    return generatedDeviceId;
+  }
+
+
+  private generateDeviceId():
+    string {
+
+    if (
+      typeof crypto !==
+        'undefined'
+      &&
+      typeof crypto.randomUUID ===
+        'function'
+    ) {
+
+      return crypto.randomUUID();
+    }
+
+
+    return [
+      Date.now()
+        .toString(36),
+
+      Math.random()
+        .toString(36)
+        .slice(2),
+
+      Math.random()
+        .toString(36)
+        .slice(2)
+    ]
+      .join('-');
+  }
+
+
+  private getDeviceName():
+    string {
+
+    if (
+      typeof navigator ===
+        'undefined'
+    ) {
+
+      return 'TaskManagement Web';
+    }
+
+
+    const userAgent =
+      navigator.userAgent
+        .toLowerCase();
+
+
+    const deviceType =
+      /android|iphone|ipad|ipod|mobile/
+        .test(userAgent)
+        ? 'Mobile'
+        : 'Desktop';
+
+
+    let browserName =
+      'Browser';
+
+
+    if (
+      userAgent.includes(
+        'edg/'
+      )
+    ) {
+
+      browserName =
+        'Edge';
+
+    } else if (
+      userAgent.includes(
+        'firefox/'
+      )
+    ) {
+
+      browserName =
+        'Firefox';
+
+    } else if (
+      userAgent.includes(
+        'chrome/'
+      )
+    ) {
+
+      browserName =
+        'Chrome';
+
+    } else if (
+      userAgent.includes(
+        'safari/'
+      )
+    ) {
+
+      browserName =
+        'Safari';
+    }
+
+
+    return `${deviceType} - ${browserName}`;
   }
 
 
@@ -360,9 +524,11 @@ export class Login
      ========================= */
 
   startPasswordRecovery(): void {
+
     if (
       this.recoveryLoading
     ) {
+
       return;
     }
 
@@ -377,6 +543,7 @@ export class Login
 
 
     if (!publicToken) {
+
       this.recoveryMode =
         'request';
 
@@ -389,6 +556,7 @@ export class Login
         currentEmail &&
         !this.accountEmail.value
       ) {
+
         this.accountEmail.setValue(
           currentEmail
         );
@@ -402,6 +570,7 @@ export class Login
     this.recoveryMode =
       'status';
 
+
     this.loadRecoveryStatus(
       publicToken
     );
@@ -413,10 +582,12 @@ export class Login
      ========================= */
 
   submitRecoveryRequest(): void {
+
     if (
       this.recoveryRequestForm.invalid ||
       this.recoveryLoading
     ) {
+
       this.recoveryRequestForm
         .markAllAsTouched();
 
@@ -447,7 +618,9 @@ export class Login
           value.reason.trim()
       })
       .subscribe({
+
         next: response => {
+
           this.recoveryLoading =
             false;
 
@@ -463,9 +636,12 @@ export class Login
           );
         },
 
+
         error: error => {
+
           this.recoveryLoading =
             false;
+
 
           this.recoveryError =
             this.readError(
@@ -473,6 +649,7 @@ export class Login
               'تعذر إرسال طلب إعادة تعيين كلمة المرور.'
             );
         }
+
       });
   }
 
@@ -482,6 +659,7 @@ export class Login
      ========================= */
 
   refreshRecoveryStatus(): void {
+
     const publicToken =
       localStorage.getItem(
         this.recoveryTokenKey
@@ -489,6 +667,7 @@ export class Login
 
 
     if (!publicToken) {
+
       this.recoveryMode =
         'request';
 
@@ -505,6 +684,7 @@ export class Login
   private loadRecoveryStatus(
     publicToken: string
   ): void {
+
     this.recoveryLoading =
       true;
 
@@ -516,16 +696,21 @@ export class Login
         publicToken
       )
       .subscribe({
+
         next: response => {
+
           this.recoveryLoading =
             false;
+
 
           this.applyRecoveryStatus(
             response
           );
         },
 
+
         error: error => {
+
           this.recoveryLoading =
             false;
 
@@ -533,13 +718,17 @@ export class Login
           if (
             error?.status === 404
           ) {
+
             this.clearStoredRecovery();
+
 
             this.recoveryMode =
               'request';
 
+
             this.recoveryError =
               'لم يعد طلب الاستعادة السابق متاحًا. يمكنك إنشاء طلب جديد.';
+
 
             return;
           }
@@ -551,6 +740,7 @@ export class Login
               'تعذر التحقق من حالة طلب الاستعادة.'
             );
         }
+
       });
   }
 
@@ -560,8 +750,10 @@ export class Login
      ========================= */
 
   private applyRecoveryStatus(
-    response: PasswordRecoveryStatusResponse
+    response:
+      PasswordRecoveryStatusResponse
   ): void {
+
     this.recoveryStatus =
       response;
 
@@ -569,6 +761,7 @@ export class Login
     if (
       response.isResetCompleted
     ) {
+
       this.recoveryMode =
         'completed';
 
@@ -577,8 +770,10 @@ export class Login
 
 
     if (
-      response.status === 'Pending'
+      response.status ===
+        'Pending'
     ) {
+
       this.recoveryMode =
         'status';
 
@@ -587,9 +782,13 @@ export class Login
 
 
     if (
-      response.status === 'Rejected' ||
-      response.status === 'Expired'
+      response.status ===
+        'Rejected'
+      ||
+      response.status ===
+        'Expired'
     ) {
+
       this.recoveryMode =
         'status';
 
@@ -604,10 +803,14 @@ export class Login
 
 
     if (
-      response.status === 'Approved' &&
-      response.codeVerified &&
+      response.status ===
+        'Approved'
+      &&
+      response.codeVerified
+      &&
       resetToken
     ) {
+
       this.recoveryMode =
         'reset';
 
@@ -616,9 +819,12 @@ export class Login
 
 
     if (
-      response.status === 'Approved' &&
+      response.status ===
+        'Approved'
+      &&
       response.codeSent
     ) {
+
       this.recoveryMode =
         'code';
 
@@ -636,10 +842,12 @@ export class Login
      ========================= */
 
   submitRecoveryCode(): void {
+
     if (
       this.recoveryCodeForm.invalid ||
       this.recoveryLoading
     ) {
+
       this.recoveryCodeForm
         .markAllAsTouched();
 
@@ -654,6 +862,7 @@ export class Login
 
 
     if (!publicToken) {
+
       this.recoveryMode =
         'request';
 
@@ -681,7 +890,9 @@ export class Login
         code
       })
       .subscribe({
+
         next: response => {
+
           this.recoveryLoading =
             false;
 
@@ -695,6 +906,7 @@ export class Login
           if (
             this.recoveryStatus
           ) {
+
             this.recoveryStatus = {
               ...this.recoveryStatus,
 
@@ -707,13 +919,17 @@ export class Login
           this.recoveryMode =
             'reset';
 
+
           this.recoveryMessage =
             'تم التحقق من الرمز بنجاح. يمكنك الآن تعيين كلمة مرور جديدة.';
         },
 
+
         error: error => {
+
           this.recoveryLoading =
             false;
+
 
           this.recoveryError =
             this.readError(
@@ -725,9 +941,11 @@ export class Login
           if (
             error?.status === 409
           ) {
+
             this.refreshRecoveryStatus();
           }
         }
+
       });
   }
 
@@ -737,10 +955,12 @@ export class Login
      ========================= */
 
   submitNewPassword(): void {
+
     if (
       this.resetPasswordForm.invalid ||
       this.recoveryLoading
     ) {
+
       this.resetPasswordForm
         .markAllAsTouched();
 
@@ -757,14 +977,17 @@ export class Login
       value.newPassword !==
       value.confirmNewPassword
     ) {
+
       this.confirmNewPassword
         .setErrors({
           passwordMismatch:
             true
         });
 
+
       this.confirmNewPassword
         .markAsTouched();
+
 
       return;
     }
@@ -786,11 +1009,14 @@ export class Login
       !publicToken ||
       !resetToken
     ) {
+
       this.recoveryError =
         'انتهت جلسة إعادة التعيين. تحقق من رمز الاستعادة مرة أخرى.';
 
+
       this.recoveryMode =
         'code';
+
 
       return;
     }
@@ -815,7 +1041,9 @@ export class Login
           value.confirmNewPassword
       })
       .subscribe({
+
         next: () => {
+
           this.recoveryLoading =
             false;
 
@@ -823,21 +1051,28 @@ export class Login
           this.clearStoredRecovery();
 
 
-          this.recoveryCodeForm.reset();
+          this.recoveryCodeForm
+            .reset();
 
-          this.resetPasswordForm.reset();
+
+          this.resetPasswordForm
+            .reset();
 
 
           this.recoveryStatus =
             null;
 
+
           this.recoveryMode =
             'completed';
         },
 
+
         error: error => {
+
           this.recoveryLoading =
             false;
+
 
           this.recoveryError =
             this.readError(
@@ -845,6 +1080,7 @@ export class Login
               'تعذر إعادة تعيين كلمة المرور.'
             );
         }
+
       });
   }
 
@@ -854,7 +1090,9 @@ export class Login
      ========================= */
 
   startNewRecoveryRequest(): void {
+
     this.clearStoredRecovery();
+
 
     this.recoveryStatus =
       null;
@@ -865,21 +1103,26 @@ export class Login
     this.recoveryMessage =
       '';
 
-    this.recoveryCodeForm.reset();
 
-    this.resetPasswordForm.reset();
+    this.recoveryCodeForm
+      .reset();
 
 
-    this.recoveryRequestForm.reset({
-      accountEmail:
-        this.email.value.trim(),
+    this.resetPasswordForm
+      .reset();
 
-      recoveryEmail:
-        '',
 
-      reason:
-        ''
-    });
+    this.recoveryRequestForm
+      .reset({
+        accountEmail:
+          this.email.value.trim(),
+
+        recoveryEmail:
+          '',
+
+        reason:
+          ''
+      });
 
 
     this.recoveryMode =
@@ -892,23 +1135,28 @@ export class Login
      ========================= */
 
   backToLogin(): void {
+
     this.clearRecoveryMessages();
+
 
     this.recoveryMode =
       'login';
 
 
-    this.router.navigate(
+    void this.router.navigate(
       ['/login'],
       {
-        replaceUrl: true
+        replaceUrl:
+          true
       }
     );
   }
 
 
   completedBackToLogin(): void {
+
     this.clearStoredRecovery();
+
 
     this.recoveryStatus =
       null;
@@ -919,17 +1167,23 @@ export class Login
     this.recoveryMessage =
       '';
 
-    this.form.controls.password
-      .setValue('');
+
+    this.form.controls
+      .password
+      .setValue(
+        ''
+      );
+
 
     this.recoveryMode =
       'login';
 
 
-    this.router.navigate(
+    void this.router.navigate(
       ['/login'],
       {
-        replaceUrl: true
+        replaceUrl:
+          true
       }
     );
   }
@@ -940,20 +1194,26 @@ export class Login
      ========================= */
 
   statusLabel(): string {
+
     switch (
       this.recoveryStatus?.status
     ) {
+
       case 'Pending':
         return 'قيد المراجعة';
+
 
       case 'Approved':
         return 'تمت الموافقة وإرسال رمز الاستعادة';
 
+
       case 'Rejected':
         return 'تم رفض الطلب';
 
+
       case 'Expired':
         return 'انتهت صلاحية الطلب';
+
 
       default:
         return 'حالة الطلب';
@@ -962,37 +1222,49 @@ export class Login
 
 
   formatDate(
-    value: string | null
+    value:
+      string | null
   ): string {
+
     if (!value) {
+
       return '';
     }
 
 
     try {
-      return new Intl.DateTimeFormat(
-        'ar-SY',
-        {
-          dateStyle:
-            'medium',
 
-          timeStyle:
-            'short'
-        }
-      ).format(
-        new Date(value)
-      );
-    }
-    catch {
+      return new Intl
+        .DateTimeFormat(
+          'ar-SY',
+          {
+            dateStyle:
+              'medium',
+
+            timeStyle:
+              'short'
+          }
+        )
+        .format(
+          new Date(
+            value
+          )
+        );
+
+    } catch {
+
       return value;
     }
   }
 
 
-  private clearStoredRecovery(): void {
+  private clearStoredRecovery():
+    void {
+
     localStorage.removeItem(
       this.recoveryTokenKey
     );
+
 
     sessionStorage.removeItem(
       this.resetTokenKey
@@ -1000,7 +1272,9 @@ export class Login
   }
 
 
-  private clearRecoveryMessages(): void {
+  private clearRecoveryMessages():
+    void {
+
     this.recoveryError =
       '';
 
@@ -1013,23 +1287,30 @@ export class Login
     error: any,
     fallback: string
   ): string {
+
     const validationErrors =
       error?.error?.errors as
         Record<string, string[]> |
         undefined;
 
 
-    if (validationErrors) {
+    if (
+      validationErrors
+    ) {
+
       for (
         const messages
         of Object.values(
           validationErrors
         )
       ) {
+
         if (
           messages &&
-          messages.length > 0
+          messages.length >
+            0
         ) {
+
           return messages[0];
         }
       }
@@ -1037,8 +1318,10 @@ export class Login
 
 
     return (
-      error?.error?.detail ??
-      error?.error?.message ??
+      error?.error?.detail
+      ??
+      error?.error?.message
+      ??
       fallback
     );
   }
