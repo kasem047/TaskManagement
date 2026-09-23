@@ -1,191 +1,1 @@
-﻿\# TaskManagement
-
-
-
-A full-stack task and project management system designed to organize workspaces, projects, teams, tasks, permissions, notifications, and day-to-day collaboration through Web and Mobile applications.
-
-
-
-The repository contains the complete Backend, Angular Web Application, React Native Mobile Application, and project documentation.
-
-
-
-\---
-
-
-
-\## Overview
-
-
-
-TaskManagement provides a centralized environment for managing organizational work.
-
-
-
-Users can create and manage workspaces, organize projects, assign members, create and track tasks, collaborate through comments and attachments, receive notifications, and monitor activity across the system.
-
-
-
-The project includes role-based access control and administrative tools for managing users and permissions.
-
-
-
-\---
-
-
-
-\## Main Features
-
-
-
-\- Workspace management
-
-\- Project management
-
-\- Project member management
-
-\- Task creation and tracking
-
-\- Task assignment
-
-\- Task status and progress management
-
-\- Task comments
-
-\- Task attachments
-
-\- Activity logging
-
-\- Real-time notifications
-
-\- Task reminders
-
-\- User account management
-
-\- Authentication using JWT
-
-\- Role and permission management
-
-\- User-specific permissions
-
-\- Administrative dashboard
-
-\- Password recovery
-
-\- Responsive Angular web application
-
-\- React Native mobile application
-
-\- Dark and light themes
-
-
-
-\---
-
-
-
-\## Technology Stack
-
-
-
-\### Backend
-
-
-
-\- ASP.NET Core
-
-\- C#
-
-\- Entity Framework Core
-
-\- SQL Server
-
-\- JWT Authentication
-
-\- SignalR
-
-\- Hosted Background Services
-
-\- REST API
-
-
-
-\### Web Frontend
-
-
-
-\- Angular
-
-\- TypeScript
-
-\- HTML
-
-\- SCSS
-
-\- RxJS
-
-
-
-\### Mobile Application
-
-
-
-\- React Native
-
-\- Expo
-
-\- TypeScript
-
-
-
-\### Database
-
-
-
-\- Microsoft SQL Server
-
-\- Entity Framework Core Migrations
-
-
-
-\---
-
-
-
-\## Repository Structure
-
-
-
-```text
-
-TaskManagement/
-
-â”‚
-
-â”œâ”€â”€ Backend/
-
-â”‚   â”œâ”€â”€ TaskManagement.API/
-
-â”‚   â”œâ”€â”€ TaskManagement.Application/
-
-â”‚   â”œâ”€â”€ TaskManagement.Domain/
-
-â”‚   â””â”€â”€ TaskManagement.Infrastructure/
-
-â”‚
-
-â”œâ”€â”€ Frontend/
-
-â”‚
-
-â”œâ”€â”€ Mobile/
-
-â”‚
-
-â”œâ”€â”€ Docs/
-
-â”‚
-
-â””â”€â”€ README.md
-
-
+\# TaskManagementA full-stack task and project management system designed to organize workspaces, projects, teams, tasks, permissions, notifications, and day-to-day collaboration through Web and Mobile applications.This repository contains the complete Backend, Angular Web Application, React Native Mobile Application, database migrations, and project documentation.\---\## OverviewTaskManagement provides a centralized environment for managing organizational work.Users can create and manage workspaces, organize projects, manage project members, create and track tasks, collaborate through comments and attachments, receive notifications, and monitor activity across the system.The project also includes role-based access control, user-specific permissions, administrative tools, activity logging, task reminders, and real-time notifications.\---\## Main Features\- Workspace management\- Project management\- Project member management\- Task creation and tracking\- Task assignment\- Task status and progress management\- Task comments\- Task attachments\- Task activity history\- Activity logging\- Real-time notifications\- Task reminders\- User account management\- JWT authentication\- Role and permission management\- User-specific permissions\- Administrative dashboard\- Password recovery\- Responsive Angular web application\- React Native mobile application\- Dark and light themes\---\## Technology Stack\### Backend\- ASP.NET Core\- C#\- Entity Framework Core\- SQL Server\- JWT Authentication\- SignalR\- Hosted Background Services\- REST API\### Web Frontend\- Angular\- TypeScript\- HTML\- SCSS\- RxJS\### Mobile Application\- React Native\- Expo\- TypeScript\### Database\- Microsoft SQL Server\- Entity Framework Core Migrations\---\## Repository Structure```textTaskManagement/|+-- Backend/|   +-- TaskManagement.API/|   +-- TaskManagement.Application/|   +-- TaskManagement.Domain/|   +-- TaskManagement.Infrastructure/|+-- Frontend/|+-- Mobile/|+-- Docs/|+-- .gitignore+-- README.md```\---\## Backend ArchitectureThe backend is divided into separate layers to keep the application organized and maintainable.\### TaskManagement.APIContains the API entry point and HTTP layer.Main responsibilities include:\- Controllers\- API endpoints\- Authentication configuration\- Dependency injection\- Application startup configuration\- Background services\- SignalR configuration\### TaskManagement.ApplicationContains the application logic.Main responsibilities include:\- DTOs\- Service interfaces\- Application services\- Permission handling\- Notification logic\- Workspace operations\- Project operations\- Task operations\- Administrative functionality\### TaskManagement.DomainContains the main domain entities and core models used by the system.Examples include:\- User\- Workspace\- Project\- ProjectMember\- Task\### TaskManagement.InfrastructureContains infrastructure-related implementations.Main responsibilities include:\- Entity Framework Core\- ApplicationDbContext\- Database migrations\- Entity configurations\- Authentication and identity services\- Database persistence\---\## PrerequisitesBefore running the project, install the following tools.\### Backend\- .NET SDK\- SQL Server\- SQL Server Management Studio or another SQL Server client\### Web Frontend\- Node.js\- npm\- Angular CLI\### Mobile\- Node.js\- npm\- Expo tooling\- Expo Go or an Android/iOS emulator\### General\- Git\- Visual Studio, Visual Studio Code, or another compatible IDE\---\## Clone the RepositoryClone the project:```bashgit clone https://github.com/kasem047/TaskManagement.git```Enter the project directory:```bashcd TaskManagement```The repository contains three main applications:```textBackendFrontendMobile```Each application must be configured and started separately.\---\# Backend Setup\## 1. Open the Backend Directory```bashcd Backend```\---\## 2. Restore .NET Dependencies```bashdotnet restore```\---\## 3. Configure SQL ServerThe backend uses Microsoft SQL Server.Configure the local database connection information in the appropriate ASP.NET Core configuration file used by the API.Do not commit real production credentials, database passwords, JWT secrets, or private keys to the repository.Each developer should use local development configuration for sensitive values.\---\## 4. Apply Database MigrationsThe repository contains Entity Framework Core migrations inside:```textBackend/TaskManagement.Infrastructure/Data/Migrations/```From the `Backend` directory, the database can be updated using Entity Framework Core.A typical command for this solution structure is:```bashdotnet ef database update --project TaskManagement.Infrastructure --startup-project TaskManagement.API```If the `dotnet ef` command is not available, install the EF Core CLI tool first:```bashdotnet tool install --global dotnet-ef```Then run the database update command again.\---\## 5. Run the Backend APIFrom the `Backend` directory:```bashdotnet run --project TaskManagement.API```The ASP.NET Core API should start using the URL configured in the local development settings.Keep the backend running while using the Web or Mobile applications.\---\# Web Frontend Setup\## 1. Open the Frontend DirectoryFrom the repository root:```bashcd Frontend```\---\## 2. Install Dependencies```bashnpm install```\---\## 3. Configure the Backend API URLAngular environment configuration is located under:```textFrontend/src/environments/```The project currently includes:```textenvironment.tsenvironment.production.ts```Make sure the configured API URL points to the backend instance you are running.For local development, use the local ASP.NET Core API address.For a deployed environment, use the deployed backend API address.\---\## 4. Start the Angular Application```bashnpm start```If required by your Angular setup, you can also use:```bashng serve```Then open the local URL displayed by Angular in the terminal.\---\# Mobile Application Setup\## 1. Open the Mobile DirectoryFrom the repository root:```bashcd Mobile```\---\## 2. Install Dependencies```bashnpm install```\---\## 3. Configure the APIMobile API-related configuration is located in:```textMobile/src/config.ts```Make sure the application points to an API address that can be reached by the mobile device or emulator.Important:```textlocalhost```from a physical phone refers to the phone itself, not the development computer.When testing on a physical device, use an API address that the device can access.The local Mobile `.env` file is intentionally excluded from Git.Do not commit credentials or secrets inside `.env`.\---\## 4. Start Expo```bashnpx expo start```You can then run the application using:\- Expo Go\- Android emulator\- iOS simulator, when supported\- Web mode, when applicable\---\# Authentication and AuthorizationThe system uses JWT-based authentication.Authorization is based on roles and permissions and is applied across system operations.The system supports functionality related to:\- Administrative permissions\- Workspace access\- Project access\- Project membership\- Role permissions\- User-specific permissionsUsers should only be able to access operations permitted by their assigned role and permissions.\---\# Workspace ManagementWorkspaces represent the main organizational container in the system.Workspace functionality includes management of:\- Workspace information\- Members\- Permissions\- Projects\- Workspace-related accessProjects belong to workspaces.\---\# Project ManagementProjects are created within workspaces.Project functionality includes:\- Creating projects\- Updating project information\- Managing project members\- Managing project access\- Accessing project tasksProject membership is implemented in the backend and database through project-member functionality.\---\# Task ManagementTasks are managed within the project/workspace structure.Task functionality includes:\- Task creation\- Task assignment\- Task status\- Task progress\- Due dates\- Comments\- Attachments\- Activity history\- Notifications\- Reminders\---\# NotificationsThe system contains a notification infrastructure for notifying users about important activities.SignalR is used to support real-time notification behavior in the Web application.Notifications can be generated for system activities such as:\- Task-related events\- Project-related events\- Membership changes\- Reminders\- Administrative actions\---\# Background ServicesThe backend contains background processing functionality for task reminders.This functionality runs independently from normal HTTP requests and is responsible for processing reminder-related work.\---\# Administrative FunctionalityThe system contains administrative functionality for managing areas such as:\- Users\- Roles\- Permissions\- User-specific permissions\- Password recovery\- Administrative dashboard informationAdministrative routes and operations are protected by authorization rules.\---\# Web ApplicationThe Angular application contains interfaces for major system functionality, including:\- Login\- Dashboard\- Workspaces\- Projects\- Tasks\- Team management\- Notifications\- Activity logs\- User account\- Administration\- Roles and permissions\---\# Mobile ApplicationThe React Native application provides access to the main TaskManagement functionality.The Mobile application currently contains screens and components related to:\- Login\- Home\- Projects\- Managed projects\- Project members\- Tasks\- Task board\- Task details\- Team\- Notifications\- Account\- Administration\- Role-based dashboards\---\# Configuration NotesSome configuration is machine-specific and should not be stored directly in the public repository.Before running the project on another computer, verify:```textBackend database connectionBackend authentication configurationBackend API URLFrontend API URLMobile API URLLocal environment variables```Sensitive values should remain outside Git whenever possible.\---\# Files Intentionally Excluded from GitThe `.gitignore` configuration prevents local or generated files from being uploaded.Examples include:```textnode\_modules/bin/obj/.env.expo/deploy/build outputlocal IDE filesdeployment archives```These files are generated locally or may contain machine-specific or sensitive information.\---\# Database MigrationsDatabase migrations are stored in:```textBackend/TaskManagement.Infrastructure/Data/Migrations/```The repository includes migrations required by the current backend model.After cloning the project and configuring SQL Server, apply the migrations before using the application.\---\# Development WorkflowA typical local development workflow is:```text1\. Clone the repository2\. Configure the Backend3\. Configure SQL Server4\. Apply Entity Framework Core migrations5\. Start the Backend API6\. Configure and start the Angular Frontend7\. Configure and start the Mobile application```When all three applications are used together:```textSQL Server&#x20;   |&#x20;   vASP.NET Core Backend API&#x20;   |&#x20;   +------ Angular Web Application&#x20;   |&#x20;   +------ React Native Mobile Application```\---\# Git WorkflowBefore starting new work:```bashgit pull origin main```After making changes:```bashgit statusgit add .git commit -m "Describe the changes"git push origin main```For larger development work, using separate feature branches is recommended instead of committing directly to `main`.Example:```bashgit checkout -b feature/example-feature```After completing the feature:```bashgit add .git commit -m "Add example feature"git push origin feature/example-feature```\---\# Security NotesBecause this is a public repository, never commit:\- SQL Server passwords\- Production connection strings\- JWT signing secrets\- API keys\- Private keys\- Personal access tokens\- `.env` files containing secrets\- Production credentialsIf a secret is accidentally committed, removing it from the latest file is not sufficient because it may remain in Git history.The compromised secret should be rotated immediately.\---\# Troubleshooting\## Backend does not connect to SQL ServerVerify:\- SQL Server is running\- The connection string is correct\- The configured SQL Server instance exists\- The database user has the required permissions\- Entity Framework Core migrations were applied\---\## Frontend cannot communicate with the BackendVerify:\- The Backend API is running\- The Angular environment contains the correct API URL\- The configured port is correct\- CORS configuration allows the Web application\- HTTP/HTTPS configuration matches the Backend\---\## Mobile cannot communicate with the BackendVerify:\- The API is running\- `Mobile/src/config.ts` contains the correct API address\- The phone or emulator can reach the backend machine\- The development computer and phone are on an accessible network\- A physical phone is not configured to use `localhost` for the development computer\---\## Angular dependencies are missingRun:```bashnpm install```inside:```textFrontend/```\---\## Mobile dependencies are missingRun:```bashnpm install```inside:```textMobile/```\---\## Database model is outdatedApply the latest migrations:```bashdotnet ef database update --project TaskManagement.Infrastructure --startup-project TaskManagement.API```from:```textBackend/```\---\# DocumentationAdditional documentation is available in:```textDocs/```The repository includes documentation related to the Web and Mobile application structure and other project information.\---\# Project StatusThe repository contains working implementations of:\- Backend API\- Angular Web application\- React Native Mobile application\- SQL Server persistence\- Authentication\- Authorization\- Workspace management\- Project management\- Project membership\- Task management\- Notifications\- Activity logging\- Administrative functionality\---\# Handoff NotesThis repository is intended to contain the complete source code required to continue development of TaskManagement.After cloning the project on a new computer, the main items that must be configured locally are:```text1\. SQL Server connection2\. Backend local configuration3\. Database migrations4\. Frontend API URL5\. Mobile API URL6\. Any required local environment variables```Generated dependencies and build artifacts are intentionally not included and must be restored locally.\---\# LicenseThe Mobile project currently contains its own license file.Before distributing or licensing the complete TaskManagement project, define the licensing terms that should apply to the repository as a whole.
