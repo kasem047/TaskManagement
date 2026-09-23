@@ -19,6 +19,10 @@ import {
   GlobalActivityLog
 } from '../../../../core/services/activity-logs';
 
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
 
 type ActivityEntityFilter =
   | 'all'
@@ -103,6 +107,12 @@ export class ActivityLogsPage
     );
 
 
+  private readonly access =
+    inject(
+      WorkspaceAccess
+    );
+
+
   /* =========================================================
      MODE
      ========================================================= */
@@ -151,17 +161,22 @@ export class ActivityLogsPage
     '';
 
 
+  searchDraft =
+    '';
+
+
   entityFilter:
+    ActivityEntityFilter =
+      'all';
+
+
+  entityFilterDraft:
     ActivityEntityFilter =
       'all';
 
 
   globalUserId =
     0;
-
-
-  globalAction =
-    '';
 
 
   globalFrom =
@@ -267,6 +282,56 @@ export class ActivityLogsPage
     ];
 
 
+  get isManagerMode():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'manager';
+  }
+
+
+  get isMemberMode():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'member';
+  }
+
+
+  get visibleEntityFilters():
+    {
+      value: ActivityEntityFilter;
+      label: string;
+    }[] {
+
+    if (
+      !this.isManagerMode &&
+      !this.isMemberMode
+    ) {
+      return this.entityFilters;
+    }
+
+
+    const allowed =
+      new Set([
+        'all',
+        'Project',
+        'TaskItem',
+        'TaskAssignee',
+        'TaskComment',
+        'TaskAttachment'
+      ]);
+
+
+    return this.entityFilters
+      .filter(filter =>
+        allowed.has(
+          filter.value
+        )
+      );
+  }
+
+
   /* =========================================================
      INIT
      ========================================================= */
@@ -292,22 +357,23 @@ export class ActivityLogsPage
       '';
 
 
-    this.workspaceActivityService
-      .getMyWorkspaces()
+    this.access
+      .refresh()
       .subscribe({
 
-        next: workspaces => {
-
-          this.workspaces =
-            workspaces;
-
+        next: snapshot => {
 
           this.isSystemAdmin =
-            workspaces.some(
-              workspace =>
-                workspace.currentUserRole ===
-                  'SystemAdmin'
-            );
+            snapshot.profile?.isSystemAdmin === true;
+
+          this.workspaces =
+            snapshot.workspaces
+              .filter(workspace =>
+                this.isSystemAdmin ||
+                this.access.matchesActiveRole(
+                  workspace.currentUserRole
+                )
+              );
 
 
           this.loadingWorkspaces =
@@ -340,7 +406,9 @@ export class ActivityLogsPage
           ) {
 
             this.selectedWorkspaceId =
-              manageable[0].id;
+              this.resolveInitialWorkspaceId(
+                manageable
+              );
 
             this.loadWorkspaceActivity();
           }
@@ -381,7 +449,11 @@ export class ActivityLogsPage
           workspace.currentUserRole ===
             'WorkspaceOwner' ||
           workspace.currentUserRole ===
-            'Owner'
+            'Owner' ||
+          workspace.currentUserRole ===
+            'ProjectManager' ||
+          workspace.currentUserRole ===
+            'Member'
       );
   }
 
@@ -398,6 +470,42 @@ export class ActivityLogsPage
         )
       ?? null
     );
+  }
+
+
+  private resolveInitialWorkspaceId(
+    manageable:
+      ActivityWorkspace[]
+  ): number {
+
+    const stored =
+      Number(
+        localStorage.getItem(
+          'taskmanagement_selected_workspace_id'
+        )
+        ??
+        localStorage.getItem(
+          'taskmanagement_workspace_id'
+        )
+        ??
+        0
+      );
+
+
+    if (
+      manageable.some(
+        workspace =>
+          workspace.id ===
+            stored
+      )
+    ) {
+
+      return stored;
+    }
+
+
+    return manageable[0]?.id ??
+      0;
   }
 
 
@@ -580,10 +688,6 @@ export class ActivityLogsPage
           this.globalUserId ||
           null,
 
-        action:
-          this.globalAction ||
-          null,
-
         entityName:
           this.entityFilter ===
             'all'
@@ -661,20 +765,8 @@ export class ActivityLogsPage
     value: string
   ): void {
 
-    this.search =
+    this.searchDraft =
       value;
-
-
-    this.currentPage =
-      1;
-
-
-    if (
-      this.isSystemAdmin
-    ) {
-
-      return;
-    }
   }
 
 
@@ -691,13 +783,26 @@ export class ActivityLogsPage
         );
 
 
-    this.entityFilter =
+    this.entityFilterDraft =
       exists
 
         ? value as
             ActivityEntityFilter
 
         : 'all';
+  }
+
+
+  applyRoleFilters():
+    void {
+
+    this.search =
+      this.searchDraft
+        .trim();
+
+
+    this.entityFilter =
+      this.entityFilterDraft;
 
 
     this.currentPage =
@@ -724,16 +829,20 @@ export class ActivityLogsPage
       '';
 
 
+    this.searchDraft =
+      '';
+
+
     this.entityFilter =
+      'all';
+
+
+    this.entityFilterDraft =
       'all';
 
 
     this.globalUserId =
       0;
-
-
-    this.globalAction =
-      '';
 
 
     this.globalFrom =
@@ -780,6 +889,16 @@ export class ActivityLogsPage
 
 
     return this.logs
+      .filter(
+        log => {
+
+          if (!this.isMemberMode) {
+            return true;
+          }
+
+          return log.userId === this.access.currentUserId;
+        }
+      )
       .filter(
         log => {
 

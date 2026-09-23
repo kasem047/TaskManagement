@@ -19,4 +19,7 @@ public class Project : BaseEntity
     public bool IsArchived { get; set; } = false;
 
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+
+    public ICollection<ProjectMember> Members { get; set; } =
+        new List<ProjectMember>();
 }

@@ -6,11 +6,15 @@
 .admin-users-page {
   direction: rtl;
 
+  width: 100%;
+
   min-height:
-    calc(100vh - 28px);
+    calc(100vh - 32px);
+
+  margin: 0 auto;
 
   padding:
-    28px 30px 50px;
+    var(--space-8) var(--space-8) var(--space-12);
 
   color:
     var(--text);
@@ -32,7 +36,7 @@
 .page-header h1 {
   margin: 0;
 
-  font-size: 31px;
+  font-size: 35px;
   font-weight: 850;
 
   line-height: 1.35;
@@ -46,7 +50,7 @@
   color:
     var(--muted);
 
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.7;
 }
 
@@ -66,30 +70,34 @@
 
 
 .primary-button {
-  min-height: 46px;
+  min-height: var(--control-height, 52px);
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  gap: 8px;
+  gap: var(--space-2);
 
   padding:
-    0 18px;
+    0 var(--space-6);
 
-  border-radius: 13px;
+  border-radius: var(--radius-md);
 
-  color: #ffffff;
+  color: var(--white);
 
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
 
   background:
     linear-gradient(
       135deg,
       var(--primary),
-      var(--violet)
+      var(--primary-2)
     );
+}
+
+.primary-button:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 
@@ -108,7 +116,7 @@
 
   border-radius: 12px;
 
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 650;
 
   line-height: 1.7;
@@ -202,13 +210,13 @@
   color:
     var(--muted);
 
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 650;
 }
 
 
 .stats-grid strong {
-  font-size: 29px;
+  font-size: 33px;
   font-weight: 900;
 }
 
@@ -295,7 +303,7 @@
     var(--surface-2);
 
   font: inherit;
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -326,7 +334,7 @@
 .clear-button {
   border-radius: 11px;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -384,7 +392,7 @@
 .panel-heading h2 {
   margin: 0;
 
-  font-size: 20px;
+  font-size: 24px;
 }
 
 
@@ -395,7 +403,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -431,7 +439,7 @@ th {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 750;
 
   background:
@@ -444,7 +452,19 @@ th {
 
 
 td {
-  font-size: 12.5px;
+  font-size: 16.5px;
+}
+
+
+.id-cell {
+  width: 72px;
+
+  color:
+    var(--muted);
+
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 
@@ -509,7 +529,7 @@ tbody tr:hover {
 
 
 .user-cell strong {
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -517,7 +537,7 @@ tbody tr:hover {
   color:
     var(--muted);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -534,7 +554,7 @@ tbody tr:hover {
 
   border-radius: 99px;
 
-  font-size: 10.5px;
+  font-size: 14.5px;
   font-weight: 800;
 }
 
@@ -552,6 +572,20 @@ tbody tr:hover {
 }
 
 
+.description-cell {
+  min-width: 220px;
+  max-width: 340px;
+
+  white-space: normal;
+
+  color:
+    var(--muted);
+
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+
 .type-badge.admin {
   color:
     var(--primary-2);
@@ -560,6 +594,44 @@ tbody tr:hover {
     color-mix(
       in srgb,
       var(--primary) 12%,
+      transparent
+    );
+}
+
+
+.type-badge.owner {
+  color: #7c8cff;
+
+  background:
+    color-mix(
+      in srgb,
+      #7c8cff 14%,
+      transparent
+    );
+}
+
+
+.type-badge.manager {
+  color: #58cfa1;
+
+  background:
+    rgba(
+      70,
+      201,
+      152,
+      0.12
+    );
+}
+
+
+.type-badge.member {
+  color:
+    var(--muted);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--text) 8%,
       transparent
     );
 }
@@ -607,7 +679,7 @@ tbody tr:hover {
 
   border-radius: 9px;
 
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 750;
 }
 
@@ -680,14 +752,14 @@ tbody tr:hover {
   color:
     var(--text);
 
-  font-size: 16px;
+  font-size: 20px;
 }
 
 
 .empty-state p {
   margin: 0;
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -807,7 +879,7 @@ tbody tr:hover {
 .modal h2 {
   margin: 0;
 
-  font-size: 22px;
+  font-size: 26px;
 }
 
 
@@ -818,7 +890,7 @@ tbody tr:hover {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -841,7 +913,7 @@ tbody tr:hover {
   background:
     transparent;
 
-  font-size: 22px;
+  font-size: 26px;
 
   cursor: pointer;
 }
@@ -865,7 +937,7 @@ tbody tr:hover {
 
 
 .field > span {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -892,7 +964,7 @@ tbody tr:hover {
     var(--surface-2);
 
   font: inherit;
-  font-size: 13px;
+  font-size: 17px;
 
   transition:
     border-color 160ms ease,
@@ -936,7 +1008,7 @@ tbody tr:hover {
   color:
     #ef7e8d;
 
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 650;
 
   line-height: 1.6;
@@ -957,7 +1029,7 @@ tbody tr:hover {
   color:
     var(--muted);
 
-  font-size: 11px;
+  font-size: 15px;
   line-height: 1.65;
 }
 
@@ -978,7 +1050,7 @@ tbody tr:hover {
 
   border-radius: 11px;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 650;
 }
 
@@ -1019,7 +1091,7 @@ tbody tr:hover {
   background:
     transparent;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 750;
 }
 
@@ -1072,14 +1144,19 @@ tbody tr:hover {
   color:
     var(--muted);
 
-  font-size: 10.5px;
+  font-size: 14.5px;
 }
 
 
 .details-grid strong {
   overflow-wrap: anywhere;
 
-  font-size: 12.5px;
+  font-size: 16.5px;
+}
+
+
+.details-grid article.wide {
+  grid-column: 1 / -1;
 }
 
 

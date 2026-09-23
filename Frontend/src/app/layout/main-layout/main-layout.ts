@@ -1,5 +1,6 @@
 import {
   Component,
+  HostListener,
   OnDestroy,
   OnInit,
   inject
@@ -35,8 +36,14 @@ import {
 } from '../../core/services/notification-realtime';
 
 import {
-  Auth
-} from '../../core/services/auth';
+  AppRoleMode,
+  WorkspaceAccess
+} from '../../core/services/workspace-access';
+
+import {
+  arabicNotificationMessage,
+  arabicNotificationTitle
+} from '../../core/utils/notification-text';
 
 
 type NotificationCategory =
@@ -82,8 +89,8 @@ export class MainLayout
     inject(NotificationRealtime);
 
 
-  private readonly auth =
-    inject(Auth);
+  readonly access =
+    inject(WorkspaceAccess);
 
 
   private readonly router =
@@ -96,6 +103,10 @@ export class MainLayout
 
 
   isSystemAdmin =
+    false;
+
+
+  roleMenuOpen =
     false;
 
 
@@ -113,6 +124,20 @@ export class MainLayout
 
   unreadCount =
     0;
+
+
+  get isAdminDashboard():
+    boolean {
+
+    const url =
+      this.router.url.split('?')[0];
+
+    return (
+      url === '/admin'
+      ||
+      url === '/admin/dashboard'
+    );
+  }
 
 
   quickLoading =
@@ -147,7 +172,23 @@ export class MainLayout
 
   ngOnInit(): void {
 
-    this.detectSystemAdmin();
+    this.access
+      .refresh()
+      .subscribe({
+
+        next: () => {
+
+          this.isSystemAdmin =
+            this.access.isSystemAdmin;
+        },
+
+        error: () => {
+
+          this.isSystemAdmin =
+            false;
+        }
+
+      });
 
     this.loadQuickSummary();
 
@@ -186,41 +227,6 @@ export class MainLayout
 
 
     this.toastTimers.clear();
-  }
-
-
-  /* =========================================================
-     SYSTEM ADMIN
-     ========================================================= */
-
-  private detectSystemAdmin():
-    void {
-
-    /*
-     * لا نستخدم /api/admin/dashboard
-     * لاكتشاف صلاحية المستخدم لأن ذلك
-     * يولد 403 طبيعي لكل مستخدم عادي.
-     *
-     * Profile endpoint متاح للمستخدم
-     * الحالي ويحتوي isSystemAdmin.
-     */
-    this.auth
-      .getProfile()
-      .subscribe({
-
-        next: profile => {
-
-          this.isSystemAdmin =
-            profile.isSystemAdmin === true;
-        },
-
-        error: () => {
-
-          this.isSystemAdmin =
-            false;
-        }
-
-      });
   }
 
 
@@ -552,6 +558,66 @@ export class MainLayout
 
 
   /* =========================================================
+     ROLE MODE
+     ========================================================= */
+
+  toggleRoleMenu(
+    event?: Event
+  ): void {
+
+    event?.stopPropagation();
+
+    this.roleMenuOpen =
+      !this.roleMenuOpen;
+  }
+
+
+  closeRoleMenu():
+    void {
+
+    this.roleMenuOpen =
+      false;
+  }
+
+
+  selectRole(
+    mode: AppRoleMode,
+    event?: Event
+  ): void {
+
+    event?.stopPropagation();
+
+    this.access.setRoleMode(mode);
+    this.roleMenuOpen = false;
+
+    const url =
+      this.router.url.split('?')[0];
+
+    if (
+      url === '/dashboard' ||
+      url === '/'
+    ) {
+
+      return;
+    }
+
+    void this.router.navigateByUrl(
+      '/dashboard'
+    );
+  }
+
+
+  @HostListener(
+    'document:click'
+  )
+  onDocumentClick():
+    void {
+
+    this.closeRoleMenu();
+  }
+
+
+  /* =========================================================
      SIDEBAR ACTIVE ROUTES
      ========================================================= */
 
@@ -630,6 +696,9 @@ export class MainLayout
       ) ||
       type.includes(
         'completed'
+      ) ||
+      type.includes(
+        'reward'
       )
     ) {
 
@@ -671,10 +740,19 @@ export class MainLayout
       NotificationItem
   ): string {
 
-    return (
-      notification.title
-      ||
-      'إشعار جديد'
+    return arabicNotificationTitle(
+      notification
+    );
+  }
+
+
+  notificationMessage(
+    notification:
+      NotificationItem
+  ): string {
+
+    return arabicNotificationMessage(
+      notification
     );
   }
 

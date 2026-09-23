@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>الهيكلة الهيكلية — الواجهة الويب والتطبيق المحمول</title>
+  <style>
+    @page { size: A4; margin: 10mm 9mm 11mm 9mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; background: #fff; color: #1b2433;
+      font-family: "Segoe UI", "Tahoma", "Arial", sans-serif;
+      font-size: 9pt; line-height: 1.32;
+    }
+    h1, h2, h3 { margin: 0 0 3px; color: #0f2744; }
+    h1 { font-size: 14.5pt; }
+    h2 {
+      font-size: 11pt; border-bottom: 2px solid #4f46e5;
+      padding-bottom: 2px; margin: 8px 0 5px;
+    }
+    h3 { font-size: 9.5pt; margin: 6px 0 3px; color: #312e81; }
+    p { margin: 0 0 4px; }
+    .muted { color: #4b5563; font-size: 8.3pt; }
+
+    .cover {
+      background: linear-gradient(135deg, #0f2744 0%, #312e81 70%);
+      color: #fff; padding: 9px 13px; border-radius: 8px; margin-bottom: 7px;
+    }
+    .cover h1 { color: #fff; margin-bottom: 1px; }
+    .cover p { margin: 0; color: #e0e7ff; font-size: 8.8pt; }
+    .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .chip {
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 999px; padding: 1px 8px; font-size: 8pt;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .card {
+      border: 1px solid #dbe3ef; border-radius: 7px; padding: 6px 8px; background: #f8fafc;
+    }
+    .card h3 { margin-top: 0; }
+    .card p { margin: 0; font-size: 8.4pt; }
+
+    .note-bar {
+      background: #eef2ff; border-right: 4px solid #4f46e5;
+      padding: 4px 8px; border-radius: 5px; font-size: 8.3pt; margin: 5px 0 6px;
+    }
+
+    .files {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 8px;
+      border: 1px solid #cfd8e6;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 0 0 6px;
+    }
+    .files .row {
+      display: grid;
+      grid-template-columns: 46% 54%;
+      gap: 4px;
+      padding: 2px 6px;
+      border-bottom: 1px solid #e6ebf3;
+      font-size: 7.8pt;
+      align-items: start;
+    }
+    .files .row:nth-child(4n+1),
+    .files .row:nth-child(4n+2) { background: #f8fafc; }
+    .files code {
+      font-family: Consolas, "Courier New", monospace;
+      color: #1e3a8a; font-size: 7.3pt; direction: ltr; text-align: left;
+    }
+    .files span { color: #1f2937; }
+
+    table {
+      width: 100%; border-collapse: collapse; font-size: 8pt; margin: 3px 0 4px;
+    }
+    th, td {
+      border: 1px solid #d7dee8; padding: 3px 6px; text-align: right; vertical-align: top;
+    }
+    th { background: #0f2744; color: #fff; font-weight: 600; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .footer { margin-top: 5px; font-size: 8.1pt; color: #4b5563; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>الهيكلة الهيكلية للواجهة الويب والتطبيق المحمول</h1>
+    <p>مشروع إدارة المهام — Task Management</p>
+    <div class="meta">
+      <span class="chip">Angular 20 — Frontend</span>
+      <span class="chip">Expo 57 / React Native — Mobile</span>
+      <span class="chip">نفس واجهة الـ API الخلفية</span>
+    </div>
+  </header>
+
+  <h2>شرح مختصر لإطاري العمل</h2>
+  <div class="grid-2">
+    <article class="card">
+      <h3>Angular (الويب)</h3>
+      <p>إطار ويب من Google لبناء تطبيقات صفحة واحدة. كل شاشة غالباً ثلاثة ملفات: منطق TypeScript، قالب HTML، وتنسيق SCSS. التوجيه عبر المسارات، والبيانات من الـ API عبر خدمات HttpClient، مع حراس تمنع الدخول بدون تسجيل أو بدون صلاحية مسؤول.</p>
+    </article>
+    <article class="card">
+      <h3>Expo / React Native (الموبايل)</h3>
+      <p>إطار لبناء تطبيق هاتف بـ React. الشاشة ملف tsx واحد يجمع الواجهة والمنطق. Expo يشغّله على Android وiOS والمتصفح. نفس الـ API، والتنقل عبر React Navigation (تبويبات سفلية ومكدس شاشات).</p>
+    </article>
+  </div>
+  <p class="note-bar">كلا التطبيقين عربيان (RTL) ويتصلان بـ ASP.NET Core. التسلسل: مساحة عمل ← مشروع ← مهمة. الأدوار: مالك، مدير مشروع، عضو، ومسؤول نظام.</p>
+
+  <h2>1) هيكل الفرونت — Angular 20 &nbsp;<span class="muted">المجلد: Frontend/</span></h2>
+  <h3>التشغيل والإعداد والهيكل</h3>
+  <div class="files">
+    <div class="row"><code>src/index.html</code><span>صفحة HTML الأساسية.</span></div>
+    <div class="row"><code>src/main.ts</code><span>تشغيل تطبيق Angular.</span></div>
+    <div class="row"><code>src/styles.scss</code><span>أنماط عامة وألوان وRTL.</span></div>
+    <div class="row"><code>environments/environment.ts</code><span>عنوان الـ API للتطوير.</span></div>
+    <div class="row"><code>environments/environment.production.ts</code><span>عنوان الـ API للإنتاج.</span></div>
+    <div class="row"><code>app/app.ts</code><span>المكوّن الجذر.</span></div>
+    <div class="row"><code>app/app.routes.ts</code><span>جدول المسارات.</span></div>
+    <div class="row"><code>app/app.config.ts</code><span>تسجيل الخدمات والحراس.</span></div>
+    <div class="row"><code>layout/main-layout/</code><span>الشريط الجانبي والجرس بعد الدخول.</span></div>
+    <div class="row"><code>angular.json / package.json</code><span>إعداد البناء والتبعيات.</span></div>
+  </div>
+
+  <h3>core — طبقة مشتركة (ليست صفحات)</h3>
+  <div class="files">
+    <div class="row"><code>guards/auth-guard.ts</code><span>منع الصفحات بدون توكن.</span></div>
+    <div class="row"><code>guards/admin-guard.ts</code><span>صفحات المسؤول فقط.</span></div>
+    <div class="row"><code>interceptors/auth-interceptor.ts</code><span>إرفاق JWT مع كل طلب.</span></div>
+    <div class="row"><code>interceptors/api-error-interceptor.ts</code><span>توحيد رسائل الخطأ.</span></div>
+    <div class="row"><code>utils/notification-text.ts</code><span>ترجمة الإشعارات للعربية.</span></div>
+    <div class="row"><code>services/auth.ts</code><span>دخول وخروج وملف المستخدم.</span></div>
+    <div class="row"><code>services/token-storage.ts</code><span>حفظ التوكن محلياً.</span></div>
+    <div class="row"><code>services/workspace-access.ts</code><span>الدور الحالي وصلاحيات الشريط.</span></div>
+    <div class="row"><code>services/workspaces.ts</code><span>مساحات العمل.</span></div>
+    <div class="row"><code>services/workspace-members.ts</code><span>أعضاء المساحة.</span></div>
+    <div class="row"><code>services/workspace-invitations.ts</code><span>دعوات الانضمام.</span></div>
+    <div class="row"><code>services/projects.ts</code><span>المشاريع وأعضاؤها.</span></div>
+    <div class="row"><code>services/tasks.ts</code><span>المهام وحالاتها.</span></div>
+    <div class="row"><code>services/task-assignees.ts</code><span>إسناد المهام.</span></div>
+    <div class="row"><code>services/task-comments.ts</code><span>تعليقات المهمة.</span></div>
+    <div class="row"><code>services/task-attachments.ts</code><span>مرفقات المهمة.</span></div>
+    <div class="row"><code>services/task-board-scope.ts</code><span>نطاق لوحة المهام حسب الدور.</span></div>
+    <div class="row"><code>services/notifications.ts</code><span>صندوق الإشعارات.</span></div>
+    <div class="row"><code>services/notification-realtime.ts</code><span>تنبيه فوري عبر SignalR.</span></div>
+    <div class="row"><code>services/activity-logs.ts</code><span>سجل تدقيق المسؤول.</span></div>
+    <div class="row"><code>services/workspace-activity-logs.ts</code><span>نشاط المساحة حسب الدور.</span></div>
+    <div class="row"><code>services/admin.ts</code><span>إحصاءات لوحة المسؤول.</span></div>
+    <div class="row"><code>services/admin-users.ts</code><span>إدارة حسابات المستخدمين.</span></div>
+    <div class="row"><code>services/roles-permissions.ts</code><span>الأدوار والصلاحيات.</span></div>
+    <div class="row"><code>services/user-permissions.ts</code><span>صلاحيات مستخدم محدد.</span></div>
+    <div class="row"><code>services/password-recovery-admin.ts</code><span>استعادة كلمات المرور.</span></div>
+    <div class="row"><code>services/theme.ts</code><span>الوضع الداكن والفاتح.</span></div>
+    <div class="row"><code></code><span></span></div>
+  </div>
+
+  <h3>features — الصفحات (غالباً ts + html + scss)</h3>
+  <div class="files">
+    <div class="row"><code>auth/login</code><span>شاشة تسجيل الدخول.</span></div>
+    <div class="row"><code>auth/register</code><span>إنشاء حساب جديد.</span></div>
+    <div class="row"><code>dashboard/pages/dashboard</code><span>لوحة المستخدم حسب الدور.</span></div>
+    <div class="row"><code>dashboard/pages/admin-dashboard</code><span>لوحة إحصاءات المسؤول.</span></div>
+    <div class="row"><code>dashboard/role-insights-board</code><span>ملخص بصري حسب الدور.</span></div>
+    <div class="row"><code>dashboard/chart-slices.ts</code><span>شرائح الرسوم بـ CSS بدون Chart.js.</span></div>
+    <div class="row"><code>workspaces/workspace-management</code><span>إنشاء وإدارة المساحات.</span></div>
+    <div class="row"><code>projects/pages/projects</code><span>قائمة المشاريع.</span></div>
+    <div class="row"><code>projects/pages/projects-entry</code><span>مدخل صفحة المشاريع.</span></div>
+    <div class="row"><code>tasks/pages/tasks</code><span>لوحة المهام وتغيير الحالة.</span></div>
+    <div class="row"><code>tasks/pages/tasks-entry</code><span>مدخل صفحة المهام.</span></div>
+    <div class="row"><code>tasks/task-interaction</code><span>تعليق ومرفق وإسناد المهمة.</span></div>
+    <div class="row"><code>team/pages/team</code><span>الفريق والدعوات للمالك.</span></div>
+    <div class="row"><code>activity/pages/activity-logs</code><span>سجل النشاط وزر تطبيق الفلترة.</span></div>
+    <div class="row"><code>notifications/pages/notifications</code><span>صندوق الإشعارات.</span></div>
+    <div class="row"><code>account/pages/account</code><span>الملف الشخصي والإعدادات.</span></div>
+    <div class="row"><code>admin/pages/users</code><span>إدارة المستخدمين.</span></div>
+    <div class="row"><code>admin/pages/roles-permissions</code><span>إدارة الأدوار والصلاحيات.</span></div>
+    <div class="row"><code>admin/pages/user-permissions</code><span>صلاحيات مستخدم فردي.</span></div>
+    <div class="row"><code>admin/pages/password-recovery</code><span>استعادة كلمات المرور.</span></div>
+  </div>
+
+  <h2>2) هيكل الموبايل — Expo 57 &nbsp;<span class="muted">المجلد: Mobile/</span></h2>
+  <h3>التشغيل والـ API والتخزين</h3>
+  <div class="files">
+    <div class="row"><code>index.ts</code><span>نقطة تشغيل Expo.</span></div>
+    <div class="row"><code>App.tsx</code><span>الجذر: ثيم وصلاحيات وتنقّل.</span></div>
+    <div class="row"><code>app.json</code><span>اسم التطبيق والأيقونات.</span></div>
+    <div class="row"><code>package.json</code><span>أوامر start / android / web.</span></div>
+    <div class="row"><code>.env</code><span>عنوان الـ API عبر EXPO_PUBLIC_API_BASE_URL.</span></div>
+    <div class="row"><code>src/config.ts</code><span>قراءة عنوان الـ API واسم التطبيق.</span></div>
+    <div class="row"><code>api/client.ts</code><span>طلبات HTTP والتوكن والأخطاء.</span></div>
+    <div class="row"><code>api/types.ts</code><span>أنواع البيانات (Workspace, Task…).</span></div>
+    <div class="row"><code>api/services.ts</code><span>دوال الـ API كلها.</span></div>
+    <div class="row"><code>access/AccessProvider.tsx</code><span>الدور الحالي وصلاحيات التبويب.</span></div>
+    <div class="row"><code>storage/kv.ts</code><span>تخزين مفتاح/قيمة.</span></div>
+    <div class="row"><code>storage/session.ts</code><span>حفظ جلسة الدخول.</span></div>
+    <div class="row"><code>theme/tokens.ts</code><span>ألوان ومسافات وخطوط.</span></div>
+    <div class="row"><code>theme/ThemeProvider.tsx</code><span>الوضع الداكن والفاتح.</span></div>
+  </div>
+
+  <h3>التنقّل والمكوّنات المشتركة</h3>
+  <div class="files">
+    <div class="row"><code>navigation/types.ts</code><span>أسماء الشاشات ومعاملاتها.</span></div>
+    <div class="row"><code>navigation/RootNavigator.tsx</code><span>مكدس: دخول أو التطبيق الرئيسي.</span></div>
+    <div class="row"><code>navigation/MainTabs.tsx</code><span>التبويبات السفلية حسب الدور.</span></div>
+    <div class="row"><code>components/Ui.tsx</code><span>أزرار وبطاقات وشاشات فارغة.</span></div>
+    <div class="row"><code>components/Icon.tsx</code><span>الأيقونات.</span></div>
+    <div class="row"><code>components/RoleSwitcher.tsx</code><span>تبديل عرض الدور.</span></div>
+    <div class="row"><code>components/RoleInsightsBoard.tsx</code><span>ملخص حسب الدور.</span></div>
+    <div class="row"><code>components/AssigneePicker.tsx</code><span>اختيار المسند إليه.</span></div>
+    <div class="row"><code>components/FilterSelect.tsx</code><span>قوائم الفلترة.</span></div>
+    <div class="row"><code>components/DateTimeField.tsx</code><span>حقل تاريخ ووقت.</span></div>
+    <div class="row"><code>components/ChoiceRow.tsx</code><span>صف اختيار من خيارات.</span></div>
+    <div class="row"><code></code><span></span></div>
+  </div>
+
+  <h3>الشاشات — screens</h3>
+  <div class="files">
+    <div class="row"><code>LoginScreen.tsx</code><span>تسجيل الدخول.</span></div>
+    <div class="row"><code>HomeScreen.tsx</code><span>الرئيسية والدعوات.</span></div>
+    <div class="row"><code>ProjectsScreen.tsx</code><span>المشاريع: قائمة وإنشاء وتعديل.</span></div>
+    <div class="row"><code>ProjectMembersScreen.tsx</code><span>أعضاء المشروع.</span></div>
+    <div class="row"><code>ManagedProjectView.tsx</code><span>عرض مشروع يديره المدير.</span></div>
+    <div class="row"><code>TasksScreen.tsx</code><span>قائمة المهام.</span></div>
+    <div class="row"><code>TaskBoard.tsx</code><span>لوحة الحالات (Kanban).</span></div>
+    <div class="row"><code>TaskDetailScreen.tsx</code><span>تفاصيل وتعليقات ومرفقات.</span></div>
+    <div class="row"><code>taskUi.ts</code><span>مساعدات عرض حالة المهمة.</span></div>
+    <div class="row"><code>TeamScreen.tsx</code><span>الفريق وسجل النشاط.</span></div>
+    <div class="row"><code>NotificationsScreen.tsx</code><span>الإشعارات بالعربية.</span></div>
+    <div class="row"><code>AccountScreen.tsx</code><span>الحساب والإعدادات.</span></div>
+    <div class="row"><code>MoreScreen.tsx</code><span>قائمة المزيد.</span></div>
+    <div class="row"><code>AdminScreens.tsx</code><span>مستخدمون ومساحات للمسؤول.</span></div>
+    <div class="row"><code>AdminHomeDashboard.tsx</code><span>لوحة المسؤول على الموبايل.</span></div>
+    <div class="row"><code></code><span></span></div>
+  </div>
+
+  <h2>3) كيف يسيران معاً</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>الجانب</th>
+        <th>الويب (Angular 20)</th>
+        <th>الموبايل (Expo 57)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>الإطار</td><td>Angular 20</td><td>Expo SDK 57 + React Native</td></tr>
+      <tr><td>بناء الشاشة</td><td>ts + html + scss</td><td>ملف tsx واحد</td></tr>
+      <tr><td>التنقّل</td><td>app.routes.ts</td><td>RootNavigator + MainTabs</td></tr>
+      <tr><td>الاتصال بالـ API</td><td>core/services</td><td>api/services.ts</td></tr>
+      <tr><td>الحماية</td><td>authGuard / adminGuard</td><td>فحص التوكن في RootNavigator</td></tr>
+      <tr><td>التشغيل</td><td>ng serve → localhost:4200</td><td>npm start → Expo Go أو ويب</td></tr>
+    </tbody>
+  </table>
+  <p class="footer">كلا الواجهتين تقرآن نفس الـ JWT وتعرضان الشاشات حسب الدور. منطق الأعمال (الإنشاء، الصلاحيات، الإشعارات) يُنفَّذ في الـ API وليس داخل الواجهة.</p>
+</body>
+</html>

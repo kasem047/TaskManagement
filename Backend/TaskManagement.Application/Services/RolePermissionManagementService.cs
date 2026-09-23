@@ -98,71 +98,10 @@ public sealed class RolePermissionManagementService
     {
         await EnsureSystemAdminAsync();
 
-        var normalizedName =
-            request.Name.Trim();
+        _ = request;
 
-        var roleNameExists =
-            await _dbContext.Roles
-                .AsNoTracking()
-                .AnyAsync(role =>
-                    role.Name ==
-                        normalizedName);
-
-        if (roleNameExists)
-        {
-            throw new ConflictException(
-                "A role with the same name already exists.");
-        }
-
-        var permissionIds =
-            request.PermissionIds
-                .Distinct()
-                .ToHashSet();
-
-        await EnsurePermissionsExistAsync(
-            permissionIds);
-
-        var now =
-            DateTime.UtcNow;
-
-        var role =
-            new Role
-            {
-                Name =
-                    normalizedName,
-
-                Description =
-                    NormalizeOptionalText(
-                        request.Description),
-
-                IsSystemRole =
-                    false,
-
-                CreatedAt =
-                    now
-            };
-
-        _dbContext.Roles.Add(
-            role);
-
-        foreach (var permissionId in
-                 permissionIds)
-        {
-            role.RolePermissions.Add(
-                new RolePermission
-                {
-                    PermissionId =
-                        permissionId,
-
-                    CreatedAt =
-                        now
-                });
-        }
-
-        await _dbContext.SaveChangesAsync();
-
-        return await GetRoleResponseAsync(
-            role.Id);
+        throw new BadRequestException(
+            "Custom roles are disabled. Workspace roles are fixed: WorkspaceOwner, ProjectManager, and Member.");
     }
 
     public async Task<RoleResponse>
@@ -172,57 +111,11 @@ public sealed class RolePermissionManagementService
     {
         await EnsureSystemAdminAsync();
 
-        var role =
-            await _dbContext.Roles
-                .FirstOrDefaultAsync(role =>
-                    role.Id ==
-                        roleId &&
-                    !role.IsDeleted);
+        _ = roleId;
+        _ = request;
 
-        if (role is null)
-        {
-            throw new NotFoundException(
-                "Role not found.");
-        }
-
-        if (role.IsSystemRole)
-        {
-            throw new ConflictException(
-                "System role metadata cannot be changed. Its permissions can still be managed.");
-        }
-
-        var normalizedName =
-            request.Name.Trim();
-
-        var duplicateName =
-            await _dbContext.Roles
-                .AsNoTracking()
-                .AnyAsync(existingRole =>
-                    existingRole.Id !=
-                        roleId &&
-                    existingRole.Name ==
-                        normalizedName);
-
-        if (duplicateName)
-        {
-            throw new ConflictException(
-                "A role with the same name already exists.");
-        }
-
-        role.Name =
-            normalizedName;
-
-        role.Description =
-            NormalizeOptionalText(
-                request.Description);
-
-        role.UpdatedAt =
-            DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return await GetRoleResponseAsync(
-            role.Id);
+        throw new BadRequestException(
+            "Workspace roles are fixed and cannot be renamed or edited.");
     }
 
     public async Task DeleteRoleAsync(
@@ -230,75 +123,10 @@ public sealed class RolePermissionManagementService
     {
         await EnsureSystemAdminAsync();
 
-        var role =
-            await _dbContext.Roles
-                .FirstOrDefaultAsync(role =>
-                    role.Id ==
-                        roleId &&
-                    !role.IsDeleted);
+        _ = roleId;
 
-        if (role is null)
-        {
-            throw new NotFoundException(
-                "Role not found.");
-        }
-
-        if (role.IsSystemRole)
-        {
-            throw new ConflictException(
-                "System roles cannot be deleted.");
-        }
-
-        var isAssignedToActiveMember =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .AnyAsync(member =>
-                    member.RoleId ==
-                        roleId &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted);
-
-        if (isAssignedToActiveMember)
-        {
-            throw new ConflictException(
-                "This role is assigned to one or more active workspace members. Reassign those members before deleting the role.");
-        }
-
-        var now =
-            DateTime.UtcNow;
-
-        role.IsDeleted =
-            true;
-
-        role.DeletedAt =
-            now;
-
-        role.UpdatedAt =
-            now;
-
-        var rolePermissions =
-            await _dbContext.RolePermissions
-                .Where(rolePermission =>
-                    rolePermission.RoleId ==
-                        roleId &&
-                    !rolePermission.IsDeleted)
-                .ToListAsync();
-
-        foreach (var rolePermission in
-                 rolePermissions)
-        {
-            rolePermission.IsDeleted =
-                true;
-
-            rolePermission.DeletedAt =
-                now;
-
-            rolePermission.UpdatedAt =
-                now;
-        }
-
-        await _dbContext.SaveChangesAsync();
+        throw new BadRequestException(
+            "Workspace roles are fixed and cannot be deleted.");
     }
 
     public async Task<RolePermissionsResponse>
@@ -371,98 +199,11 @@ public sealed class RolePermissionManagementService
     {
         await EnsureSystemAdminAsync();
 
-        var role =
-            await _dbContext.Roles
-                .FirstOrDefaultAsync(role =>
-                    role.Id == roleId &&
-                    !role.IsDeleted);
+        _ = roleId;
+        _ = request;
 
-        if (role is null)
-        {
-            throw new NotFoundException(
-                "Role not found.");
-        }
-
-        var requestedPermissionIds =
-            request.PermissionIds
-                .Distinct()
-                .ToHashSet();
-
-        await EnsurePermissionsExistAsync(
-            requestedPermissionIds);
-
-        var currentRolePermissions =
-            await _dbContext.RolePermissions
-                .Where(rolePermission =>
-                    rolePermission.RoleId ==
-                        roleId)
-                .ToListAsync();
-
-        var now =
-            DateTime.UtcNow;
-
-        foreach (var rolePermission in
-                 currentRolePermissions.Where(
-                     rolePermission =>
-                         !rolePermission.IsDeleted &&
-                         !requestedPermissionIds.Contains(
-                             rolePermission.PermissionId)))
-        {
-            rolePermission.IsDeleted =
-                true;
-
-            rolePermission.DeletedAt =
-                now;
-
-            rolePermission.UpdatedAt =
-                now;
-        }
-
-        foreach (var permissionId in
-                 requestedPermissionIds)
-        {
-            var existingRolePermission =
-                currentRolePermissions
-                    .FirstOrDefault(
-                        rolePermission =>
-                            rolePermission.PermissionId ==
-                                permissionId);
-
-            if (existingRolePermission is null)
-            {
-                _dbContext.RolePermissions.Add(
-                    new RolePermission
-                    {
-                        RoleId =
-                            roleId,
-
-                        PermissionId =
-                            permissionId,
-
-                        CreatedAt =
-                            now
-                    });
-
-                continue;
-            }
-
-            if (existingRolePermission.IsDeleted)
-            {
-                existingRolePermission.IsDeleted =
-                    false;
-
-                existingRolePermission.DeletedAt =
-                    null;
-
-                existingRolePermission.UpdatedAt =
-                    now;
-            }
-        }
-
-        await _dbContext.SaveChangesAsync();
-
-        return await GetRolePermissionsAsync(
-            roleId);
+        throw new BadRequestException(
+            "Role permissions are fixed and cannot be changed.");
     }
 
     private async Task EnsurePermissionsExistAsync(

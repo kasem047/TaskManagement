@@ -10,7 +10,11 @@ export const authInterceptor: HttpInterceptorFn = (
   const tokenStorage = inject(TokenStorage);
   const token = tokenStorage.getToken();
 
-  if (!token) {
+  const isPublicAuthRequest =
+    req.url.includes('/api/Auth/login') ||
+    req.url.includes('/api/Auth/password-recovery/');
+
+  if (!token || isPublicAuthRequest) {
     return next(req);
   }
 

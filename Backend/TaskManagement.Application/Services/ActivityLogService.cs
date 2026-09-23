@@ -46,22 +46,153 @@ public sealed class ActivityLogService
         await EnsureWorkspaceExistsAsync(
             workspaceId);
 
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
 
-        await _permissionService
-            .EnsurePermissionAsync(
-                workspaceId,
-                SystemPermissions.WorkspaceManage);
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            throw new ForbiddenException(
+                "You do not have permission to perform this action.");
+        }
 
+        var userId =
+            _currentUserService.UserId;
 
-        var activityLogs =
-            await _dbContext.ActivityLogs
+        var activityLogsQuery =
+            _dbContext.ActivityLogs
                 .AsNoTracking()
                 .Include(activityLog =>
                     activityLog.User)
                 .Where(activityLog =>
                     activityLog.WorkspaceId ==
                         workspaceId &&
-                    !activityLog.IsDeleted)
+                    !activityLog.IsDeleted);
+
+        if (roleName == SystemRoles.ProjectManager)
+        {
+            var projectIds =
+                await _dbContext.Projects
+                    .AsNoTracking()
+                    .Where(project =>
+                        project.WorkspaceId == workspaceId &&
+                        !project.IsDeleted &&
+                        (
+                            project.ManagerUserId == userId ||
+                            project.Members.Any(member =>
+                                member.UserId == userId &&
+                                !member.IsDeleted)
+                        ))
+                    .Select(project =>
+                        project.Id)
+                    .ToListAsync();
+
+            var taskIds =
+                await _dbContext.TaskItems
+                    .AsNoTracking()
+                    .Where(task =>
+                        projectIds.Contains(task.ProjectId))
+                    .Select(task =>
+                        task.Id)
+                    .ToListAsync();
+
+            var assigneeIds =
+                await _dbContext.TaskAssignees
+                    .AsNoTracking()
+                    .Where(assignment =>
+                        taskIds.Contains(assignment.TaskItemId))
+                    .Select(assignment =>
+                        assignment.Id)
+                    .ToListAsync();
+
+            var commentIds =
+                await _dbContext.TaskComments
+                    .AsNoTracking()
+                    .Where(comment =>
+                        taskIds.Contains(comment.TaskItemId))
+                    .Select(comment =>
+                        comment.Id)
+                    .ToListAsync();
+
+            var attachmentIds =
+                await _dbContext.TaskAttachments
+                    .AsNoTracking()
+                    .Where(attachment =>
+                        taskIds.Contains(attachment.TaskItemId))
+                    .Select(attachment =>
+                        attachment.Id)
+                    .ToListAsync();
+
+            var dependencyIds =
+                await _dbContext.TaskDependencies
+                    .AsNoTracking()
+                    .Where(dependency =>
+                        taskIds.Contains(dependency.TaskItemId) ||
+                        taskIds.Contains(dependency.DependsOnTaskItemId))
+                    .Select(dependency =>
+                        dependency.Id)
+                    .ToListAsync();
+
+            var projectMemberIds =
+                await _dbContext.ProjectMembers
+                    .AsNoTracking()
+                    .Where(member =>
+                        projectIds.Contains(member.ProjectId))
+                    .Select(member =>
+                        member.Id)
+                    .ToListAsync();
+
+            activityLogsQuery =
+                activityLogsQuery.Where(activityLog =>
+                    activityLog.UserId == userId ||
+                    activityLog.EntityName == nameof(WorkspaceInvitation) ||
+                    (
+                        activityLog.EntityName == nameof(Project) &&
+                        projectIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(ProjectMember) &&
+                        projectMemberIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(TaskItem) &&
+                        taskIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(TaskAssignee) &&
+                        assigneeIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(TaskComment) &&
+                        commentIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(TaskAttachment) &&
+                        attachmentIds.Contains(activityLog.EntityId)
+                    ) ||
+                    (
+                        activityLog.EntityName == nameof(TaskDependency) &&
+                        dependencyIds.Contains(activityLog.EntityId)
+                    ));
+        }
+        else if (roleName == SystemRoles.Member)
+        {
+            activityLogsQuery =
+                activityLogsQuery.Where(activityLog =>
+                    activityLog.UserId == userId);
+        }
+        else if (
+            roleName != "SystemAdmin" &&
+            roleName != SystemRoles.WorkspaceOwner &&
+            roleName != "Owner")
+        {
+            throw new ForbiddenException(
+                "You do not have permission to perform this action.");
+        }
+
+        var activityLogs =
+            await activityLogsQuery
                 .OrderByDescending(activityLog =>
                     activityLog.CreatedAt)
                 .ThenByDescending(activityLog =>
@@ -106,6 +237,28 @@ public sealed class ActivityLogService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskView);
+
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        if (roleName == SystemRoles.Member)
+        {
+            var assigned =
+                await _dbContext.TaskAssignees
+                    .AsNoTracking()
+                    .AnyAsync(assignment =>
+                        assignment.TaskItemId == taskId &&
+                        assignment.UserId == _currentUserService.UserId &&
+                        !assignment.IsDeleted);
+
+            if (!assigned)
+            {
+                throw new NotFoundException(
+                    "Task not found.");
+            }
+        }
 
 
         /* =====================================================

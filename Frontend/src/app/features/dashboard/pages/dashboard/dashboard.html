@@ -4,14 +4,16 @@
 
     <div class="header-copy">
 
+      <span class="eyebrow">
+        {{ dashboardEyebrow }}
+      </span>
+
       <h1>
-        أهلًا
-        {{ user?.fullName || 'بك' }}
+        {{ dashboardTitle }}
       </h1>
 
       <p>
-        تابع مساحات عملك وانتقل بسرعة
-        إلى المكان الذي تريد العمل عليه.
+        {{ dashboardSubtitle }}
       </p>
 
     </div>
@@ -38,15 +40,14 @@
       </button>
 
 
+      @if (
+        canCreateWorkspace &&
+        workspaces.length === 0
+      ) {
+
       <button
         class="primary-button"
         type="button"
-        [disabled]="!canCreateWorkspace"
-        [title]="
-          canCreateWorkspace
-            ? 'إنشاء مساحة عمل جديدة'
-            : 'يمكن للمستخدم امتلاك مساحة عمل واحدة فقط'
-        "
         (click)="openCreateWorkspace()"
       >
 
@@ -59,11 +60,14 @@
 
       </button>
 
+      }
+
     </div>
 
   </header>
 
-  <!-- KPI -->
+  <!-- KPI for member-only accounts -->
+  @if (!showRoleInsights) {
   <section class="stats-grid">
 
     <article class="stat-card">
@@ -92,7 +96,7 @@
         </span>
 
         <strong>
-          {{ workspaces.length }}
+          {{ listedWorkspaces.length }}
         </strong>
 
         <small>
@@ -103,6 +107,8 @@
 
     </article>
 
+
+    @if (ownerCount > 0) {
 
     <article class="stat-card">
 
@@ -140,6 +146,10 @@
 
     </article>
 
+    }
+
+
+    @if (managerCount > 0) {
 
     <article class="stat-card">
 
@@ -184,6 +194,52 @@
 
     </article>
 
+    }
+
+
+    @if (memberCount > 0) {
+
+    <article class="stat-card">
+
+      <div class="stat-icon sky">
+
+        <svg viewBox="0 0 24 24">
+
+          <circle
+            cx="12"
+            cy="8"
+            r="4"
+          />
+
+          <path
+            d="M4 21v-2
+               a8 8 0 0 1 16 0v2"
+          />
+
+        </svg>
+
+      </div>
+
+      <div class="stat-content">
+
+        <span>
+          عضو فيها
+        </span>
+
+        <strong>
+          {{ memberCount }}
+        </strong>
+
+        <small>
+          بصلاحية عضو
+        </small>
+
+      </div>
+
+    </article>
+
+    }
+
 
     <article class="stat-card status-card">
 
@@ -216,10 +272,70 @@
     </article>
 
   </section>
+  }
 
 
+  @if (insightsLoading) {
+    <section class="insight-loading">
+      <span class="loader"></span>
+      <p>جارٍ تجهيز الرسوم البيانية حسب دورك...</p>
+    </section>
+  }
+
+  @if (showOwnerBoard && ownerInsights; as insights) {
+    <app-role-insights-board
+      heading="نظرة عامة"
+      [insights]="insights"
+      [taskSlices]="ownerTaskChart"
+      variant="owner"
+      projectsCaption="المشاريع"
+      thirdLabel="أعضاء الفريق"
+      thirdHint="في مساحتك"
+      [showTeamAction]="showTeamAction"
+      [showTasksAction]="true"
+      projectsActionLabel="المشاريع"
+      (teamClick)="openTeam()"
+      (tasksClick)="openTasks()"
+      (projectsClick)="openProjects()"
+    />
+  }
+
+  @if (showManagerBoard && managerInsights; as insights) {
+    <app-role-insights-board
+      heading="نظرة عامة"
+      [insights]="insights"
+      [taskSlices]="managerTaskChart"
+      variant="manager"
+      projectsCaption="المشروع"
+      thirdLabel="أعضاء المشروع"
+      thirdHint="داخل المشروع الذي تديره"
+      [showTasksAction]="true"
+      projectsActionLabel="تفاصيل المشروع"
+      (tasksClick)="openTasks()"
+      (projectsClick)="openProjects()"
+    />
+  }
+
+  @if (showMemberBoard && memberInsights; as insights) {
+    <app-role-insights-board
+      heading="ملخص عملك"
+      [insights]="insights"
+      [taskSlices]="memberTaskChart"
+      variant="member"
+      projectsCaption="مشاريعي"
+      thirdLabel="زملاء المشروع"
+      thirdHint="في المشاريع التي أنت ضمنها"
+      [showTasksAction]="true"
+      projectsActionLabel="المشاريع"
+      (tasksClick)="openTasks()"
+      (projectsClick)="openProjects()"
+    />
+  }
+
+
+  @if (!showOwnerDashboard && !showManagerDashboard && !showMemberDashboard) {
   <!-- Main content -->
-  <section class="dashboard-grid">
+  <section class="dashboard-grid single">
 
     <!-- Workspaces -->
     <article class="panel workspaces-panel">
@@ -229,11 +345,11 @@
         <div>
 
           <h2>
-            مساحات العمل
+            {{ workspaceListTitle }}
           </h2>
 
           <p>
-            المساحات التي يمكنك الوصول إليها.
+            {{ workspaceListHint }}
           </p>
 
         </div>
@@ -247,7 +363,7 @@
             (click)="openWorkspaceManagement()"
             title="إدارة مساحات العمل"
           >
-            {{ workspaces.length }}
+            {{ listedWorkspaces.length }}
           </button>
 
         </div>
@@ -309,7 +425,7 @@
         </div>
 
       } @else if (
-        workspaces.length === 0
+        listedWorkspaces.length === 0
       ) {
 
         <div class="empty-state">
@@ -340,18 +456,25 @@
 
 
           <p>
-            أنشئ مساحة عمل لبدء تنظيم مشاريعك ومهامك.
+            @if (canCreateWorkspace) {
+              أنشئ مساحة عمل لبدء تنظيم مشاريعك وفريقك.
+            } @else {
+              لا توجد مساحات عمل مرتبطة بحسابك حالياً. سيقوم مسؤول النظام بإنشاء مساحة وإسنادها إليك، ويمكنك قبول دعوة عند وصولها.
+            }
           </p>
 
+
+          @if (canCreateWorkspace) {
 
           <button
             type="button"
             class="primary-button"
-            [disabled]="!canCreateWorkspace"
             (click)="openCreateWorkspace()"
           >
             مساحة عمل جديدة
           </button>
+
+          }
 
         </div>
 
@@ -360,7 +483,7 @@
         <div class="workspace-list">
 
           @for (
-            workspace of workspaces;
+            workspace of listedWorkspaces;
             track workspace.id
           ) {
 
@@ -402,17 +525,6 @@
 
               <div class="workspace-meta">
 
-                <span class="role-badge">
-
-                  {{
-                    roleLabel(
-                      workspace.currentUserRole
-                    )
-                  }}
-
-                </span>
-
-
                 <svg viewBox="0 0 24 24">
                   <path d="m9 18 6-6-6-6" />
                 </svg>
@@ -429,75 +541,10 @@
 
     </article>
 
-
-    <!-- Focus panel -->
-    <aside class="panel focus-panel">
-
-      <div class="focus-icon">
-
-        <img
-          src="brand/taskmanagement-logo.png"
-          alt=""
-        >
-
-      </div>
-
-
-      <span class="focus-label">
-        TASK MANAGEMENT
-      </span>
-
-
-      <h2>
-        اختر مساحة العمل
-        التي تريد التركيز عليها.
-      </h2>
-
-
-      <p>
-        بعد اختيار المساحة ستظهر
-        مشاريعها ومهامها وأعضاء الفريق
-        ضمن السياق نفسه.
-      </p>
-
-
-      <div class="focus-divider"></div>
-
-
-      <div class="session-info">
-
-        <div>
-
-          <span>
-            المستخدم
-          </span>
-
-          <strong>
-            {{ user?.fullName || '—' }}
-          </strong>
-
-        </div>
-
-
-        <div>
-
-          <span>
-            البريد
-          </span>
-
-          <strong class="email">
-            {{ user?.email || '—' }}
-          </strong>
-
-        </div>
-
-      </div>
-
-    </aside>
-
   </section>
+  }
 
-
+  @if (!showRoleInsights) {
   <!-- Quick Actions -->
   <section class="panel quick-panel">
 
@@ -519,6 +566,8 @@
 
 
     <div class="quick-grid">
+
+      @if (showProjectsAction) {
 
       <button
         class="quick-action"
@@ -559,6 +608,10 @@
 
       </button>
 
+      }
+
+
+      @if (showTasksAction) {
 
       <button
         class="quick-action"
@@ -599,6 +652,10 @@
 
       </button>
 
+      }
+
+
+      @if (showTeamAction) {
 
       <button
         class="quick-action"
@@ -644,6 +701,10 @@
 
       </button>
 
+      }
+
+
+      @if (showOwnerAction) {
 
       <button
         class="quick-action"
@@ -685,8 +746,11 @@
 
       </button>
 
+      }
+
     </div>
 
   </section>
+  }
 
 </div>

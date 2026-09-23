@@ -16,9 +16,21 @@ import {
 } from '@angular/forms';
 
 import {
+  catchError,
+  forkJoin,
+  of
+} from 'rxjs';
+
+import {
   Project,
+  ProjectMember,
   Projects
 } from '../../../../core/services/projects';
+
+import {
+  TaskItem,
+  Tasks
+} from '../../../../core/services/tasks';
 
 import {
   Workspace,
@@ -26,9 +38,35 @@ import {
 } from '../../../../core/services/workspaces';
 
 import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
+import {
   WorkspaceMember,
   WorkspaceMembers
 } from '../../../../core/services/workspace-members';
+
+
+type ProjectTaskStats = {
+  total: number;
+  todo: number;
+  inProgress: number;
+  inReview: number;
+  done: number;
+  cancelled: number;
+  completion: number;
+};
+
+
+const emptyProjectTaskStats: ProjectTaskStats = {
+  total: 0,
+  todo: 0,
+  inProgress: 0,
+  inReview: 0,
+  done: 0,
+  cancelled: 0,
+  completion: 0
+};
 
 
 @Component({
@@ -65,8 +103,16 @@ export class ProjectsPage
     inject(Workspaces);
 
 
+  private readonly access =
+    inject(WorkspaceAccess);
+
+
   private readonly workspaceMembersService =
     inject(WorkspaceMembers);
+
+
+  private readonly tasksApi =
+    inject(Tasks);
 
 
   private readonly fb =
@@ -118,8 +164,42 @@ export class ProjectsPage
     WorkspaceMember[] = [];
 
 
+  workspaceMembers:
+    WorkspaceMember[] = [];
+
+
+  projectMembers:
+    ProjectMember[] = [];
+
+
+  projectMembersById:
+    Record<number, ProjectMember[]> =
+      {};
+
+
+  projectTaskStatsById:
+    Record<number, ProjectTaskStats> =
+      {};
+
+
+  membersModalOpen =
+    false;
+
+
   loadingManagers =
     false;
+
+
+  loadingProjectMembers =
+    false;
+
+
+  addingProjectMember =
+    false;
+
+
+  selectedAddMemberUserId =
+    0;
 
 
   /* =========================================================
@@ -246,6 +326,19 @@ export class ProjectsPage
 
         next: workspace => {
 
+          if (
+            !this.access.matchesActiveRole(
+              workspace.currentUserRole
+            )
+          ) {
+
+            this.router.navigateByUrl(
+              '/projects'
+            );
+
+            return;
+          }
+
           this.workspace =
             workspace;
 
@@ -329,6 +422,244 @@ export class ProjectsPage
   }
 
 
+  get canAddProjectMembers():
+    boolean {
+
+    return this.canManageProjects;
+  }
+
+
+  get canViewProjectMembers():
+    boolean {
+
+    return (
+      this.canManageProjects ||
+      this.isManagerView ||
+      this.isMemberView
+    );
+  }
+
+
+  get isManagerView():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'manager';
+  }
+
+
+  get isMemberView():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'member';
+  }
+
+
+  get isFocusedProjectView():
+    boolean {
+
+    return this.isManagerView ||
+      this.isMemberView;
+  }
+
+
+  get pageTitle():
+    string {
+
+    if (
+      this.isFocusedProjectView &&
+      this.projects.length === 1
+    ) {
+
+      return this.projects[0].name;
+    }
+
+
+    if (this.isManagerView) {
+      return 'المشاريع التي تديرها';
+    }
+
+
+    if (this.isMemberView) {
+      return 'المشاريع التي أنت ضمنها';
+    }
+
+
+    return this.workspaceName;
+  }
+
+
+  get pageSubtitle():
+    string {
+
+    if (
+      this.canManageProjects
+    ) {
+
+      return 'أنشئ المشاريع وعيّن مديريها وأضف أعضاء مساحة العمل إلى كل مشروع.';
+    }
+
+
+    if (this.isManagerView) {
+
+      return this.workspaceName
+        ? `تفاصيل المشروع الذي تديره داخل مساحة ${this.workspaceName}: الفريق، المهام، وتاريخ العمل.`
+        : 'تفاصيل المشروع الذي تديره: الفريق، المهام، وتاريخ العمل.';
+    }
+
+
+    if (this.isMemberView) {
+
+      return this.workspaceName
+        ? `المشاريع التي أنت عضو فيها داخل مساحة ${this.workspaceName}. يمكنك عرض الأعضاء ومهامك المسندة.`
+        : 'المشاريع التي أنت عضو فيها. يمكنك عرض الأعضاء ومهامك المسندة.';
+    }
+
+
+    return 'المشاريع التي أنت عضو فيها. المهام تظهر فقط إذا أُسندت باسمك.';
+  }
+
+
+  formatDateTime(
+    value: string | null | undefined
+  ): string {
+
+    if (!value) {
+      return '—';
+    }
+
+
+    const date =
+      new Date(
+        value
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return '—';
+    }
+
+
+    return new Intl
+      .DateTimeFormat(
+        'ar-SY',
+        {
+          dateStyle:
+            'medium',
+          timeStyle:
+            'short'
+        }
+      )
+      .format(
+        date
+      );
+  }
+
+
+  taskStatsOf(
+    project: Project
+  ): ProjectTaskStats {
+
+    return this.projectTaskStatsById[project.id]
+      ?? emptyProjectTaskStats;
+  }
+
+
+  formatDate(
+    value: string | null | undefined
+  ): string {
+
+    if (!value) {
+      return '—';
+    }
+
+
+    const date =
+      new Date(
+        value
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return '—';
+    }
+
+
+    return new Intl
+      .DateTimeFormat(
+        'ar-SY',
+        {
+          dateStyle:
+            'medium'
+        }
+      )
+      .format(
+        date
+      );
+  }
+
+
+  get eligibleProjectMembers():
+    WorkspaceMember[] {
+
+    const addedUserIds =
+      new Set(
+        this.projectMembers.map(
+          member =>
+            member.userId
+        )
+      );
+
+
+    return this.workspaceMembers
+      .filter(member =>
+        member.status ===
+          'Active'
+        &&
+        member.roleName ===
+          'Member'
+        &&
+        !addedUserIds.has(
+          member.userId
+        )
+      )
+      .sort(
+        (a, b) =>
+          a.fullName
+            .localeCompare(
+              b.fullName,
+              'ar'
+            )
+      );
+  }
+
+
+  onAddMemberUserChange(
+    event: Event
+  ): void {
+
+    const select =
+      event.target as HTMLSelectElement;
+
+
+    this.selectedAddMemberUserId =
+      Number(
+        select.value
+      ) || 0;
+  }
+
+
   roleLabel(
     role: string
   ): string {
@@ -407,6 +738,10 @@ export class ProjectsPage
 
           this.loading =
             false;
+
+
+          this.loadProjectMemberLists();
+          this.loadProjectTaskStats();
         },
 
 
@@ -459,6 +794,10 @@ export class ProjectsPage
 
         next: members => {
 
+          this.workspaceMembers =
+            members;
+
+
           /*
            * الـBackend يقبل فقط مستخدم
            * دوره ProjectManager.
@@ -494,10 +833,8 @@ export class ProjectsPage
             false;
 
 
-          this.errorMessage =
-            this.extractApiError(
-              error
-            );
+          this.projectManagers =
+            [];
         }
 
       });
@@ -783,7 +1120,15 @@ export class ProjectsPage
       });
 
 
+    this.selectedAddMemberUserId =
+      0;
+
+
     this.loadProjectManagers();
+
+    this.loadProjectMembers(
+      project
+    );
 
 
     this.editModalOpen =
@@ -807,6 +1152,510 @@ export class ProjectsPage
 
     this.selectedProject =
       null;
+
+
+    this.projectMembers =
+      [];
+
+
+    this.selectedAddMemberUserId =
+      0;
+  }
+
+
+  membersOf(
+    project: Project
+  ): ProjectMember[] {
+
+    return this.projectMembersById[project.id]
+      ?? [];
+  }
+
+
+  openMembers(
+    project: Project
+  ): void {
+
+    if (
+      !this.canViewProjectMembers
+    ) {
+      return;
+    }
+
+
+    if (
+      this.canAddProjectMembers
+    ) {
+
+      this.openEdit(
+        project
+      );
+
+      return;
+    }
+
+
+    this.selectedProject =
+      project;
+
+    this.membersModalOpen =
+      true;
+
+    this.errorMessage =
+      '';
+
+
+    this.loadProjectMembers(
+      project
+    );
+  }
+
+
+  closeMembers(): void {
+
+    this.membersModalOpen =
+      false;
+
+
+    if (
+      !this.editModalOpen
+    ) {
+
+      this.selectedProject =
+        null;
+    }
+  }
+
+
+  private loadProjectMemberLists():
+    void {
+
+    if (
+      !this.canViewProjectMembers ||
+      this.projects.length ===
+        0
+    ) {
+
+      this.projectMembersById =
+        {};
+
+      return;
+    }
+
+
+    forkJoin(
+      this.projects.map(project =>
+        this.projectsService
+          .getMembers(
+            this.workspaceId,
+            project.id
+          )
+      )
+    )
+      .subscribe({
+
+        next: groups => {
+
+          const next:
+            Record<number, ProjectMember[]> =
+              {};
+
+
+          this.projects.forEach(
+            (project, index) => {
+
+              next[project.id] =
+                groups[index]
+                ?? [];
+
+            }
+          );
+
+
+          this.projectMembersById =
+            next;
+        },
+
+
+        error: () => {
+
+          this.projectMembersById =
+            {};
+        }
+
+      });
+  }
+
+
+  private loadProjectTaskStats():
+    void {
+
+    if (
+      !this.isManagerView ||
+      this.projects.length ===
+        0
+    ) {
+
+      this.projectTaskStatsById =
+        {};
+
+      return;
+    }
+
+
+    forkJoin(
+      this.projects.map(project =>
+        this.tasksApi
+          .getByProject(
+            this.workspaceId,
+            project.id
+          )
+          .pipe(
+            catchError(
+              () =>
+                of(
+                  [] as TaskItem[]
+                )
+            )
+          )
+      )
+    )
+      .subscribe({
+
+        next: groups => {
+
+          const next:
+            Record<number, ProjectTaskStats> =
+              {};
+
+
+          this.projects.forEach(
+            (project, index) => {
+
+              const tasks =
+                groups[index]
+                ?? [];
+
+              const done =
+                tasks.filter(task =>
+                  task.status ===
+                    'Done'
+                )
+                  .length;
+
+              next[project.id] = {
+                total:
+                  tasks.length,
+                todo:
+                  tasks.filter(task =>
+                    task.status ===
+                      'Todo'
+                  )
+                    .length,
+                inProgress:
+                  tasks.filter(task =>
+                    task.status ===
+                      'InProgress'
+                  )
+                    .length,
+                inReview:
+                  tasks.filter(task =>
+                    task.status ===
+                      'InReview'
+                  )
+                    .length,
+                done,
+                cancelled:
+                  tasks.filter(task =>
+                    task.status ===
+                      'Cancelled'
+                  )
+                    .length,
+                completion:
+                  tasks.length > 0
+                    ? Math.round(
+                        (
+                          done /
+                          tasks.length
+                        )
+                        *
+                        100
+                      )
+                    : 0
+              };
+
+            }
+          );
+
+
+          this.projectTaskStatsById =
+            next;
+        },
+
+
+        error: () => {
+
+          this.projectTaskStatsById =
+            {};
+        }
+
+      });
+  }
+
+
+  private loadProjectMembers(
+    project: Project
+  ): void {
+
+    if (
+      !this.canViewProjectMembers
+    ) {
+
+      this.projectMembers =
+        [];
+
+      return;
+    }
+
+
+    const cachedMembers =
+      this.projectMembersById[project.id];
+
+
+    if (
+      cachedMembers
+    ) {
+
+      this.projectMembers =
+        cachedMembers;
+    }
+
+
+    this.loadingProjectMembers =
+      !cachedMembers;
+
+
+    this.projectsService
+      .getMembers(
+        this.workspaceId,
+        project.id
+      )
+      .subscribe({
+
+        next: members => {
+
+          this.projectMembers =
+            members;
+
+
+          this.projectMembersById = {
+            ...this.projectMembersById,
+            [project.id]:
+              members
+          };
+
+
+          this.loadingProjectMembers =
+            false;
+        },
+
+
+        error: error => {
+
+          this.loadingProjectMembers =
+            false;
+
+
+          if (
+            !cachedMembers
+          ) {
+
+            this.projectMembers =
+              [];
+          }
+        }
+
+      });
+  }
+
+
+  addProjectMember(): void {
+
+    if (
+      this.addingProjectMember ||
+      !this.selectedProject ||
+      !this.canAddProjectMembers
+    ) {
+
+      return;
+    }
+
+
+    const userId =
+      Number(
+        this.selectedAddMemberUserId
+      );
+
+
+    if (
+      userId < 1
+    ) {
+
+      this.errorMessage =
+        'اختر عضوًا من مساحة العمل الحالية لإضافته إلى المشروع.';
+
+      return;
+    }
+
+
+    this.addingProjectMember =
+      true;
+
+    this.errorMessage =
+      '';
+
+
+    this.projectsService
+      .addMember(
+        this.workspaceId,
+        this.selectedProject.id,
+        userId
+      )
+      .subscribe({
+
+        next: member => {
+
+          this.addingProjectMember =
+            false;
+
+
+          this.projectMembers =
+            [
+              ...this.projectMembers,
+              member
+            ]
+              .sort(
+                (a, b) =>
+                  a.fullName
+                    .localeCompare(
+                      b.fullName,
+                      'ar'
+                    )
+              );
+
+
+          this.selectedAddMemberUserId =
+            0;
+
+
+          if (
+            this.selectedProject
+          ) {
+
+            this.projectMembersById = {
+              ...this.projectMembersById,
+              [this.selectedProject.id]:
+                this.projectMembers
+            };
+
+          }
+
+
+          this.successMessage =
+            `تمت إضافة ${member.fullName} إلى المشروع.`;
+        },
+
+
+        error: error => {
+
+          this.addingProjectMember =
+            false;
+
+
+          this.errorMessage =
+            this.extractApiError(
+              error
+            );
+        }
+
+      });
+  }
+
+
+  removeProjectMember(
+    member: ProjectMember
+  ): void {
+
+    if (
+      this.addingProjectMember ||
+      !this.selectedProject ||
+      !this.canAddProjectMembers
+    ) {
+
+      return;
+    }
+
+
+    this.addingProjectMember =
+      true;
+
+    this.errorMessage =
+      '';
+
+
+    this.projectsService
+      .removeMember(
+        this.workspaceId,
+        this.selectedProject.id,
+        member.userId
+      )
+      .subscribe({
+
+        next: () => {
+
+          this.addingProjectMember =
+            false;
+
+
+          this.projectMembers =
+            this.projectMembers.filter(
+              current =>
+                current.userId !==
+                member.userId
+            );
+
+
+          if (
+            this.selectedProject
+          ) {
+
+            this.projectMembersById = {
+              ...this.projectMembersById,
+              [this.selectedProject.id]:
+                this.projectMembers
+            };
+
+          }
+
+
+          this.successMessage =
+            `تمت إزالة ${member.fullName} من المشروع.`;
+        },
+
+
+        error: error => {
+
+          this.addingProjectMember =
+            false;
+
+
+          this.errorMessage =
+            this.extractApiError(
+              error
+            );
+        }
+
+      });
   }
 
 
@@ -1490,6 +2339,20 @@ export class ProjectsPage
 
       if (
         detail.includes(
+          'unexpected error occurred'
+        )
+        ||
+        detail.includes(
+          'Internal Server Error'
+        )
+      ) {
+
+        return 'تعذر تحميل بيانات المشروع. يمكنك تعديل الاسم والمدير ثم الحفظ.';
+      }
+
+
+      if (
+        detail.includes(
           'same name already exists'
         )
       ) {
@@ -1535,6 +2398,50 @@ export class ProjectsPage
       ) {
 
         return 'يمكن تعيين مستخدم بدور «مدير مشروع» فقط كمدير للمشروع.';
+      }
+
+
+      if (
+        detail.includes(
+          'must be an active member of this workspace'
+        )
+      ) {
+
+        return 'يمكن إضافة أعضاء من مساحة العمل الحالية فقط.';
+      }
+
+
+      if (
+        detail.includes(
+          'must be a member of this project'
+        )
+      ) {
+
+        return 'يمكن إسناد المهمة لأعضاء المشروع أو أعضاء مساحة العمل بدور عضو.';
+      }
+
+
+      if (
+        detail.includes(
+          'already a member of this project'
+        )
+      ) {
+
+        return 'هذا المستخدم عضو في المشروع بالفعل.';
+      }
+
+
+      if (
+        detail.includes(
+          'Only the workspace owner can add members'
+        )
+        ||
+        detail.includes(
+          'Only the workspace owner can remove members'
+        )
+      ) {
+
+        return 'إضافة أعضاء المشروع متاحة لمالك مساحة العمل فقط.';
       }
 
 

@@ -29,6 +29,15 @@ import {
   Auth
 } from '../../../../core/services/auth';
 
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
+import {
+  arabicNotificationMessage,
+  arabicNotificationTitle
+} from '../../../../core/utils/notification-text';
+
 
 type ReadFilter =
   | 'all'
@@ -63,6 +72,10 @@ export class NotificationsPage
 
   private readonly auth =
     inject(Auth);
+
+
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   /* =========================================================
@@ -130,6 +143,71 @@ export class NotificationsPage
     false;
 
 
+  get canCompose():
+    boolean {
+
+    if (this.isSystemAdmin) {
+      return true;
+    }
+
+    return this.access.activeRoleMode ===
+      'owner' ||
+      this.access.activeRoleMode ===
+        'manager';
+  }
+
+
+  get showSender():
+    boolean {
+
+    return this.isSystemAdmin;
+  }
+
+
+  get visibleWorkspaces():
+    NotificationWorkspace[] {
+
+    if (this.isSystemAdmin) {
+      return this.workspaces;
+    }
+
+    return this.workspaces.filter(
+      workspace =>
+        this.access.matchesActiveRole(
+          workspace.currentUserRole
+        )
+    );
+  }
+
+
+  get showWorkspaceFilter():
+    boolean {
+
+    return this.isSystemAdmin ||
+      this.visibleWorkspaces.length >
+        1;
+  }
+
+
+  get pageSubtitle():
+    string {
+
+    if (this.isSystemAdmin) {
+      return 'متابعة إشعارات النظام وإدارة حالة القراءة.';
+    }
+
+    if (this.access.activeRoleMode === 'owner') {
+      return 'إشعارات مساحتك والمشاريع التابعة لها.';
+    }
+
+    if (this.access.activeRoleMode === 'manager') {
+      return 'إشعارات المشروع الذي تديره ومهامه.';
+    }
+
+    return 'إشعارات مهامك والمشاريع التي أنت عضو فيها.';
+  }
+
+
   /* =========================================================
      PAGINATION
      ========================================================= */
@@ -147,6 +225,10 @@ export class NotificationsPage
 
 
   totalPages =
+    0;
+
+
+  private pageRequestToken =
     0;
 
 
@@ -212,6 +294,9 @@ export class NotificationsPage
      ========================================================= */
 
   ngOnInit(): void {
+
+    this.isSystemAdmin =
+      this.access.isSystemAdmin;
 
     this.detectAdmin();
 
@@ -327,7 +412,9 @@ export class NotificationsPage
     return this.invitations
       .filter(
         invitation =>
-          invitation.status ===
+          String(
+            invitation.status
+          ) ===
             'Pending'
       )
       .sort(
@@ -549,8 +636,19 @@ export class NotificationsPage
   loadPage():
     void {
 
-    this.loading =
-      true;
+    const requestToken =
+      ++this.pageRequestToken;
+
+
+    if (
+      this.notifications.length ===
+        0
+    ) {
+
+      this.loading =
+        true;
+    }
+
 
     this.errorMessage =
       '';
@@ -599,6 +697,15 @@ export class NotificationsPage
 
         next: response => {
 
+          if (
+            requestToken !==
+              this.pageRequestToken
+          ) {
+
+            return;
+          }
+
+
           this.applyPage(
             response
           );
@@ -608,6 +715,15 @@ export class NotificationsPage
         },
 
         error: error => {
+
+          if (
+            requestToken !==
+              this.pageRequestToken
+          ) {
+
+            return;
+          }
+
 
           this.errorMessage =
             this.extractApiError(
@@ -628,19 +744,29 @@ export class NotificationsPage
   ): void {
 
     this.notifications =
-      response.items;
+      response.items
+      ??
+      [];
 
     this.page =
-      response.page;
+      response.page
+      ||
+      this.page;
 
     this.pageSize =
-      response.pageSize;
+      response.pageSize
+      ||
+      this.pageSize;
 
     this.totalCount =
-      response.totalCount;
+      response.totalCount
+      ??
+      0;
 
     this.totalPages =
-      response.totalPages;
+      response.totalPages
+      ??
+      0;
   }
 
 
@@ -651,6 +777,36 @@ export class NotificationsPage
       1;
 
     this.loadPage();
+  }
+
+
+  get isTodayFilter():
+    boolean {
+
+    const today =
+      this.todayLocalDate();
+
+    return this.filterFrom ===
+      today
+      &&
+      this.filterTo ===
+        today;
+  }
+
+
+  filterToday():
+    void {
+
+    const today =
+      this.todayLocalDate();
+
+    this.filterFrom =
+      today;
+
+    this.filterTo =
+      today;
+
+    this.applyFilters();
   }
 
 
@@ -845,12 +1001,12 @@ export class NotificationsPage
         this.loadRecipients();
 
       } else if (
-        this.workspaces.length ===
+        this.visibleWorkspaces.length ===
           1
       ) {
 
         this.composeWorkspaceId =
-          this.workspaces[0].id;
+          this.visibleWorkspaces[0].id;
 
         this.loadRecipients();
       }
@@ -1198,6 +1354,16 @@ export class NotificationsPage
 
 
     if (
+      type.startsWith(
+        'member.'
+      )
+    ) {
+
+      return 'المكافآت';
+    }
+
+
+    if (
       type ===
         'manual.notification'
     ) {
@@ -1210,9 +1376,78 @@ export class NotificationsPage
   }
 
 
+  displayTitle(
+    notification:
+      NotificationItem
+  ): string {
+
+    return arabicNotificationTitle(
+      notification
+    );
+  }
+
+
+  displayMessage(
+    notification:
+      NotificationItem
+  ): string {
+
+    return arabicNotificationMessage(
+      notification
+    );
+  }
+
+
+  workspaceNameOf(
+    workspaceId:
+      number | null
+  ): string | null {
+
+    if (!workspaceId) {
+      return null;
+    }
+
+    return this.workspaces.find(
+      workspace =>
+        workspace.id ===
+          workspaceId
+    )?.name
+      ?? null;
+  }
+
+
   /* =========================================================
      DATE FILTERS
      ========================================================= */
+
+  private todayLocalDate():
+    string {
+
+    const now =
+      new Date();
+
+    const month =
+      String(
+        now.getMonth() +
+          1
+      )
+        .padStart(
+          2,
+          '0'
+        );
+
+    const day =
+      String(
+        now.getDate()
+      )
+        .padStart(
+          2,
+          '0'
+        );
+
+    return `${now.getFullYear()}-${month}-${day}`;
+  }
+
 
   private toUtcStart(
     value: string
@@ -1224,10 +1459,23 @@ export class NotificationsPage
     }
 
 
-    return new Date(
-      `${value}T00:00:00`
-    )
-      .toISOString();
+    const date =
+      new Date(
+        `${value}T00:00:00`
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return null;
+    }
+
+
+    return date.toISOString();
   }
 
 
@@ -1241,10 +1489,23 @@ export class NotificationsPage
     }
 
 
-    return new Date(
-      `${value}T23:59:59.999`
-    )
-      .toISOString();
+    const date =
+      new Date(
+        `${value}T23:59:59.999`
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return null;
+    }
+
+
+    return date.toISOString();
   }
 
 
@@ -1256,12 +1517,33 @@ export class NotificationsPage
     error: any
   ): string {
 
-    return (
+    const detail =
       error?.error?.detail
       ??
       error?.error?.message
       ??
-      'تعذر تنفيذ العملية. حاول مرة أخرى.'
-    );
+      'تعذر تنفيذ العملية. حاول مرة أخرى.';
+
+    if (typeof detail !== 'string') {
+      return 'تعذر تنفيذ العملية. حاول مرة أخرى.';
+    }
+
+    if (detail.includes('This invitation is no longer pending')) {
+      return 'هذه الدعوة لم تعد معلّقة. حدّث الصفحة ثم أعد المحاولة.';
+    }
+
+    if (detail.includes('already an active member of this workspace')) {
+      return 'أنت عضو في مساحة العمل بالفعل.';
+    }
+
+    if (detail.includes('The workspace is no longer available')) {
+      return 'مساحة العمل لم تعد متاحة.';
+    }
+
+    if (detail.includes('The role assigned to this invitation is no longer available')) {
+      return 'الدور المرتبط بهذه الدعوة لم يعد متاحًا.';
+    }
+
+    return detail;
   }
 }

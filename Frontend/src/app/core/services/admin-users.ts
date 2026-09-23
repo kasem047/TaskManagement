@@ -24,6 +24,9 @@ export interface AdminUser {
   email: string;
   isActive: boolean;
   isSystemAdmin: boolean;
+  ownsWorkspace: boolean;
+  workspaceRole: string;
+  roleDescription: string;
   createdAt: string;
   lastLoginAt: string | null;
 }

@@ -263,29 +263,29 @@ public sealed class TaskReminderBackgroundService
         {
             TaskReminderType.Halfway =>
                 (
-                    "Task halfway reminder",
-                    $"Half of the available time for task \"{task.Title}\" has passed. Due: {formattedDueDate}.",
+                    "تذكير منتصف مدة المهمة",
+                    $"انتصف الوقت المتاح للمهمة \"{task.Title}\". الموعد: {formattedDueDate}.",
                     "task.reminder.halfway"
                 ),
 
             TaskReminderType.OneDayBefore =>
                 (
-                    "Task due tomorrow",
-                    $"Task \"{task.Title}\" is due within 24 hours. Due: {formattedDueDate}.",
+                    "المهمة مستحقة غدًا",
+                    $"المهمة \"{task.Title}\" مستحقة خلال 24 ساعة. الموعد: {formattedDueDate}.",
                     "task.reminder.one_day"
                 ),
 
             TaskReminderType.OneHourBefore =>
                 (
-                    "Task due soon",
-                    $"Task \"{task.Title}\" is due within one hour. Due: {formattedDueDate}.",
+                    "المهمة مستحقة خلال ساعة",
+                    $"المهمة \"{task.Title}\" مستحقة خلال ساعة. الموعد: {formattedDueDate}.",
                     "task.reminder.one_hour"
                 ),
 
             TaskReminderType.Overdue =>
                 (
-                    "Task overdue",
-                    $"Task \"{task.Title}\" is overdue. Due date was {formattedDueDate}.",
+                    "المهمة متأخرة عن موعدها",
+                    $"المهمة \"{task.Title}\" تجاوزت موعدها. كان الموعد {formattedDueDate}.",
                     "task.reminder.overdue"
                 ),
 

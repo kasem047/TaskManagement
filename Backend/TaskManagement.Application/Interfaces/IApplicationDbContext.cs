@@ -15,6 +15,8 @@ public interface IApplicationDbContext
 
     DbSet<Project> Projects { get; }
 
+    DbSet<ProjectMember> ProjectMembers { get; }
+
     DbSet<TaskItem> TaskItems { get; }
 
     DbSet<TaskAssignee> TaskAssignees { get; }

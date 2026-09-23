@@ -1,0 +1,474 @@
+:host {
+  display: block;
+  margin-bottom: 24px;
+}
+
+.board {
+  display: block;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.head span {
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.board.manager .head span {
+  color: var(--violet);
+}
+
+.board.member .head span {
+  color: var(--sky);
+}
+
+.head h2 {
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  font-size: 32px;
+  line-height: 1.25;
+}
+
+.head p {
+  margin: 6px 0 0;
+  max-width: 46rem;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actions button {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ghost {
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.solid {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2, var(--violet)));
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.kpis article {
+  min-height: 148px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm, 0 4px 18px rgba(0, 0, 0, 0.05));
+}
+
+.kpis span,
+.kpis small {
+  display: block;
+  color: var(--text-secondary);
+}
+
+.kpis span {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kpis strong {
+  display: block;
+  margin-top: 14px;
+  color: var(--text-primary);
+  font-size: 40px;
+  line-height: 1;
+}
+
+.kpis small {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.meter {
+  height: 6px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--violet));
+}
+
+.chart-card {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm, 0 4px 18px rgba(0, 0, 0, 0.05));
+}
+
+.chart-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.chart-card > header span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.chart-card > header h3 {
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  font-size: 22px;
+}
+
+.chart-card > header b {
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.donut-row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+}
+
+.donut {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.donut-pie {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(circle 48px at center, transparent 47px, #000 48px);
+  mask: radial-gradient(circle 48px at center, transparent 47px, #000 48px);
+}
+
+.donut-hole {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.donut-hole strong {
+  color: var(--text-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.donut-hole small {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.donut-row ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.donut-row li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 10px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.donut-row li > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.donut-row li b {
+  color: var(--text-primary);
+}
+
+.slice-bar {
+  grid-column: 2 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.slice-bar em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.charts-grid .chart-card {
+  margin-top: 0;
+}
+
+.task-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.task-charts .chart-card {
+  margin-top: 0;
+}
+
+.workflow-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.workflow-donut {
+  position: relative;
+  width: 210px;
+  height: 210px;
+}
+
+.workflow-donut svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.workflow-track,
+.workflow-slice {
+  fill: none;
+  stroke-width: 18;
+}
+
+.workflow-track {
+  stroke: var(--surface-3);
+}
+
+.workflow-slice {
+  transition: stroke-dasharray 400ms ease;
+}
+
+.workflow-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.workflow-center strong {
+  color: var(--text-primary);
+  font-size: 36px;
+  line-height: 1;
+}
+
+.workflow-center small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.workflow-legend {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-legend li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.workflow-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.workflow-legend b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.workflow-legend small {
+  color: var(--text-muted);
+}
+
+.volume-chart {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  height: 260px;
+  margin-top: 8px;
+}
+
+.volume-col {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.volume-col span {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.volume-track {
+  width: 100%;
+  max-width: 42px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border-radius: 14px 14px 8px 8px;
+  background: var(--surface-3);
+}
+
+.volume-track em {
+  display: block;
+  width: 100%;
+  min-height: 8px;
+  border-radius: inherit;
+  animation: volume-bar 500ms ease;
+}
+
+.volume-col small {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+}
+
+@keyframes volume-bar {
+  from {
+    height: 0;
+  }
+}
+
+.progress-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.progress-row,
+.task-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-copy span {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.progress-copy small {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.meter.large {
+  height: 10px;
+}
+
+.task-progress {
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .kpis,
+  .donut-row,
+  .charts-grid,
+  .task-charts,
+  .workflow-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .donut,
+  .workflow-donut {
+    margin-inline: auto;
+  }
+
+  .volume-chart {
+    height: 220px;
+  }
+}
+
+@media (max-width: 720px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}

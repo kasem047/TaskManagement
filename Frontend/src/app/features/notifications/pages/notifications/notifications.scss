@@ -4,12 +4,14 @@
 
 
 .notifications-page {
-  max-width: 1500px;
+  max-width: none;
 
-  margin: 0 auto;
+  width: 100%;
+
+  margin: 0;
 
   padding:
-    32px 36px 64px;
+    var(--space-8) var(--space-8) var(--space-16);
 
   color:
     var(--text);
@@ -32,13 +34,15 @@
   gap: 24px;
 
   margin-bottom: 24px;
+
+  padding-left: 320px;
 }
 
 
 .page-header h1 {
   margin: 0;
 
-  font-size: 30px;
+  font-size: 42px;
 
   font-weight: 850;
 }
@@ -51,7 +55,7 @@
   color:
     var(--muted);
 
-  font-size: 14px;
+  font-size: 21px;
 }
 
 
@@ -132,7 +136,7 @@ button:disabled {
 
   border-radius: 12px;
 
-  font-size: 14px;
+  font-size: 18px;
 }
 
 
@@ -257,7 +261,7 @@ button:disabled {
 .invitations-header h2 {
   margin: 0;
 
-  font-size: 18px;
+  font-size: 22px;
 }
 
 
@@ -268,7 +272,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -320,7 +324,7 @@ button:disabled {
       var(--violet)
     );
 
-  font-size: 16px;
+  font-size: 20px;
 
   font-weight: 900;
 }
@@ -360,7 +364,7 @@ button:disabled {
 .invitation-title-row h3 {
   margin: 0;
 
-  font-size: 16px;
+  font-size: 20px;
 }
 
 
@@ -370,7 +374,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 11px;
+  font-size: 18px;
 }
 
 
@@ -396,7 +400,7 @@ button:disabled {
       transparent
     );
 
-  font-size: 10px;
+  font-size: 17px;
 
   font-weight: 800;
 }
@@ -409,7 +413,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 13px;
+  font-size: 17px;
 
   line-height: 1.8;
 }
@@ -488,7 +492,7 @@ button:disabled {
 
   text-align: center;
 
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -524,7 +528,7 @@ button:disabled {
 .compose-panel > header h2 {
   margin: 0;
 
-  font-size: 19px;
+  font-size: 23px;
 }
 
 
@@ -535,7 +539,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -575,7 +579,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 
   font-weight: 700;
 }
@@ -696,7 +700,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -841,27 +845,22 @@ button:disabled {
    ========================================================= */
 
 .filters {
-  display: grid;
+  display: flex;
 
-  grid-template-columns:
-    repeat(
-      3,
-      minmax(
-        0,
-        1fr
-      )
-    );
+  align-items: flex-end;
 
-  gap: 14px;
+  gap: 12px;
 
   margin-bottom: 22px;
 
-  padding: 18px;
+  padding: 16px 18px;
 }
 
 
 .filters label {
   min-width: 0;
+
+  flex: 1 1 0;
 
   display: grid;
 
@@ -870,7 +869,27 @@ button:disabled {
 
 
 .filter-actions {
-  align-self: end;
+  display: flex;
+
+  flex: none;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+
+.filter-actions .secondary-button.active {
+  border-color: var(--primary);
+
+  color: var(--primary);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--primary) 12%,
+      transparent
+    );
 }
 
 
@@ -891,7 +910,9 @@ button:disabled {
 
   align-items: center;
 
-  gap: 20px;
+  flex-wrap: wrap;
+
+  gap: 16px;
 
   padding:
     18px 20px;
@@ -905,7 +926,7 @@ button:disabled {
 .panel-header h2 {
   margin: 0;
 
-  font-size: 18px;
+  font-size: 22px;
 }
 
 
@@ -917,7 +938,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -925,7 +946,22 @@ button:disabled {
   color:
     var(--primary);
 
-  font-size: 13px;
+  font-size: 17px;
+}
+
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+
+.panel-actions .primary-button,
+.panel-actions .secondary-button {
+  white-space: nowrap;
 }
 
 
@@ -999,17 +1035,35 @@ button:disabled {
   justify-content:
     space-between;
 
-  gap: 20px;
+  gap: 16px;
+}
+
+
+.title-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+
+.time-status {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 
 .notification-content h3 {
-  display: inline;
+  margin: 0;
 
-  margin:
-    0 0 0 8px;
+  font-size: 19px;
 
-  font-size: 15px;
+  line-height: 1.45;
 }
 
 
@@ -1019,7 +1073,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1032,7 +1086,7 @@ button:disabled {
 
   opacity: 0.86;
 
-  font-size: 14px;
+  font-size: 18px;
 
   line-height: 1.7;
 }
@@ -1040,6 +1094,8 @@ button:disabled {
 
 .source-badge {
   display: inline-flex;
+
+  align-items: center;
 
   padding:
     3px 8px;
@@ -1056,7 +1112,9 @@ button:disabled {
       transparent
     );
 
-  font-size: 11px;
+  font-size: 13px;
+
+  font-weight: 800;
 }
 
 
@@ -1083,18 +1141,38 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 11px;
+  font-size: 18px;
 }
 
 
-.notification-content footer button {
-  border: 0;
+.notification-content footer button,
+.mark-read {
+  flex: none;
+
+  min-height: 34px;
+
+  padding: 0 12px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 35%,
+      var(--border)
+    );
+
+  border-radius: 9px;
 
   color:
     var(--primary);
 
   background:
-    transparent;
+    color-mix(
+      in srgb,
+      var(--primary) 10%,
+      transparent
+    );
+
+  white-space: nowrap;
 
   cursor: pointer;
 }
@@ -1104,7 +1182,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1170,7 +1248,7 @@ button:disabled {
   color:
     var(--muted);
 
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -1183,14 +1261,23 @@ button:disabled {
 ) {
 
   .filters {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(
-          0,
-          1fr
-        )
-      );
+    flex-wrap: wrap;
+  }
+
+
+  .filters label {
+    flex: 1 1 160px;
+  }
+
+
+  .page-header {
+    padding-left: 280px;
+  }
+
+
+  .panel-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
 
@@ -1218,15 +1305,21 @@ button:disabled {
 
   .page-header {
     flex-direction: column;
+
+    padding-left: 0;
+
+    padding-top: 72px;
   }
 
 
-  .header-actions {
+  .header-actions,
+  .panel-actions {
     width: 100%;
   }
 
 
-  .header-actions button {
+  .header-actions button,
+  .panel-actions button {
     flex: 1;
   }
 
@@ -1264,10 +1357,25 @@ button:disabled {
   }
 
 
-  .compose-grid,
-  .filters {
+  .compose-grid {
     grid-template-columns:
       1fr;
+  }
+
+
+  .filters {
+    flex-wrap: wrap;
+  }
+
+
+  .filters label,
+  .filter-actions {
+    flex: 1 1 100%;
+  }
+
+
+  .filter-actions button {
+    flex: 1;
   }
 
 

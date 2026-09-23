@@ -124,7 +124,15 @@ export class RolesPermissionsPage
         next: result => {
 
           this.roles =
-            result.roles;
+            result.roles
+              .filter(role =>
+                role.name ===
+                  'WorkspaceOwner' ||
+                role.name ===
+                  'ProjectManager' ||
+                role.name ===
+                  'Member'
+              );
 
           this.permissions =
             result.permissions;

@@ -411,6 +411,45 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.ToTable("Projects", (string)null);
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.ProjectMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProjectId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("ProjectMembers", (string)null);
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -1231,6 +1270,25 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("Workspace");
                 });
 
+            modelBuilder.Entity("TaskManagement.Domain.Entities.ProjectMember", b =>
+                {
+                    b.HasOne("TaskManagement.Domain.Entities.Project", "Project")
+                        .WithMany("Members")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagement.Domain.Entities.User", "User")
+                        .WithMany("ProjectMembers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TaskManagement.Domain.Entities.RolePermission", b =>
                 {
                     b.HasOne("TaskManagement.Domain.Entities.Permission", "Permission")
@@ -1468,6 +1526,8 @@ namespace TaskManagement.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("TaskManagement.Domain.Entities.Project", b =>
                 {
+                    b.Navigation("Members");
+
                     b.Navigation("Tasks");
                 });
 
@@ -1500,6 +1560,8 @@ namespace TaskManagement.Infrastructure.Data.Migrations
                     b.Navigation("CreatedWorkspaces");
 
                     b.Navigation("PasswordRecoveryRequests");
+
+                    b.Navigation("ProjectMembers");
 
                     b.Navigation("TaskAssignees");
 

@@ -4,11 +4,15 @@
 
 
 .workspace-page {
+  width: 100%;
+
   min-height:
-    calc(100vh - 30px);
+    calc(100vh - 32px);
+
+  margin: 0 auto;
 
   padding:
-    28px 30px 60px;
+    var(--space-8) var(--space-8) var(--space-16);
 
   color:
     var(--text);
@@ -34,7 +38,7 @@
 .page-header h1 {
   margin: 0;
 
-  font-size: 32px;
+  font-size: 42px;
   font-weight: 900;
 }
 
@@ -46,7 +50,7 @@
   color:
     var(--muted);
 
-  font-size: 14px;
+  font-size: 21px;
 }
 
 
@@ -64,23 +68,27 @@
 
 
 .primary-button {
-  min-height: 46px;
+  min-height: var(--control-height, 52px);
 
   padding:
-    0 18px;
+    0 var(--space-6);
 
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 
-  color: white;
+  color: var(--white);
 
   background:
     linear-gradient(
       135deg,
       var(--primary),
-      var(--violet)
+      var(--primary-2)
     );
 
-  font-weight: 800;
+  font-weight: 700;
+}
+
+.primary-button:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 
@@ -228,7 +236,7 @@
   background:
     var(--surface-2);
 
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -245,7 +253,7 @@
   margin:
     0 0 7px;
 
-  font-size: 20px;
+  font-size: 28px;
 }
 
 
@@ -257,7 +265,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 
   line-height: 1.8;
 }
@@ -275,7 +283,7 @@
     1px solid
     var(--border);
 
-  font-size: 11px;
+  font-size: 18px;
 }
 
 
@@ -341,19 +349,24 @@
 
 
 .danger-button {
-  min-height: 40px;
+  min-height: var(--control-height, 52px);
 
   padding:
-    0 14px;
+    0 var(--space-5);
 
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 
-  color: #ef8292;
+  color: var(--white);
 
   background:
-    rgba(239, 90, 110, .09);
+    var(--danger);
 
-  font-weight: 800;
+  font-weight: 600;
+}
+
+.danger-button:hover:not(:disabled) {
+  background:
+    var(--umber-700);
 }
 
 
@@ -485,7 +498,7 @@
 .modal h2 {
   margin: 0;
 
-  font-size: 22px;
+  font-size: 26px;
 }
 
 
@@ -496,7 +509,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -516,7 +529,7 @@
   background:
     transparent;
 
-  font-size: 20px;
+  font-size: 24px;
 }
 
 
@@ -538,7 +551,7 @@
 
 
 .field > span {
-  font-size: 13px;
+  font-size: 17px;
 
   font-weight: 800;
 }
@@ -593,7 +606,7 @@
 .field-error {
   color: #ef8292;
 
-  font-size: 11px;
+  font-size: 18px;
 
   font-weight: 700;
 }

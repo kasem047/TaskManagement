@@ -4,8 +4,10 @@
 
 
 .permissions-page {
+  width: 100%;
   min-height: 100%;
-  padding: 28px;
+  margin: 0 auto;
+  padding: var(--space-8);
   color: var(--text);
 }
 
@@ -23,21 +25,21 @@
   display: block;
   margin-bottom: 6px;
   color: var(--primary);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 
 .page-header h1 {
   margin: 0;
-  font-size: 29px;
+  font-size: 33px;
 }
 
 
 .page-header p {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -58,7 +60,7 @@
   margin-bottom: 15px;
   padding: 12px 14px;
   border-radius: 11px;
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -98,7 +100,7 @@
 
 .context-panel label > span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 750;
 }
 
@@ -113,7 +115,7 @@
   color: var(--text);
   background: var(--surface-2);
   font: inherit;
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -150,7 +152,7 @@
 
 .user-summary > div:nth-child(2) span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -164,12 +166,12 @@
 
 .summary-role span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
 .summary-role strong {
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -196,13 +198,13 @@
 
 .module-card h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 
 .module-card header span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -240,14 +242,14 @@
 
 
 .permission-title strong {
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
 .effective-badge {
   padding: 4px 8px;
   border-radius: 99px;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 850;
 }
 
@@ -267,14 +269,14 @@
 .permission-copy p {
   margin: 7px 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 15px;
   line-height: 1.7;
 }
 
 
 .permission-copy small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -295,7 +297,7 @@
   color: var(--text);
   background: var(--surface-2);
   font: inherit;
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -311,7 +313,7 @@
   border: 0;
   border-radius: 9px;
   font: inherit;
-  font-size: 10.5px;
+  font-size: 14.5px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -343,7 +345,7 @@
 
 .saving {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 

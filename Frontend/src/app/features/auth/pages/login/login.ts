@@ -372,9 +372,8 @@ export class Login
 
 
           this.errorMessage =
-            this.readError(
-              error,
-              'تعذر تسجيل الدخول. تحقق من البريد الإلكتروني وكلمة المرور.'
+            this.readLoginError(
+              error
             );
         }
 
@@ -1280,6 +1279,42 @@ export class Login
 
     this.recoveryMessage =
       '';
+  }
+
+
+  private readLoginError(
+    error: any
+  ): string {
+
+    const status =
+      error?.status;
+
+
+    if (
+      status === 400 ||
+      status === 401
+    ) {
+
+      return this.readError(
+        error,
+        'تعذر تسجيل الدخول. تحقق من البريد الإلكتروني وكلمة المرور.'
+      );
+    }
+
+
+    if (status === 0) {
+
+      return this.readError(
+        error,
+        'تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت أو حاول مرة أخرى بعد قليل.'
+      );
+    }
+
+
+    return this.readError(
+      error,
+      'تعذر إكمال تسجيل الدخول. حاول مرة أخرى.'
+    );
   }
 
 

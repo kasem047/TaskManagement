@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TaskManagement.Application.Common;
 using TaskManagement.Application.Common.Exceptions;
 using TaskManagement.Application.DTOs.Workspaces;
 using TaskManagement.Application.Interfaces;
@@ -35,40 +36,22 @@ public sealed class WorkspaceService
         CreateAsync(
             CreateWorkspaceRequest request)
     {
-        var userId =
+        var adminUserId =
             _currentUserService.UserId;
 
-        var alreadyOwnsActiveWorkspace =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .AnyAsync(member =>
-                    member.UserId == userId &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.IsDeleted &&
-                    !member.Workspace.IsDeleted &&
-                    !member.Role.IsDeleted &&
-                    member.Role.Name ==
-                        SystemRoles.WorkspaceOwner);
-
-        if (alreadyOwnsActiveWorkspace)
+        if (!await IsSystemAdminAsync(
+                adminUserId))
         {
-            throw new ConflictException(
-                "A user cannot own more than one active workspace.");
+            throw new ForbiddenException(
+                "Only the system administrator can create workspaces.");
         }
+
+        var owner =
+            await GetEligibleWorkspaceOwnerAsync(
+                request.OwnerUserId);
 
         var ownerRole =
-            await _dbContext.Roles
-                .FirstOrDefaultAsync(role =>
-                    role.Name ==
-                        SystemRoles.WorkspaceOwner &&
-                    !role.IsDeleted);
-
-        if (ownerRole is null)
-        {
-            throw new NotFoundException(
-                "Workspace owner role was not found.");
-        }
+            await GetWorkspaceOwnerRoleAsync();
 
         var now =
             DateTime.UtcNow;
@@ -86,7 +69,7 @@ public sealed class WorkspaceService
                         : request.Description.Trim(),
 
                 CreatedByUserId =
-                    userId,
+                    adminUserId,
 
                 CreatedAt =
                     now
@@ -99,7 +82,7 @@ public sealed class WorkspaceService
                     workspace,
 
                 UserId =
-                    userId,
+                    owner.Id,
 
                 RoleId =
                     ownerRole.Id,
@@ -127,7 +110,16 @@ public sealed class WorkspaceService
             "workspace.created",
             nameof(Workspace),
             workspace.Id,
-            $"Created workspace: {workspace.Name}");
+            $"Created workspace: {workspace.Name} and assigned owner {owner.FullName}.");
+
+        await _notificationService.CreateAsync(
+            owner.Id,
+            workspace.Id,
+            "إسناد مساحة عمل",
+            $"تم تعيينك مالكًا لمساحة العمل \"{workspace.Name}\".",
+            "workspace.assigned",
+            nameof(Workspace),
+            workspace.Id);
 
         return await GetByIdAsync(
             workspace.Id);
@@ -151,6 +143,10 @@ public sealed class WorkspaceService
                     workspace.WorkspaceMembers)
                 .ThenInclude(member =>
                     member.Role)
+                .Include(workspace =>
+                    workspace.WorkspaceMembers)
+                .ThenInclude(member =>
+                    member.User)
                 .Where(workspace =>
                     !workspace.IsDeleted);
 
@@ -202,6 +198,10 @@ public sealed class WorkspaceService
                     workspace.WorkspaceMembers)
                 .ThenInclude(member =>
                     member.Role)
+                .Include(workspace =>
+                    workspace.WorkspaceMembers)
+                .ThenInclude(member =>
+                    member.User)
                 .FirstOrDefaultAsync(workspace =>
                     workspace.Id ==
                         workspaceId &&
@@ -255,6 +255,10 @@ public sealed class WorkspaceService
                     workspace.WorkspaceMembers)
                 .ThenInclude(member =>
                     member.Role)
+                .Include(workspace =>
+                    workspace.WorkspaceMembers)
+                .ThenInclude(member =>
+                    member.User)
                 .FirstOrDefaultAsync(workspace =>
                     workspace.Id ==
                         workspaceId &&
@@ -309,6 +313,21 @@ public sealed class WorkspaceService
             await IsSystemAdminAsync(
                 currentUserId);
 
+        if (!isSystemAdmin)
+        {
+            throw new ForbiddenException(
+                "Only the system administrator can assign a new workspace owner.");
+        }
+
+        await ApplyOwnershipChangeAsync(
+            workspaceId,
+            request.NewOwnerUserId);
+    }
+
+    private async Task ApplyOwnershipChangeAsync(
+        int workspaceId,
+        int newOwnerUserId)
+    {
         var workspace =
             await _dbContext.Workspaces
                 .Include(workspace =>
@@ -349,75 +368,71 @@ public sealed class WorkspaceService
         var currentOwner =
             activeOwners[0];
 
-        var currentUserIsOwner =
-            currentOwner.UserId ==
-                currentUserId;
-
-        if (!currentUserIsOwner &&
-            !isSystemAdmin)
-        {
-            throw new ForbiddenException(
-                "Only the current workspace owner or system administrator can transfer ownership.");
-        }
-
-        if (request.NewOwnerUserId ==
+        if (newOwnerUserId ==
             currentOwner.UserId)
         {
             throw new BadRequestException(
                 "The selected user is already the workspace owner.");
         }
 
+        var newOwnerUser =
+            await GetEligibleWorkspaceOwnerAsync(
+                newOwnerUserId,
+                workspaceId);
+
+        var ownerRole =
+            await GetWorkspaceOwnerRoleAsync();
+
+        var now =
+            DateTime.UtcNow;
+
         var newOwnerMember =
             workspace.WorkspaceMembers
                 .FirstOrDefault(member =>
                     member.UserId ==
-                        request.NewOwnerUserId &&
-                    !member.IsDeleted &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active);
+                        newOwnerUserId &&
+                    !member.IsDeleted);
 
         if (newOwnerMember is null)
         {
-            throw new NotFoundException(
-                "The selected user must be an active member of this workspace before ownership can be transferred.");
+            newOwnerMember =
+                new WorkspaceMember
+                {
+                    WorkspaceId =
+                        workspaceId,
+
+                    UserId =
+                        newOwnerUser.Id,
+
+                    RoleId =
+                        ownerRole.Id,
+
+                    Status =
+                        WorkspaceMemberStatus.Active,
+
+                    JoinedAt =
+                        now,
+
+                    CreatedAt =
+                        now
+                };
+
+            workspace.WorkspaceMembers.Add(
+                newOwnerMember);
         }
-
-        if (newOwnerMember.User is null ||
-            newOwnerMember.User.IsDeleted ||
-            !newOwnerMember.User.IsActive)
+        else
         {
-            throw new ConflictException(
-                "The selected user account is inactive or unavailable.");
-        }
+            newOwnerMember.RoleId =
+                ownerRole.Id;
 
-        var newOwnerAlreadyOwnsWorkspace =
-            await _dbContext.WorkspaceMembers
-                .AsNoTracking()
-                .AnyAsync(member =>
-                    member.UserId ==
-                        request.NewOwnerUserId &&
-                    member.WorkspaceId !=
-                        workspaceId &&
-                    !member.IsDeleted &&
-                    member.Status ==
-                        WorkspaceMemberStatus.Active &&
-                    !member.Workspace.IsDeleted &&
-                    !member.Role.IsDeleted &&
-                    member.Role.Name ==
-                        SystemRoles.WorkspaceOwner);
+            newOwnerMember.Role =
+                ownerRole;
 
-        if (newOwnerAlreadyOwnsWorkspace)
-        {
-            throw new ConflictException(
-                "The selected user already owns another active workspace.");
-        }
+            newOwnerMember.Status =
+                WorkspaceMemberStatus.Active;
 
-        if (await HasActiveAssignedTasksAsync(
-                workspaceId,
-                currentOwner.UserId))
-        {
-            throw new ConflictException(
-                "Workspace ownership cannot be transferred while the current owner still has unfinished assigned tasks. Complete or cancel those tasks first.");
+            newOwnerMember.UpdatedAt =
+                now;
         }
 
         var oldOwnerName =
@@ -425,19 +440,7 @@ public sealed class WorkspaceService
             "Previous owner";
 
         var newOwnerName =
-            newOwnerMember.User.FullName;
-
-        var now =
-            DateTime.UtcNow;
-
-        newOwnerMember.RoleId =
-            currentOwner.RoleId;
-
-        newOwnerMember.Role =
-            currentOwner.Role;
-
-        newOwnerMember.UpdatedAt =
-            now;
+            newOwnerUser.FullName;
 
         currentOwner.Status =
             WorkspaceMemberStatus.Removed;
@@ -458,26 +461,26 @@ public sealed class WorkspaceService
 
         await _activityLogService.LogAsync(
             workspaceId,
-            "workspace.ownership_transferred",
+            "workspace.ownership_assigned",
             nameof(Workspace),
             workspace.Id,
-            $"Transferred workspace ownership from {oldOwnerName} to {newOwnerName}.");
+            $"Assigned workspace ownership from {oldOwnerName} to {newOwnerName}.");
 
         await _notificationService.CreateAsync(
-            newOwnerMember.UserId,
+            newOwnerUser.Id,
             workspaceId,
-            "Workspace ownership transferred",
-            $"You are now the owner of workspace \"{workspace.Name}\".",
-            "workspace.ownership_transferred",
+            "إسناد ملكية مساحة عمل",
+            $"أصبحت مالك مساحة العمل \"{workspace.Name}\".",
+            "workspace.ownership_assigned",
             nameof(Workspace),
             workspace.Id);
 
         await _notificationService.CreateAsync(
             currentOwner.UserId,
             workspaceId,
-            "Workspace ownership transferred",
-            $"Ownership of workspace \"{workspace.Name}\" was transferred to {newOwnerName}. You are no longer a member of this workspace.",
-            "workspace.ownership_transferred",
+            "إسناد ملكية مساحة عمل",
+            $"قام مسؤول النظام بتعيين {newOwnerName} مالكًا لمساحة العمل \"{workspace.Name}\". لم تعد عضوًا في هذه المساحة.",
+            "workspace.ownership_assigned",
             nameof(Workspace),
             workspace.Id);
     }
@@ -527,7 +530,7 @@ public sealed class WorkspaceService
             SystemRoles.WorkspaceOwner)
         {
             throw new ConflictException(
-                "Workspace owner cannot leave directly. Transfer ownership first.");
+                "Workspace owner cannot leave directly. A system administrator must assign a new owner first.");
         }
 
         if (await HasActiveAssignedTasksAsync(
@@ -600,8 +603,8 @@ public sealed class WorkspaceService
             await _notificationService.CreateAsync(
                 ownerUserId,
                 workspaceId,
-                "Project requires a new manager",
-                $"{memberName} left the workspace and project \"{project.Name}\" no longer has a manager. Please assign a new project manager.",
+                "المشروع يحتاج مديرًا جديدًا",
+                $"{memberName} غادر مساحة العمل وأصبح المشروع \"{project.Name}\" بلا مدير. يرجى تعيين مدير مشروع جديد.",
                 "project.manager_required",
                 nameof(Project),
                 project.Id);
@@ -702,6 +705,15 @@ public sealed class WorkspaceService
                         WorkspaceMemberStatus.Active &&
                     !member.IsDeleted);
 
+        var owner =
+            workspace.WorkspaceMembers
+                .FirstOrDefault(member =>
+                    !member.IsDeleted &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    member.Role?.Name ==
+                        SystemRoles.WorkspaceOwner);
+
         return new WorkspaceResponse
         {
             Id =
@@ -725,6 +737,13 @@ public sealed class WorkspaceService
                     ? "SystemAdmin"
                     : currentMember?.Role?.Name ??
                       string.Empty,
+
+            OwnerUserId =
+                owner?.UserId ?? 0,
+
+            OwnerUserName =
+                owner?.User?.FullName ??
+                string.Empty,
 
             CreatedAt =
                 workspace.CreatedAt
@@ -764,6 +783,83 @@ public sealed class WorkspaceService
                     TaskItemStatus.Done &&
                 assignment.TaskItem.Status !=
                     TaskItemStatus.Cancelled);
+    }
+
+    private async Task<User>
+        GetEligibleWorkspaceOwnerAsync(
+            int ownerUserId,
+            int? exceptWorkspaceId = null)
+    {
+        var owner =
+            await _dbContext.Users
+                .FirstOrDefaultAsync(user =>
+                    user.Id ==
+                        ownerUserId &&
+                    !user.IsDeleted);
+
+        if (owner is null)
+        {
+            throw new NotFoundException(
+                "The selected owner was not found.");
+        }
+
+        if (!owner.IsActive)
+        {
+            throw new ConflictException(
+                "The selected owner account is inactive.");
+        }
+
+        if (owner.IsSystemAdmin)
+        {
+            throw new BadRequestException(
+                "System administrator cannot be assigned as a workspace owner.");
+        }
+
+        var alreadyOwnsActiveWorkspace =
+            await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .AnyAsync(member =>
+                    member.UserId ==
+                        ownerUserId &&
+                    (
+                        exceptWorkspaceId == null ||
+                        member.WorkspaceId !=
+                            exceptWorkspaceId.Value
+                    ) &&
+                    !member.IsDeleted &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.Workspace.IsDeleted &&
+                    !member.Role.IsDeleted &&
+                    member.Role.Name ==
+                        SystemRoles.WorkspaceOwner);
+
+        if (alreadyOwnsActiveWorkspace)
+        {
+            throw new ConflictException(
+                "The selected user already owns an active workspace.");
+        }
+
+        return owner;
+    }
+
+    private async Task<Role>
+        GetWorkspaceOwnerRoleAsync()
+    {
+        var ownerRole =
+            await _dbContext.Roles
+                .FirstOrDefaultAsync(role =>
+                    role.Name ==
+                        SystemRoles.WorkspaceOwner &&
+                    !role.IsDeleted);
+
+        if (ownerRole is null)
+        {
+            throw new NotFoundException(
+                "Workspace owner role was not found.");
+        }
+
+        return ownerRole;
     }
 
     private async Task<int>

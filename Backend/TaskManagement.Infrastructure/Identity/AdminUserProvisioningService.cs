@@ -140,6 +140,15 @@ public sealed class AdminUserProvisioningService
             IsSystemAdmin =
                 user.IsSystemAdmin,
 
+            OwnsWorkspace =
+                false,
+
+            WorkspaceRole =
+                "None",
+
+            RoleDescription =
+                "لا ينتمي إلى مساحة عمل",
+
             CreatedAt =
                 user.CreatedAt,
 

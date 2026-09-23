@@ -12,26 +12,34 @@
       </h1>
 
       <p>
-        إدارة المساحات التي تعمل ضمنها والوصول إلى مشاريعها.
+        @if (isSystemAdmin) {
+          إنشاء مساحات العمل وإسنادها فورًا إلى مستخدم لا يملك مساحة عمل.
+        } @else {
+          إدارة المساحات التي تعمل ضمنها والوصول إلى مشاريعها.
+        }
       </p>
 
     </div>
 
 
-    <button
-      type="button"
-      class="primary-button"
-      [disabled]="!canCreateWorkspace"
-      (click)="openCreate()"
-    >
-      <span>+</span>
-      مساحة عمل جديدة
-    </button>
+    @if (canCreateWorkspace) {
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="openCreate()"
+      >
+        <span>+</span>
+        مساحة عمل جديدة
+      </button>
+
+    }
 
   </header>
 
 
   @if (
+    !isSystemAdmin &&
     !canCreateWorkspace &&
     ownedWorkspace
   ) {
@@ -91,7 +99,11 @@
       </h2>
 
       <p>
-        أنشئ مساحة العمل الأولى وابدأ بإضافة المشاريع والفريق.
+        @if (canCreateWorkspace) {
+          أنشئ مساحة العمل الأولى وأسندها فورًا إلى مستخدم لا يملك مساحة عمل.
+        } @else {
+          لا توجد مساحات عمل مرتبطة بحسابك. سيقوم مسؤول النظام بإنشائها وإسنادها عند الحاجة.
+        }
       </p>
 
 
@@ -176,6 +188,19 @@
             </button>
 
 
+            @if (isSystemAdmin) {
+
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="openAssignOwner(workspace)"
+              >
+                تعيين مالك
+              </button>
+
+            }
+
+
             @if (isOwner(workspace)) {
 
               <button
@@ -233,7 +258,7 @@
           </h2>
 
           <p>
-            ستصبح المالك الوحيد لهذه المساحة بعد إنشائها.
+            أنشئ المساحة وأسندها فورًا إلى مستخدم لا يملك مساحة عمل.
           </p>
 
         </div>
@@ -313,6 +338,71 @@
         </label>
 
 
+        <label class="field">
+
+          <span>
+            مالك مساحة العمل
+          </span>
+
+
+          <select
+            formControlName="ownerUserId"
+          >
+
+            <option
+              [value]="0"
+              disabled
+            >
+              اختر مستخدمًا لا يملك مساحة عمل
+            </option>
+
+
+            @for (
+              user
+              of eligibleOwners;
+              track user.id
+            ) {
+
+              <option
+                [value]="user.id"
+              >
+                {{ user.fullName }} — {{ user.email }}
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (loadingOwners) {
+
+            <small>
+              جارٍ تحميل المستخدمين المؤهلين...
+            </small>
+
+          } @else if (eligibleOwners.length === 0) {
+
+            <small class="field-error">
+              لا يوجد حاليًا مستخدم نشط بدون مساحة عمل لإسناده.
+            </small>
+
+          }
+
+
+          @if (
+            workspaceForm.controls.ownerUserId.touched &&
+            workspaceForm.controls.ownerUserId.invalid
+          ) {
+
+            <small class="field-error">
+              يجب اختيار مالك لإسناد مساحة العمل فور إنشائها.
+            </small>
+
+          }
+
+        </label>
+
+
         <footer>
 
           <button
@@ -327,12 +417,169 @@
           <button
             type="submit"
             class="primary-button"
-            [disabled]="submitting"
+            [disabled]="
+              submitting ||
+              loadingOwners ||
+              eligibleOwners.length === 0
+            "
           >
             {{
               submitting
                 ? 'جارٍ الإنشاء...'
                 : 'إنشاء مساحة العمل'
+            }}
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  }
+
+
+  <!-- ====================================================
+       ASSIGN OWNER
+       ==================================================== -->
+
+  @if (
+    assignModalOpen &&
+    assignWorkspace
+  ) {
+
+    <button
+      type="button"
+      class="modal-backdrop"
+      aria-label="إغلاق"
+      (click)="closeAssignOwner()"
+    ></button>
+
+
+    <section class="modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            تعيين مالك جديد
+          </h2>
+
+          <p>
+            عيّن مستخدمًا لا يملك مساحة عمل ليصبح المالك الجديد لـ
+            {{ assignWorkspace.name }}.
+            سيخرج المالك الحالي من المساحة بعد التعيين.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeAssignOwner()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <form
+        [formGroup]="assignForm"
+        (ngSubmit)="assignOwner()"
+      >
+
+        <label class="field">
+
+          <span>
+            المالك الجديد
+          </span>
+
+
+          <select
+            formControlName="newOwnerUserId"
+          >
+
+            <option
+              [value]="0"
+              disabled
+            >
+              اختر مستخدمًا لا يملك مساحة عمل
+            </option>
+
+
+            @for (
+              user
+              of eligibleOwners;
+              track user.id
+            ) {
+
+              <option
+                [value]="user.id"
+              >
+                {{ user.fullName }} — {{ user.email }}
+              </option>
+
+            }
+
+          </select>
+
+
+          @if (loadingOwners) {
+
+            <small>
+              جارٍ تحميل المستخدمين المؤهلين...
+            </small>
+
+          } @else if (eligibleOwners.length === 0) {
+
+            <small class="field-error">
+              لا يوجد حاليًا مستخدم نشط بدون مساحة عمل لتعيينه.
+            </small>
+
+          }
+
+
+          @if (
+            assignForm.controls.newOwnerUserId.touched &&
+            assignForm.controls.newOwnerUserId.invalid
+          ) {
+
+            <small class="field-error">
+              يجب اختيار المالك الجديد.
+            </small>
+
+          }
+
+        </label>
+
+
+        <footer>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeAssignOwner()"
+          >
+            إلغاء
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="
+              assigning ||
+              loadingOwners ||
+              eligibleOwners.length === 0
+            "
+          >
+            {{
+              assigning
+                ? 'جارٍ التعيين...'
+                : 'تأكيد التعيين'
             }}
           </button>
 

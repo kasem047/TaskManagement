@@ -16,15 +16,19 @@ public sealed class UpdateProjectRequest : IValidatableObject
         ErrorMessage = "Project description cannot exceed 1000 characters.")]
     public string? Description { get; set; }
 
-    [Range(
-        1,
-        int.MaxValue,
-        ErrorMessage = "Project manager user ID must be greater than zero.")]
     public int? ManagerUserId { get; set; }
 
     public IEnumerable<ValidationResult> Validate(
         ValidationContext validationContext)
     {
+        if (ManagerUserId.HasValue &&
+            ManagerUserId.Value < 1)
+        {
+            yield return new ValidationResult(
+                "Project manager user ID must be greater than zero.",
+                new[] { nameof(ManagerUserId) });
+        }
+
         if (IsPlaceholder(Name))
         {
             yield return new ValidationResult(

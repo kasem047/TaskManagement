@@ -9,8 +9,8 @@ import {
 } from '@angular/router';
 
 import {
-  Workspaces
-} from '../../../../core/services/workspaces';
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
 
 
 @Component({
@@ -25,17 +25,21 @@ export class ProjectsEntryPage
     inject(Router);
 
 
-  private readonly workspacesService =
-    inject(Workspaces);
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   ngOnInit(): void {
 
-    this.workspacesService
-      .getAll()
+    this.access
+      .refresh()
       .subscribe({
 
-        next: workspaces => {
+        next: () => {
+
+          const workspaces =
+            this.access.scopedWorkspaces;
+
 
           if (
             workspaces.length === 0

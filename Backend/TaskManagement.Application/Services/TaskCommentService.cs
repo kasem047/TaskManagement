@@ -45,6 +45,10 @@ public sealed class TaskCommentService
             workspaceId,
             SystemPermissions.TaskView);
 
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
+
         var comments = await _dbContext.TaskComments
             .AsNoTracking()
             .Include(comment => comment.User)
@@ -73,6 +77,10 @@ public sealed class TaskCommentService
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
             SystemPermissions.TaskComment);
+
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
 
         if (project.IsArchived)
         {
@@ -142,8 +150,8 @@ public sealed class TaskCommentService
         await _notificationService.CreateManyAsync(
             notificationRecipientUserIds,
             workspaceId,
-            "New task comment",
-            $"A new comment was added to task \"{task.Title}\".",
+            "تعليق جديد على مهمة",
+            $"أُضيف تعليق جديد على المهمة \"{task.Title}\".",
             "task.comment_added",
             nameof(TaskItem),
             task.Id);
@@ -166,6 +174,10 @@ public sealed class TaskCommentService
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
             SystemPermissions.TaskComment);
+
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
 
         if (project.IsArchived)
         {
@@ -214,6 +226,10 @@ public sealed class TaskCommentService
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
             SystemPermissions.TaskComment);
+
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
 
         if (project.IsArchived)
         {
@@ -284,6 +300,32 @@ public sealed class TaskCommentService
         }
 
         return task;
+    }
+
+    private async Task EnsureMemberAssignedWhenRequiredAsync(
+        int workspaceId,
+        int taskId)
+    {
+        var roleName =
+            await _permissionService.GetActiveRoleNameAsync(
+                workspaceId);
+
+        if (roleName != SystemRoles.Member)
+        {
+            return;
+        }
+
+        var assigned =
+            await _dbContext.TaskAssignees.AnyAsync(assignment =>
+                assignment.TaskItemId == taskId &&
+                assignment.UserId == _currentUserService.UserId &&
+                !assignment.IsDeleted);
+
+        if (!assigned)
+        {
+            throw new ForbiddenException(
+                "You can only access tasks assigned to you.");
+        }
     }
 
     private async Task EnsureTaskExistsAsync(

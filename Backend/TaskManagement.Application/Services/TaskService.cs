@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using TaskManagement.Application.Common;
 using TaskManagement.Application.Common.Exceptions;
 using TaskManagement.Application.DTOs.Tasks;
 using TaskManagement.Application.Interfaces;
@@ -70,15 +71,38 @@ public sealed class TaskService : ITaskService
                 workspaceId,
                 SystemPermissions.TaskView);
 
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
-        var tasks =
-            await _dbContext
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        var query =
+            _dbContext
                 .TaskItems
                 .AsNoTracking()
                 .Where(task =>
                     task.ProjectId ==
                         projectId &&
-                    !task.IsDeleted)
+                    !task.IsDeleted);
+
+        if (roleName == SystemRoles.Member)
+        {
+            var userId =
+                _currentUserService.UserId;
+
+            query =
+                query.Where(task =>
+                    task.TaskAssignees.Any(assignment =>
+                        !assignment.IsDeleted &&
+                        assignment.UserId == userId));
+        }
+
+        var tasks =
+            await query
                 .OrderBy(task =>
                     task.Status)
                 .ThenBy(task =>
@@ -115,11 +139,18 @@ public sealed class TaskService : ITaskService
                 workspaceId,
                 SystemPermissions.TaskView);
 
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
         var task =
             await GetTaskAsync(
                 projectId,
                 taskId);
+
+        await EnsureTaskVisibleForCurrentUserAsync(
+            workspaceId,
+            task.Id);
 
 
         return MapToResponse(
@@ -147,6 +178,16 @@ public sealed class TaskService : ITaskService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskCreate);
+
+        await EnsureWorkspaceOwnerCannotManageTasksAsync(
+            workspaceId);
+
+        await EnsureMemberCannotRestructureTasksAsync(
+            workspaceId);
+
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
 
         if (project.IsArchived)
@@ -298,6 +339,16 @@ public sealed class TaskService : ITaskService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskDetailsUpdate);
+
+        await EnsureWorkspaceOwnerCannotManageTasksAsync(
+            workspaceId);
+
+        await EnsureMemberCannotRestructureTasksAsync(
+            workspaceId);
+
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
 
         if (project.IsArchived)
@@ -462,6 +513,17 @@ public sealed class TaskService : ITaskService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskStatusUpdate);
+
+        await EnsureWorkspaceOwnerCannotManageTasksAsync(
+            workspaceId);
+
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
+
+        await EnsureTaskVisibleForCurrentUserAsync(
+            workspaceId,
+            taskId);
 
 
         if (project.IsArchived)
@@ -746,6 +808,18 @@ public sealed class TaskService : ITaskService
                     task.Id);
         }
 
+        if (
+            statusChanged &&
+            request.Status ==
+                TaskItemStatus.Done)
+        {
+            await TryNotifyOnTimeCompletionRewardAsync(
+                workspaceId,
+                project,
+                task,
+                now);
+        }
+
 
         return MapToResponse(
             task);
@@ -772,9 +846,12 @@ public sealed class TaskService : ITaskService
                 workspaceId,
                 SystemPermissions.TaskView);
 
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
-        await GetTaskAsync(
-            projectId,
+        await EnsureTaskVisibleForCurrentUserAsync(
+            workspaceId,
             taskId);
 
 
@@ -850,6 +927,16 @@ public sealed class TaskService : ITaskService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskDetailsUpdate);
+
+        await EnsureWorkspaceOwnerCannotManageTasksAsync(
+            workspaceId);
+
+        await EnsureMemberCannotRestructureTasksAsync(
+            workspaceId);
+
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
 
         if (project.IsArchived)
@@ -1121,13 +1208,13 @@ public sealed class TaskService : ITaskService
             .CreateManyAsync(
                 recipients,
                 workspaceId,
-                "Task dependencies changed",
+                "تغيّرت اعتماديات مهمة",
 
                 dependencyTitles.Count == 0
 
-                    ? $"Dependencies were removed from task \"{task.Title}\"."
+                    ? $"أُزيلت الاعتماديات من المهمة \"{task.Title}\"."
 
-                    : $"Task \"{task.Title}\" now depends on: {string.Join(", ", dependencyTitles)}.",
+                    : $"أصبحت المهمة \"{task.Title}\" تعتمد على: {string.Join("، ", dependencyTitles)}.",
 
                 "task.dependencies_updated",
                 nameof(TaskItem),
@@ -1160,6 +1247,16 @@ public sealed class TaskService : ITaskService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskDelete);
+
+        await EnsureWorkspaceOwnerCannotManageTasksAsync(
+            workspaceId);
+
+        await EnsureMemberCannotRestructureTasksAsync(
+            workspaceId);
+
+        await EnsureProjectVisibleForCurrentUserAsync(
+            workspaceId,
+            projectId);
 
 
         if (project.IsArchived)
@@ -1265,8 +1362,8 @@ public sealed class TaskService : ITaskService
             .CreateManyAsync(
                 recipients,
                 workspaceId,
-                "Task deleted",
-                $"Task \"{taskTitle}\" was deleted.",
+                "تم حذف مهمة",
+                $"تم حذف المهمة \"{taskTitle}\".",
                 "task.deleted",
                 nameof(TaskItem),
                 task.Id);
@@ -1469,6 +1566,146 @@ public sealed class TaskService : ITaskService
     /* =========================================================
        WORKFLOW AUTHORIZATION
        ========================================================= */
+
+    private async Task EnsureWorkspaceOwnerCannotManageTasksAsync(
+        int workspaceId)
+    {
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        if (roleName == SystemRoles.WorkspaceOwner ||
+            roleName == "Owner")
+        {
+            throw new ForbiddenException(
+                "Workspace owners cannot manage tasks.");
+        }
+    }
+
+
+    private async Task EnsureMemberCannotRestructureTasksAsync(
+        int workspaceId)
+    {
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        if (roleName == SystemRoles.Member)
+        {
+            throw new ForbiddenException(
+                "Members cannot create, restructure, or delete tasks.");
+        }
+    }
+
+
+    private async Task EnsureProjectVisibleForCurrentUserAsync(
+        int workspaceId,
+        int projectId)
+    {
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        var userId =
+            _currentUserService.UserId;
+
+        if (roleName == "SystemAdmin" ||
+            roleName == SystemRoles.WorkspaceOwner ||
+            roleName == "Owner")
+        {
+            return;
+        }
+
+        var project =
+            await _dbContext
+                .Projects
+                .AsNoTracking()
+                .FirstOrDefaultAsync(current =>
+                    current.Id == projectId &&
+                    current.WorkspaceId == workspaceId &&
+                    !current.IsDeleted);
+
+        if (project is null)
+        {
+            throw new NotFoundException(
+                "Project not found.");
+        }
+
+        if (roleName == SystemRoles.ProjectManager)
+        {
+            if (project.ManagerUserId != userId)
+            {
+                throw new NotFoundException(
+                    "Project not found.");
+            }
+
+            return;
+        }
+
+        if (roleName == SystemRoles.Member)
+        {
+            var assigned =
+                await _dbContext
+                    .TaskAssignees
+                    .AsNoTracking()
+                    .AnyAsync(assignment =>
+                        assignment.UserId == userId &&
+                        !assignment.IsDeleted &&
+                        !assignment.TaskItem.IsDeleted &&
+                        assignment.TaskItem.ProjectId == projectId);
+
+            var isProjectMember =
+                await _dbContext
+                    .ProjectMembers
+                    .AsNoTracking()
+                    .AnyAsync(member =>
+                        member.ProjectId == projectId &&
+                        member.UserId == userId &&
+                        !member.IsDeleted);
+
+            if (!assigned &&
+                !isProjectMember)
+            {
+                throw new NotFoundException(
+                    "Project not found.");
+            }
+
+            return;
+        }
+
+        throw new NotFoundException(
+            "Project not found.");
+    }
+
+
+    private async Task EnsureTaskVisibleForCurrentUserAsync(
+        int workspaceId,
+        int taskId)
+    {
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        if (roleName != SystemRoles.Member)
+        {
+            return;
+        }
+
+        var assigned =
+            await IsCurrentUserAssignedAsync(
+                taskId);
+
+        if (!assigned)
+        {
+            throw new NotFoundException(
+                "Task not found.");
+        }
+    }
+
 
     private async Task EnsureWorkflowChangeAllowedAsync(
         int workspaceId,
@@ -1898,6 +2135,115 @@ public sealed class TaskService : ITaskService
        NOTIFICATION
        ========================================================= */
 
+    private async Task TryNotifyOnTimeCompletionRewardAsync(
+        int workspaceId,
+        Project project,
+        TaskItem task,
+        DateTime completedAt)
+    {
+        if (!project.ManagerUserId.HasValue ||
+            task.DueDate is null)
+        {
+            return;
+        }
+
+        var currentUserId =
+            _currentUserService.UserId;
+
+        var isWorkspaceMember =
+            await _dbContext.WorkspaceMembers
+                .AsNoTracking()
+                .AnyAsync(member =>
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == currentUserId &&
+                    member.Status == WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted &&
+                    !member.Role.IsDeleted &&
+                    member.Role.Name == SystemRoles.Member);
+
+        if (!isWorkspaceMember)
+        {
+            return;
+        }
+
+        var isAssignee =
+            await _dbContext.TaskAssignees
+                .AsNoTracking()
+                .AnyAsync(assignment =>
+                    assignment.TaskItemId == task.Id &&
+                    assignment.UserId == currentUserId &&
+                    !assignment.IsDeleted);
+
+        if (!isAssignee)
+        {
+            return;
+        }
+
+        if (completedAt.Date > task.DueDate.Value.Date)
+        {
+            return;
+        }
+
+        var onTimeCount =
+            await _dbContext.TaskAssignees
+                .AsNoTracking()
+                .Where(assignment =>
+                    assignment.UserId == currentUserId &&
+                    !assignment.IsDeleted &&
+                    assignment.TaskItem.ProjectId == project.Id &&
+                    !assignment.TaskItem.IsDeleted &&
+                    assignment.TaskItem.Status == TaskItemStatus.Done &&
+                    assignment.TaskItem.DueDate != null &&
+                    (assignment.TaskItem.ProgressUpdatedAt ?? assignment.TaskItem.UpdatedAt) != null &&
+                    (assignment.TaskItem.ProgressUpdatedAt ?? assignment.TaskItem.UpdatedAt)!.Value.Date <=
+                        assignment.TaskItem.DueDate!.Value.Date)
+                .Select(assignment => assignment.TaskItemId)
+                .Distinct()
+                .CountAsync();
+
+        if (onTimeCount < 3 ||
+            onTimeCount % 3 != 0)
+        {
+            return;
+        }
+
+        var expectedRewards =
+            onTimeCount / 3;
+
+        var rewardsSent =
+            await _dbContext.Notifications
+                .AsNoTracking()
+                .CountAsync(notification =>
+                    notification.WorkspaceId == workspaceId &&
+                    notification.UserId == project.ManagerUserId.Value &&
+                    notification.Type == "member.ontime_reward" &&
+                    notification.EntityName == nameof(User) &&
+                    notification.EntityId == currentUserId &&
+                    !notification.IsDeleted);
+
+        if (rewardsSent >= expectedRewards)
+        {
+            return;
+        }
+
+        var memberName =
+            await _dbContext.Users
+                .AsNoTracking()
+                .Where(user => user.Id == currentUserId)
+                .Select(user => user.FullName)
+                .FirstOrDefaultAsync()
+            ?? "عضو";
+
+        await _notificationService.CreateAsync(
+            project.ManagerUserId.Value,
+            workspaceId,
+            "مكافأة مالية مقترحة",
+            $"يُقترح منح {memberName} مكافأة مالية بعد إنجاز {onTimeCount} مهام موكلة إليه في المشروع \"{project.Name}\" قبل الموعد ودون تأخير.",
+            "member.ontime_reward",
+            nameof(User),
+            currentUserId);
+    }
+
     private static WorkflowNotification BuildWorkflowNotification(
         TaskItem task,
         TaskItemStatus previousStatus,
@@ -1912,8 +2258,8 @@ public sealed class TaskService : ITaskService
             TaskItemStatus.PartiallyCompleted)
         {
             return new WorkflowNotification(
-                "Task partially completed",
-                $"Task \"{task.Title}\" is now {task.ProgressPercentage}% complete. Progress: {task.ProgressNote}",
+                "إنجاز جزئي لمهمة",
+                $"المهمة \"{task.Title}\" أصبحت مكتملة بنسبة {task.ProgressPercentage}%. التقدم: {task.ProgressNote}",
                 "task.partially_completed");
         }
 
@@ -1924,8 +2270,8 @@ public sealed class TaskService : ITaskService
                 TaskItemStatus.Done)
         {
             return new WorkflowNotification(
-                "Task completed",
-                $"Task \"{task.Title}\" was completed.",
+                "اكتملت مهمة",
+                $"اكتملت المهمة \"{task.Title}\".",
                 "task.completed");
         }
 
@@ -1936,8 +2282,8 @@ public sealed class TaskService : ITaskService
                 TaskItemStatus.Cancelled)
         {
             return new WorkflowNotification(
-                "Task cancelled",
-                $"Task \"{task.Title}\" was cancelled.",
+                "أُلغيت مهمة",
+                $"أُلغيت المهمة \"{task.Title}\".",
                 "task.cancelled");
         }
 
@@ -1952,12 +2298,12 @@ public sealed class TaskService : ITaskService
                 string.IsNullOrWhiteSpace(
                     changeReason)
                     ? string.Empty
-                    : $" Reason: {changeReason}";
+                    : $" السبب: {changeReason}";
 
 
             return new WorkflowNotification(
-                "Task reopened or returned",
-                $"Task \"{task.Title}\" changed from {GetStatusResponseName(previousStatus)} to {GetStatusResponseName(task.Status)}.{reasonPart}",
+                "أُعيد فتح مهمة",
+                $"تغيّرت المهمة \"{task.Title}\" من {NotificationCopy.Status(GetStatusResponseName(previousStatus))} إلى {NotificationCopy.Status(GetStatusResponseName(task.Status))}.{reasonPart}",
                 "task.reopened");
         }
 
@@ -1970,19 +2316,19 @@ public sealed class TaskService : ITaskService
                 string.IsNullOrWhiteSpace(
                     previousProgressNote)
                     ? string.Empty
-                    : $" Previous progress: {previousProgressNote}.";
+                    : $" التقدم السابق: {previousProgressNote}.";
 
 
             return new WorkflowNotification(
-                "Task progress updated",
-                $"Task \"{task.Title}\" progress changed from {previousProgressPercentage}% to {task.ProgressPercentage}%.{previousNotePart}",
+                "تحديث تقدم مهمة",
+                $"تغيّر تقدم المهمة \"{task.Title}\" من {previousProgressPercentage}% إلى {task.ProgressPercentage}%.{previousNotePart}",
                 "task.progress_updated");
         }
 
 
         return new WorkflowNotification(
-            "Task status changed",
-            $"Task \"{task.Title}\" status changed from {GetStatusResponseName(previousStatus)} to {GetStatusResponseName(task.Status)}.",
+            "تغيّرت حالة مهمة",
+            $"تغيّرت حالة المهمة \"{task.Title}\" من {NotificationCopy.Status(GetStatusResponseName(previousStatus))} إلى {NotificationCopy.Status(GetStatusResponseName(task.Status))}.",
             "task.status_changed");
     }
 
@@ -2054,13 +2400,13 @@ public sealed class TaskService : ITaskService
             priorityChanged &&
             dueDateChanged)
         {
-            return "Task details changed";
+            return "تغيّرت تفاصيل مهمة";
         }
 
 
         return priorityChanged
-            ? "Task priority changed"
-            : "Task due date changed";
+            ? "تغيّرت أولوية مهمة"
+            : "تغيّر موعد مهمة";
     }
 
 
@@ -2098,19 +2444,19 @@ public sealed class TaskService : ITaskService
         if (priorityChanged)
         {
             changes.Add(
-                $"priority changed from {previousPriority} to {currentPriority}");
+                $"تغيرت الأولوية من {NotificationCopy.Priority(previousPriority)} إلى {NotificationCopy.Priority(currentPriority)}");
         }
 
 
         if (dueDateChanged)
         {
             changes.Add(
-                $"due date changed from {FormatDueDate(previousDueDate)} to {FormatDueDate(currentDueDate)}");
+                $"تغيّر الموعد من {FormatDueDate(previousDueDate)} إلى {FormatDueDate(currentDueDate)}");
         }
 
 
         return
-            $"Task \"{taskTitle}\" was updated: {string.Join("; ", changes)}.";
+            $"تم تحديث المهمة \"{taskTitle}\": {string.Join("؛ ", changes)}.";
     }
 
 

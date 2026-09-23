@@ -18,39 +18,8 @@
       </h1>
 
       <p>
-        متابعة جميع الإشعارات والتنبيهات وإدارة حالة القراءة.
+        {{ pageSubtitle }}
       </p>
-
-    </div>
-
-
-    <div
-      class="header-actions"
-    >
-
-      <button
-        type="button"
-        class="secondary-button"
-        [disabled]="
-          unreadCount === 0
-        "
-        (click)="
-          markAllAsRead()
-        "
-      >
-        تعليم الكل كمقروء
-      </button>
-
-
-      <button
-        type="button"
-        class="primary-button"
-        (click)="
-          toggleCompose()
-        "
-      >
-        إنشاء إشعار
-      </button>
 
     </div>
 
@@ -383,7 +352,7 @@
 
             @for (
               workspace
-              of workspaces;
+              of visibleWorkspaces;
               track workspace.id
             ) {
 
@@ -406,7 +375,7 @@
 
       @if (
         isSystemAdmin &&
-        workspaces.length > 0
+        visibleWorkspaces.length > 0
       ) {
 
         <label
@@ -437,7 +406,7 @@
 
             @for (
               workspace
-              of workspaces;
+              of visibleWorkspaces;
               track workspace.id
             ) {
 
@@ -726,6 +695,8 @@
     </label>
 
 
+    @if (showWorkspaceFilter) {
+
     <label>
 
       <span>
@@ -747,7 +718,7 @@
 
         @for (
           workspace
-          of workspaces;
+          of visibleWorkspaces;
           track workspace.id
         ) {
 
@@ -765,40 +736,7 @@
 
     </label>
 
-
-    <label>
-
-      <span>
-        المرسل
-      </span>
-
-      <input
-        type="number"
-        min="1"
-        [(ngModel)]="
-          filterActorUserId
-        "
-        placeholder="User ID"
-      >
-
-    </label>
-
-
-    <label>
-
-      <span>
-        المصدر
-      </span>
-
-      <input
-        type="text"
-        [(ngModel)]="
-          filterSource
-        "
-        placeholder="task / workspace / manual..."
-      >
-
-    </label>
+    }
 
 
     <label>
@@ -836,6 +774,18 @@
     <div
       class="filter-actions"
     >
+
+      <button
+        type="button"
+        class="secondary-button"
+        [class.active]="isTodayFilter"
+        (click)="
+          filterToday()
+        "
+      >
+        إشعارات اليوم
+      </button>
+
 
       <button
         type="button"
@@ -884,17 +834,45 @@
         <span>
           {{ totalCount }}
           إشعار
+          ·
+          {{ unreadCount }}
+          غير مقروء
         </span>
 
       </div>
 
 
-      <strong
-        class="unread-summary"
-      >
-        {{ unreadCount }}
-        غير مقروء
-      </strong>
+      <div class="panel-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="
+            unreadCount === 0
+          "
+          (click)="
+            markAllAsRead()
+          "
+        >
+          تعليم الكل كمقروء
+        </button>
+
+
+        @if (canCompose) {
+
+        <button
+          type="button"
+          class="primary-button"
+          (click)="
+            toggleCompose()
+          "
+        >
+          إنشاء إشعار
+        </button>
+
+        }
+
+      </div>
 
     </header>
 
@@ -915,7 +893,16 @@
       <div
         class="empty-state"
       >
-        لا توجد إشعارات مطابقة للفلاتر الحالية.
+        @if (
+          totalCount === 0 &&
+          !filterFrom &&
+          !filterTo &&
+          readFilter === 'all'
+        ) {
+          لا توجد إشعارات بعد في هذه المساحة. ستظهر هنا أحداث المهام والمشاريع التي تتم داخل مساحتك.
+        } @else {
+          لا توجد إشعارات مطابقة للفلاتر الحالية.
+        }
       </div>
 
     } @else {
@@ -948,11 +935,13 @@
 
               <header>
 
-                <div>
+                <div class="title-wrap">
 
                   <h3>
                     {{
-                      notification.title
+                      displayTitle(
+                        notification
+                      )
                     }}
                   </h3>
 
@@ -969,19 +958,40 @@
                 </div>
 
 
-                <time>
-                  {{
-                    formatDate(
-                      notification.createdAt
-                    )
-                  }}
-                </time>
+                <div class="time-status">
+
+                  <time>
+                    {{
+                      formatDate(
+                        notification.createdAt
+                      )
+                    }}
+                  </time>
+
+
+                  @if (
+                    notification.isRead
+                  ) {
+
+                    <span
+                      class="read-label"
+                    >
+                      مقروء
+                    </span>
+
+                  }
+
+                </div>
 
               </header>
 
 
               <p>
-                {{ notification.message }}
+                {{
+                  displayMessage(
+                    notification
+                  )
+                }}
               </p>
 
 
@@ -990,6 +1000,28 @@
                 <div
                   class="notification-meta"
                 >
+
+                  @if (
+                    workspaceNameOf(
+                      notification.workspaceId
+                    )
+                  ) {
+
+                  <span>
+                    المساحة:
+                    <strong>
+                      {{
+                        workspaceNameOf(
+                          notification.workspaceId
+                        )
+                      }}
+                    </strong>
+                  </span>
+
+                  }
+
+
+                  @if (showSender) {
 
                   <span>
                     المرسل:
@@ -1002,13 +1034,7 @@
                     </strong>
                   </span>
 
-
-                  <span>
-                    النوع:
-                    <strong>
-                      {{ notification.type }}
-                    </strong>
-                  </span>
+                  }
 
                 </div>
 
@@ -1019,6 +1045,7 @@
 
                   <button
                     type="button"
+                    class="mark-read"
                     (click)="
                       markAsRead(
                         notification
@@ -1027,14 +1054,6 @@
                   >
                     تعليم كمقروء
                   </button>
-
-                } @else {
-
-                  <span
-                    class="read-label"
-                  >
-                    مقروء
-                  </span>
 
                 }
 

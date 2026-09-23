@@ -482,3 +482,10 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local deployment and archive files
+/deploy/
+/TaskManagement-Final-Deploy.zip
+/TaskManagement.rar
+/Backend/TaskManagement.API/wwwroot/
+/Mobile/.claude/

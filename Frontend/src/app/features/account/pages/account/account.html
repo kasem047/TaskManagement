@@ -93,7 +93,12 @@
     activeTab === 'profile'
   ) {
 
-    <div class="account-grid">
+    <div
+      class="account-grid"
+      [class.with-email]="
+        profile?.isSystemAdmin
+      "
+    >
 
       <section class="account-card">
 
@@ -123,26 +128,50 @@
         } @else {
 
           <form
+            class="profile-form"
             [formGroup]="profileForm"
             (ngSubmit)="saveProfile()"
             novalidate
           >
 
-            <label class="field">
+            <div class="profile-fields">
 
-              <span>
-                الاسم الكامل
-              </span>
+              <label class="field">
 
-              <input
-                id="profileFullName"
-                name="profileFullName"
-                type="text"
-                formControlName="fullName"
-                autocomplete="name"
-              >
+                <span>
+                  الاسم الكامل
+                </span>
 
-            </label>
+                <input
+                  id="profileFullName"
+                  name="profileFullName"
+                  type="text"
+                  formControlName="fullName"
+                  autocomplete="name"
+                >
+
+              </label>
+
+
+              <label class="field">
+
+                <span>
+                  البريد الإلكتروني
+                </span>
+
+                <input
+                  type="email"
+                  [value]="
+                    profile?.email
+                    || ''
+                  "
+                  dir="ltr"
+                  readonly
+                >
+
+              </label>
+
+            </div>
 
 
             @if (profileSuccess) {
@@ -178,6 +207,8 @@
 
       </section>
 
+
+      @if (profile?.isSystemAdmin) {
 
       <section class="account-card">
 
@@ -296,6 +327,7 @@
 
       </section>
 
+      }
 
       <section class="account-card account-summary">
 
@@ -333,13 +365,21 @@
           <div>
             <span>نوع الحساب</span>
             <strong>
-              {{
-                profile?.isSystemAdmin
-                  ? 'مسؤول النظام'
-                  : 'مستخدم'
-              }}
+              {{ accountTypeLabel }}
             </strong>
           </div>
+
+
+          @if (!profile?.isSystemAdmin) {
+
+          <div>
+            <span>مساحة العمل</span>
+            <strong>
+              {{ workspaceLabel }}
+            </strong>
+          </div>
+
+          }
 
 
           <div>

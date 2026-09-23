@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TaskManagement.Application.Common;
 using TaskManagement.Application.Common.Exceptions;
 using TaskManagement.Application.DTOs.WorkspaceInvitations;
 using TaskManagement.Application.DTOs.WorkspaceMembers;
@@ -44,11 +45,10 @@ public sealed class WorkspaceInvitationService
                 .Include(x => x.Role)
                 .Where(x =>
                     x.InvitedUserId == currentUserId &&
+                    x.Status ==
+                        WorkspaceInvitationStatus.Pending &&
                     !x.IsDeleted)
                 .OrderByDescending(x =>
-                    x.Status ==
-                    WorkspaceInvitationStatus.Pending)
-                .ThenByDescending(x =>
                     x.CreatedAt)
                 .ToListAsync();
 
@@ -186,8 +186,8 @@ public sealed class WorkspaceInvitationService
             await _notificationService.CreateAsync(
                 user.Id,
                 workspaceId,
-                "Added to workspace",
-                $"You were added to workspace \"{workspace.Name}\" with role {role.Name}.",
+                "تمت إضافتك إلى مساحة عمل",
+                $"تمت إضافتك إلى مساحة العمل \"{workspace.Name}\" بدور {NotificationCopy.Role(role.Name)}.",
                 "workspace.member_added",
                 nameof(WorkspaceMember),
                 member.Id);
@@ -242,8 +242,8 @@ public sealed class WorkspaceInvitationService
                 await _notificationService.CreateAsync(
                     user.Id,
                     workspaceId,
-                    "Workspace invitation updated",
-                    $"Your invitation to workspace \"{workspace.Name}\" was updated. Proposed role: {role.Name}.",
+                    "تم تحديث دعوة مساحة العمل",
+                    $"تم تحديث دعوتك إلى مساحة العمل \"{workspace.Name}\". الدور المقترح: {NotificationCopy.Role(role.Name)}.",
                     "workspace.invitation_updated",
                     nameof(WorkspaceInvitation),
                     existingPendingInvitation.Id);
@@ -313,8 +313,8 @@ public sealed class WorkspaceInvitationService
         await _notificationService.CreateAsync(
             user.Id,
             workspaceId,
-            "Workspace invitation",
-            $"You were invited to join workspace \"{workspace.Name}\" with role {role.Name}.",
+            "دعوة إلى مساحة عمل",
+            $"دُعيت للانضمام إلى مساحة العمل \"{workspace.Name}\" بدور {NotificationCopy.Role(role.Name)}.",
             "workspace.invitation_received",
             nameof(WorkspaceInvitation),
             invitation.Id);
@@ -348,6 +348,12 @@ public sealed class WorkspaceInvitationService
                 invitationId,
                 currentUserId);
 
+        if (invitation.Status ==
+            WorkspaceInvitationStatus.Accepted)
+        {
+            return;
+        }
+
         if (invitation.Status !=
             WorkspaceInvitationStatus.Pending)
         {
@@ -371,7 +377,6 @@ public sealed class WorkspaceInvitationService
 
         var activeMembershipExists =
             await _dbContext.WorkspaceMembers
-                .AsNoTracking()
                 .AnyAsync(member =>
                     member.WorkspaceId ==
                         invitation.WorkspaceId &&
@@ -383,8 +388,12 @@ public sealed class WorkspaceInvitationService
 
         if (activeMembershipExists)
         {
-            throw new ConflictException(
-                "You are already an active member of this workspace.");
+            MarkInvitationAccepted(
+                invitation,
+                DateTime.UtcNow);
+
+            await _dbContext.SaveChangesAsync();
+            return;
         }
 
         var user =
@@ -414,14 +423,9 @@ public sealed class WorkspaceInvitationService
         var now =
             DateTime.UtcNow;
 
-        invitation.Status =
-            WorkspaceInvitationStatus.Accepted;
-
-        invitation.RespondedAt =
-            now;
-
-        invitation.UpdatedAt =
-            now;
+        MarkInvitationAccepted(
+            invitation,
+            now);
 
         await _dbContext.SaveChangesAsync();
 
@@ -443,8 +447,8 @@ public sealed class WorkspaceInvitationService
                 ownerUserId
             },
             invitation.WorkspaceId,
-            "Workspace invitation accepted",
-            $"{user.FullName} accepted the invitation to workspace \"{invitation.Workspace.Name}\" and joined as {invitation.Role.Name}.",
+            "تم قبول دعوة مساحة العمل",
+            $"{user.FullName} قبل الدعوة إلى مساحة العمل \"{invitation.Workspace.Name}\" وانضم بدور {NotificationCopy.Role(invitation.Role.Name)}.",
             "workspace.invitation_accepted",
             nameof(WorkspaceMember),
             member.Id);
@@ -500,8 +504,8 @@ public sealed class WorkspaceInvitationService
                 ownerUserId
             },
             invitation.WorkspaceId,
-            "Workspace invitation rejected",
-            $"{invitation.InvitedUser.FullName} rejected the invitation to workspace \"{invitation.Workspace.Name}\".",
+            "تم رفض دعوة مساحة العمل",
+            $"{invitation.InvitedUser.FullName} رفض الدعوة إلى مساحة العمل \"{invitation.Workspace.Name}\".",
             "workspace.invitation_rejected",
             nameof(WorkspaceInvitation),
             invitation.Id);
@@ -562,8 +566,8 @@ public sealed class WorkspaceInvitationService
         await _notificationService.CreateAsync(
             invitation.InvitedUserId,
             workspaceId,
-            "Workspace invitation cancelled",
-            $"Your invitation to workspace \"{invitation.Workspace.Name}\" was cancelled.",
+            "تم إلغاء دعوة مساحة العمل",
+            $"أُلغيت دعوتك إلى مساحة العمل \"{invitation.Workspace.Name}\".",
             "workspace.invitation_cancelled",
             nameof(WorkspaceInvitation),
             invitation.Id);
@@ -765,14 +769,31 @@ public sealed class WorkspaceInvitationService
     }
 
     private static void
+        MarkInvitationAccepted(
+            WorkspaceInvitation invitation,
+            DateTime respondedAt)
+    {
+        invitation.Status =
+            WorkspaceInvitationStatus.Accepted;
+
+        invitation.RespondedAt =
+            respondedAt;
+
+        invitation.UpdatedAt =
+            respondedAt;
+    }
+
+    private static void
         EnsureAssignableWorkspaceRole(
             Role role)
     {
-        if (role.Name ==
-            SystemRoles.WorkspaceOwner)
+        if (role.Name !=
+                SystemRoles.ProjectManager &&
+            role.Name !=
+                SystemRoles.Member)
         {
             throw new ConflictException(
-                "WorkspaceOwner cannot be assigned through invitations. Use ownership transfer instead.");
+                "Only ProjectManager and Member can be invited. Use ownership transfer for WorkspaceOwner.");
         }
     }
 

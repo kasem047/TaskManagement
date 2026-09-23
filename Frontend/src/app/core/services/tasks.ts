@@ -176,7 +176,10 @@ export interface UpdateTaskRequest {
 
 export interface UpdateTaskStatusRequest {
 
-  status: TaskStatusValue;
+  status:
+    | TaskStatusValue
+    | TaskStatus
+    | 'PartiallyCompleted';
 
   position: number;
 

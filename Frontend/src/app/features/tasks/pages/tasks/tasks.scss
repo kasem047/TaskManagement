@@ -8,16 +8,16 @@
    ========================= */
 
 .tasks-page {
-  width: min(1500px, 100%);
+  width: 100%;
 
   min-width: 0;
 
-  margin: 0 auto;
+  margin: 0;
 
   padding:
-    24px
-    20px
-    40px;
+    28px
+    28px
+    48px;
 
   direction: rtl;
 }
@@ -53,7 +53,7 @@
 
   font-family: inherit;
 
-  font-size: 12px;
+  font-size: 16px;
 
   cursor: pointer;
 }
@@ -62,7 +62,7 @@
 .eyebrow {
   color: var(--primary);
 
-  font-size: 12px;
+  font-size: 16px;
 
   font-weight: 800;
 }
@@ -75,7 +75,7 @@
 
   color: var(--text-primary);
 
-  font-size: 31px;
+  font-size: 35px;
 
   line-height: 1.35;
 }
@@ -86,7 +86,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -166,30 +166,30 @@
 
   background: var(--rose);
 
-  font-size: 9px;
+  font-size: 16px;
 
   font-weight: 800;
 }
 
 
 .create-button {
-  height: 42px;
+  height: var(--control-height, 52px);
 
   display: flex;
 
   align-items: center;
 
-  gap: 7px;
+  gap: var(--space-2);
 
   padding:
     0
-    15px;
+    var(--space-6);
 
   border: 0;
 
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 
-  color: #ffffff;
+  color: var(--white);
 
   background:
     linear-gradient(
@@ -200,11 +200,15 @@
 
   font-family: inherit;
 
-  font-size: 12px;
+  font-size: 19px;
 
-  font-weight: 750;
+  font-weight: 700;
 
   cursor: pointer;
+}
+
+.create-button:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 
@@ -248,14 +252,14 @@
 
   color: var(--text-secondary);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
 .board-context strong {
   color: var(--text-primary);
 
-  font-size: 15px;
+  font-size: 19px;
 }
 
 
@@ -270,7 +274,7 @@
 
   background: var(--primary-soft);
 
-  font-size: 10px;
+  font-size: 14px;
 
   font-weight: 700;
 }
@@ -309,7 +313,7 @@
 .summary span {
   color: var(--text-secondary);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -320,7 +324,7 @@
 
   color: var(--text-primary);
 
-  font-size: 23px;
+  font-size: 27px;
 }
 
 
@@ -355,7 +359,7 @@
 
   background: var(--danger-soft);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -396,26 +400,26 @@
       minmax(0, 1fr)
     );
 
-  gap: 9px;
+  gap: var(--space-4);
 }
 
 
 .column {
   min-width: 0;
 
-  min-height: 570px;
+  min-height: 640px;
 
   display: flex;
 
   flex-direction: column;
 
-  padding: 9px;
+  padding: var(--space-3);
 
   border:
     1px solid
     var(--border);
 
-  border-radius: 17px;
+  border-radius: var(--radius-lg);
 
   background: var(--surface-2);
 }
@@ -449,7 +453,7 @@
 .column-title strong {
   color: var(--text-primary);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -500,7 +504,7 @@
 
   background: var(--surface);
 
-  font-size: 10px;
+  font-size: 14px;
 
   font-weight: 800;
 }
@@ -524,13 +528,13 @@
 .task-card {
   position: relative;
 
-  min-height: 205px;
+  min-height: 240px;
 
   display: flex;
 
   flex-direction: column;
 
-  padding: 12px;
+  padding: var(--space-4);
 
   overflow: hidden;
 
@@ -690,7 +694,7 @@
 
   border-radius: 999px;
 
-  font-size: 9px;
+  font-size: 13px;
 
   font-weight: 800;
 }
@@ -746,9 +750,9 @@
 .task-id {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 16px;
 
-  font-weight: 750;
+  font-weight: 600;
 }
 
 
@@ -766,7 +770,7 @@
 
   color: var(--text-primary);
 
-  font-size: 13px;
+  font-size: 17px;
 
   line-height: 1.55;
 
@@ -791,7 +795,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 11px;
+  font-size: 15px;
 
   line-height: 1.6;
 
@@ -832,7 +836,7 @@
 
   background: var(--surface-2);
 
-  font-size: 9px;
+  font-size: 13px;
 
   white-space: nowrap;
 }
@@ -895,7 +899,7 @@
       var(--surface)
     );
 
-  font-size: 9px;
+  font-size: 13px;
 
   white-space: nowrap;
 }
@@ -931,7 +935,7 @@
 
   color: var(--text-primary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   font-weight: 750;
 
@@ -970,14 +974,14 @@
 
   color: var(--text-secondary);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
 .progress-head strong {
   color: var(--violet);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -1017,7 +1021,7 @@
 
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 
   line-height: 1.5;
 
@@ -1048,7 +1052,7 @@
 
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1069,7 +1073,7 @@
 
   color: var(--danger);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1217,7 +1221,7 @@
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 14px;
 
   text-align: center;
 }
@@ -1256,7 +1260,7 @@
 
   font-family: inherit;
 
-  font-size: 9px;
+  font-size: 13px;
 
   cursor: pointer;
 }
@@ -1272,7 +1276,7 @@
 .column-pagination span {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1409,7 +1413,7 @@
 .modal-header span {
   color: var(--primary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   font-weight: 800;
 }
@@ -1424,7 +1428,7 @@
 
   color: var(--text-primary);
 
-  font-size: 19px;
+  font-size: 23px;
 }
 
 
@@ -1449,7 +1453,7 @@
 
   background: var(--surface-2);
 
-  font-size: 20px;
+  font-size: 24px;
 
   cursor: pointer;
 }
@@ -1485,7 +1489,7 @@
 
   color: var(--text-primary);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1508,7 +1512,7 @@
 .filter-section-head span {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1542,7 +1546,7 @@
 
   font-family: inherit;
 
-  font-size: 10px;
+  font-size: 14px;
 
   cursor: pointer;
 }
@@ -1582,7 +1586,7 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -1634,14 +1638,14 @@
 .filter-option-copy strong {
   color: var(--text-primary);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
 .filter-option-copy small {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1654,7 +1658,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -1680,7 +1684,7 @@
 .drawer-footer > span {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1703,7 +1707,7 @@
 
   font-family: inherit;
 
-  font-size: 10px;
+  font-size: 14px;
 
   cursor: pointer;
 }
@@ -1817,7 +1821,7 @@
 .form-field label {
   color: var(--text-primary);
 
-  font-size: 11px;
+  font-size: 15px;
 
   font-weight: 700;
 }
@@ -1826,7 +1830,7 @@
 .form-field small {
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -1851,7 +1855,7 @@
 
   font-family: inherit;
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1911,7 +1915,7 @@
 
   background: var(--danger-soft);
 
-  font-size: 10px;
+  font-size: 14px;
 
   white-space: pre-line;
 }
@@ -1934,7 +1938,7 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 15px;
 
   font-weight: 700;
 
@@ -1996,7 +2000,7 @@
 .progress-modal-intro strong {
   color: var(--text-primary);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -2008,7 +2012,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   line-height: 1.7;
 }
@@ -2043,7 +2047,7 @@
 .partial-edit-section > strong {
   color: var(--violet);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -2066,7 +2070,7 @@
 
   background: var(--surface-2);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -2129,7 +2133,7 @@
     var(--text-primary);
 
   font-size:
-    11px;
+    15px;
 
   font-weight:
     750;
@@ -2141,7 +2145,7 @@
     var(--text-muted);
 
   font-size:
-    9px;
+    13px;
 }
 
 
@@ -2186,7 +2190,7 @@
     inherit;
 
   font-size:
-    10px;
+    14px;
 
   font-weight:
     700;
@@ -2312,7 +2316,7 @@
     );
 
   font-size:
-    8px;
+    12px;
 
   font-weight:
     800;
@@ -2330,7 +2334,7 @@
     var(--text-primary);
 
   font-size:
-    9px;
+    13px;
 
   font-weight:
     700;
@@ -2378,7 +2382,7 @@
     inherit;
 
   font-size:
-    15px;
+    19px;
 
   line-height:
     1;
@@ -2423,7 +2427,7 @@
     var(--text-muted);
 
   font-size:
-    9px;
+    13px;
 }
 
 
@@ -2491,7 +2495,7 @@
     var(--danger-soft);
 
   font-size:
-    9px;
+    13px;
 }
 
 
@@ -2677,7 +2681,7 @@
     inherit;
 
   font-size:
-    10px;
+    14px;
 }
 
 
@@ -2720,7 +2724,7 @@
     inherit;
 
   font-size:
-    17px;
+    21px;
 
   cursor:
     pointer;
@@ -2842,7 +2846,7 @@
     );
 
   font-size:
-    9px;
+    13px;
 
   font-weight:
     800;
@@ -2869,7 +2873,7 @@
     var(--text-primary);
 
   font-size:
-    10px;
+    14px;
 
   text-overflow:
     ellipsis;
@@ -2887,7 +2891,7 @@
     var(--text-muted);
 
   font-size:
-    8px;
+    12px;
 
   text-overflow:
     ellipsis;
@@ -2918,7 +2922,7 @@
     var(--surface-3);
 
   font-size:
-    8px;
+    12px;
 
   text-overflow:
     ellipsis;
@@ -2951,7 +2955,7 @@
     var(--primary-soft);
 
   font-size:
-    15px;
+    19px;
 
   font-weight:
     700;
@@ -2995,7 +2999,7 @@
     0;
 
   font-size:
-    9px;
+    13px;
 }
 
 
@@ -3048,7 +3052,7 @@
     inherit;
 
   font-size:
-    9px;
+    13px;
 
   cursor:
     pointer;
@@ -3091,7 +3095,7 @@
     none;
 
   font-size:
-    9px;
+    13px;
 
   font-weight:
     700;
@@ -3103,7 +3107,7 @@
     hidden;
 
   font-size:
-    8px;
+    12px;
 
   text-overflow:
     ellipsis;
@@ -3197,7 +3201,7 @@
 
   color: var(--text-primary);
 
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -3206,7 +3210,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -3272,7 +3276,7 @@
 .history-section-title span {
   color: var(--text-primary);
 
-  font-size: 12px;
+  font-size: 16px;
 
   font-weight: 750;
 }
@@ -3297,7 +3301,7 @@
 
   background: var(--primary-soft);
 
-  font-size: 9px;
+  font-size: 13px;
 
   font-weight: 800;
 }
@@ -3362,7 +3366,7 @@
       var(--violet)
     );
 
-  font-size: 10px;
+  font-size: 14px;
 
   font-weight: 800;
 }
@@ -3382,7 +3386,7 @@
 
   color: var(--text-primary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   text-overflow: ellipsis;
 
@@ -3393,7 +3397,7 @@
 .assignee-item small {
   color: var(--text-muted);
 
-  font-size: 8px;
+  font-size: 12px;
 }
 
 
@@ -3413,7 +3417,7 @@
   background:
     var(--surface-2);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -3455,7 +3459,7 @@
 .history-state p {
   margin: 0;
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -3508,7 +3512,7 @@
 
   background: var(--danger-soft);
 
-  font-size: 10px;
+  font-size: 14px;
 }
 
 
@@ -3537,7 +3541,7 @@
 
   font-family: inherit;
 
-  font-size: 9px;
+  font-size: 13px;
 
   cursor: pointer;
 }
@@ -3667,7 +3671,7 @@
 
   color: var(--text-primary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   text-overflow: ellipsis;
 
@@ -3678,7 +3682,7 @@
 .history-actor small {
   color: var(--text-muted);
 
-  font-size: 8px;
+  font-size: 12px;
 }
 
 
@@ -3687,7 +3691,7 @@
 
   color: var(--text-muted);
 
-  font-size: 8px;
+  font-size: 12px;
 
   direction: rtl;
 }
@@ -3713,7 +3717,7 @@
 
   color: var(--text-primary);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -3725,7 +3729,7 @@
 
   color: var(--text-secondary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   line-height: 1.7;
 }
@@ -3748,14 +3752,14 @@
 
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
 .history-target strong {
   color: var(--primary);
 
-  font-size: 9px;
+  font-size: 13px;
 }
 
 
@@ -3823,12 +3827,12 @@
 
 
   .page-header h1 {
-    font-size: 25px;
+    font-size: 29px;
   }
 
 
   .page-header p {
-    font-size: 11px;
+    font-size: 15px;
   }
 
 
@@ -3853,7 +3857,7 @@
 
 
   .summary strong {
-    font-size: 20px;
+    font-size: 24px;
   }
 
 
@@ -3970,7 +3974,7 @@
 
   color: var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 
   line-height: 1.7;
 }
@@ -4022,7 +4026,7 @@
   color:
     var(--text-primary);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -4030,7 +4034,7 @@
   color:
     var(--text-muted);
 
-  font-size: 9px;
+  font-size: 13px;
 
   line-height: 1.6;
 }
@@ -4051,7 +4055,7 @@
   background:
     var(--primary-soft);
 
-  font-size: 9px;
+  font-size: 13px;
 
   font-weight: 700;
 }
@@ -4163,7 +4167,7 @@
   background:
     var(--surface-2);
 
-  font-size: 11px;
+  font-size: 15px;
 
   font-weight: 800;
 }
@@ -4194,7 +4198,7 @@
   color:
     var(--text-primary);
 
-  font-size: 10px;
+  font-size: 14px;
 
   text-overflow: ellipsis;
 
@@ -4206,7 +4210,7 @@
   color:
     var(--text-muted);
 
-  font-size: 8px;
+  font-size: 12px;
 }
 
 
@@ -4218,7 +4222,7 @@
 
   border-radius: 999px;
 
-  font-size: 8px;
+  font-size: 12px;
 
   font-weight: 700;
 
@@ -4269,7 +4273,7 @@
   background:
     var(--surface);
 
-  font-size: 9px;
+  font-size: 13px;
 
   line-height: 1.7;
 

@@ -12,6 +12,10 @@ import {
   TaskBoardScope
 } from '../../../../core/services/task-board-scope';
 
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
 
 @Component({
   selector: 'app-tasks-entry',
@@ -31,7 +35,43 @@ export class TasksEntryPage
     inject(TaskBoardScope);
 
 
+  private readonly access =
+    inject(WorkspaceAccess);
+
+
   ngOnInit(): void {
+
+    this.access
+      .refresh()
+      .subscribe({
+
+        next: () => {
+
+          if (!this.access.showTasksNav) {
+
+            this.router.navigateByUrl(
+              '/dashboard'
+            );
+
+            return;
+          }
+
+          this.openAccessibleBoard();
+        },
+
+        error: () => {
+
+          this.router.navigateByUrl(
+            '/dashboard'
+          );
+        }
+
+      });
+  }
+
+
+  private openAccessibleBoard():
+    void {
 
     this.boardScope
       .loadAccessibleBoard()
@@ -39,11 +79,23 @@ export class TasksEntryPage
 
         next: snapshot => {
 
+          const taskWorkspaces =
+            snapshot.workspaces
+              .filter(workspace =>
+                this.access.matchesActiveRole(
+                  workspace.currentUserRole
+                )
+              );
+
+
           const activeProjects =
             snapshot.projects
-              .filter(
-                project =>
-                  !project.isArchived
+              .filter(project =>
+                !project.isArchived &&
+                taskWorkspaces.some(workspace =>
+                  workspace.id ===
+                    project.workspaceId
+                )
               );
 
 

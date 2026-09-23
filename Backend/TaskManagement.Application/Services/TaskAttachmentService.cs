@@ -62,6 +62,10 @@ public sealed class TaskAttachmentService
             workspaceId,
             SystemPermissions.TaskView);
 
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
+
         var attachments =
             await _dbContext.TaskAttachments
                 .AsNoTracking()
@@ -93,6 +97,10 @@ public sealed class TaskAttachmentService
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
             SystemPermissions.TaskAttachmentUpload);
+
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
 
         if (project.IsArchived)
         {
@@ -193,6 +201,10 @@ public sealed class TaskAttachmentService
             workspaceId,
             SystemPermissions.TaskView);
 
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
+
         var attachment =
             await GetAttachmentAsync(
                 taskId,
@@ -223,6 +235,10 @@ public sealed class TaskAttachmentService
         await _permissionService.EnsurePermissionAsync(
             workspaceId,
             SystemPermissions.TaskAttachmentUpload);
+
+        await EnsureMemberAssignedWhenRequiredAsync(
+            workspaceId,
+            taskId);
 
         if (project.IsArchived)
         {
@@ -280,6 +296,32 @@ public sealed class TaskAttachmentService
         }
 
         return project;
+    }
+
+    private async Task EnsureMemberAssignedWhenRequiredAsync(
+        int workspaceId,
+        int taskId)
+    {
+        var roleName =
+            await _permissionService.GetActiveRoleNameAsync(
+                workspaceId);
+
+        if (roleName != SystemRoles.Member)
+        {
+            return;
+        }
+
+        var assigned =
+            await _dbContext.TaskAssignees.AnyAsync(assignment =>
+                assignment.TaskItemId == taskId &&
+                assignment.UserId == _currentUserService.UserId &&
+                !assignment.IsDeleted);
+
+        if (!assigned)
+        {
+            throw new ForbiddenException(
+                "You can only access tasks assigned to you.");
+        }
     }
 
     private async Task EnsureTaskExistsAsync(

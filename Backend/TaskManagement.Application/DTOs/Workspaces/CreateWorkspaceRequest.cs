@@ -19,6 +19,12 @@ public class CreateWorkspaceRequest : IValidatableObject
             "Workspace description must not exceed 500 characters.")]
     public string? Description { get; set; }
 
+    [Range(
+        1,
+        int.MaxValue,
+        ErrorMessage = "OwnerUserId must be greater than zero.")]
+    public int OwnerUserId { get; set; }
+
     public IEnumerable<ValidationResult> Validate(
         ValidationContext validationContext)
     {

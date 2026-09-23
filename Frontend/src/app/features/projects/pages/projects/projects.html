@@ -10,7 +10,7 @@
       <div class="title-line">
 
         <h1>
-          {{ workspaceName }}
+          {{ pageTitle }}
         </h1>
 
 
@@ -18,9 +18,11 @@
 
           <span class="workspace-role">
             {{
-              roleLabel(
-                workspace.currentUserRole
-              )
+              isFocusedProjectView
+                ? workspaceName
+                : roleLabel(
+                    workspace.currentUserRole
+                  )
             }}
           </span>
 
@@ -30,7 +32,7 @@
 
 
       <p>
-        إدارة المشاريع التابعة لمساحة العمل.
+        {{ pageSubtitle }}
       </p>
 
     </div>
@@ -86,6 +88,8 @@
        STATISTICS
        ========================= -->
 
+  @if (!isFocusedProjectView) {
+
   <section class="stats">
 
     <article>
@@ -128,6 +132,8 @@
 
   </section>
 
+  }
+
 
   <!-- =========================
        PROJECTS
@@ -139,13 +145,25 @@
 
       <div>
 
-        <h2>
-          المشاريع
-        </h2>
+          <h2>
+            {{
+              isManagerView
+                ? 'تفاصيل المشروع الذي تديره'
+                : isMemberView
+                  ? 'مشاريعي'
+                  : 'المشاريع'
+            }}
+          </h2>
 
-        <p>
-          جميع المشاريع التي يمكنك الوصول إليها.
-        </p>
+          <p>
+            {{
+              isManagerView
+                ? 'بيانات المشروع كاملة: الفريق، حالة المهام، وتاريخ الإنشاء والتحديث.'
+                : isMemberView
+                  ? 'المشاريع التي أنت عضو فيها. يمكنك إظهار الأعضاء ومهامك المسندة.'
+                  : 'جميع المشاريع التي يمكنك الوصول إليها.'
+            }}
+          </p>
 
       </div>
 
@@ -175,11 +193,19 @@
         </div>
 
         <strong>
-          لا توجد مشاريع بعد
+          {{
+            isMemberView
+              ? 'لا توجد مشاريع ضمن عضويتك'
+              : 'لا توجد مشاريع بعد'
+          }}
         </strong>
 
         <p>
-          لم تتم إضافة مشاريع إلى مساحة العمل حتى الآن.
+          {{
+            isMemberView
+              ? 'سيظهر هنا أي مشروع تتم إضافتك إليه داخل هذه المساحة.'
+              : 'لم تتم إضافة مشاريع إلى مساحة العمل حتى الآن.'
+          }}
         </p>
 
 
@@ -199,12 +225,636 @@
 
     } @else {
 
-      <div class="projects-grid">
+      <div
+        class="projects-grid"
+        [class.manager-layout]="
+          isManagerView
+        "
+      >
 
         @for (
           project of projects;
           track project.id
         ) {
+
+          @if (isManagerView) {
+
+            <article
+              class="project-card manager-detail"
+              [class.archived]="
+                project.isArchived
+              "
+            >
+
+              <header class="detail-hero">
+
+                <div class="detail-hero-copy">
+
+                  <div class="project-icon">
+
+                    {{
+                      firstLetter(
+                        project.name
+                      )
+                    }}
+
+                  </div>
+
+
+                  <div>
+
+                    <div class="detail-kicker">
+                      المشروع الذي تديره
+                    </div>
+
+
+                    <h3>
+                      {{ project.name }}
+                    </h3>
+
+
+                    <p>
+                      {{
+                        project.description
+                          ||
+                        'لا يوجد وصف مسجّل لهذا المشروع بعد.'
+                      }}
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                @if (
+                  project.isArchived
+                ) {
+
+                  <span class="archive-badge">
+                    مؤرشف
+                  </span>
+
+                } @else {
+
+                  <span class="active-badge">
+                    نشط
+                  </span>
+
+                }
+
+              </header>
+
+
+              <div class="detail-kpis">
+
+                <article>
+
+                  <span>
+                    أعضاء المشروع
+                  </span>
+
+                  <strong>
+                    {{
+                      membersOf(project).length
+                    }}
+                  </strong>
+
+                </article>
+
+
+                <article>
+
+                  <span>
+                    مهام المشروع
+                  </span>
+
+                  <strong>
+                    {{
+                      taskStatsOf(project).total
+                    }}
+                  </strong>
+
+                </article>
+
+
+                <article>
+
+                  <span>
+                    مكتملة
+                  </span>
+
+                  <strong>
+                    {{
+                      taskStatsOf(project).done
+                    }}
+                  </strong>
+
+                </article>
+
+
+                <article>
+
+                  <span>
+                    قيد التنفيذ
+                  </span>
+
+                  <strong>
+                    {{
+                      taskStatsOf(project).inProgress
+                    }}
+                  </strong>
+
+                </article>
+
+
+                <article>
+
+                  <span>
+                    نسبة الإنجاز
+                  </span>
+
+                  <strong>
+                    {{
+                      taskStatsOf(project).completion
+                    }}%
+                  </strong>
+
+                </article>
+
+              </div>
+
+
+              <div class="detail-facts">
+
+                <div>
+
+                  <span>
+                    مدير المشروع
+                  </span>
+
+                  <strong>
+                    {{
+                      managerName(
+                        project
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    مساحة العمل
+                  </span>
+
+                  <strong>
+                    {{ workspaceName }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    الحالة
+                  </span>
+
+                  <strong>
+                    {{
+                      project.isArchived
+                        ? 'مؤرشف'
+                        : 'نشط'
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    أُنشئ في
+                  </span>
+
+                  <strong>
+                    {{
+                      formatDateTime(
+                        project.createdAt
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    آخر تحديث
+                  </span>
+
+                  <strong>
+                    {{
+                      formatDateTime(
+                        project.updatedAt
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    الوصف
+                  </span>
+
+                  <strong>
+                    {{
+                      project.description
+                        ? 'موثّق'
+                        : 'غير مضاف'
+                    }}
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              <div class="detail-split">
+
+                <section class="detail-section">
+
+                  <header>
+
+                    <div>
+
+                      <h4>
+                        فريق المشروع
+                      </h4>
+
+                      <p>
+                        الأعضاء المعيّنون داخل المشروع الذي تديره.
+                      </p>
+
+                    </div>
+
+                    <b>
+                      {{
+                        membersOf(project).length
+                      }}
+                    </b>
+
+                  </header>
+
+
+                  @if (
+                    membersOf(project).length === 0
+                  ) {
+
+                    <div class="detail-empty">
+                      لم يُضف مالك المساحة أعضاءً إلى هذا المشروع بعد.
+                    </div>
+
+                  } @else {
+
+                    <ul class="detail-people">
+
+                      @for (
+                        member of membersOf(project);
+                        track member.userId
+                      ) {
+
+                        <li>
+
+                          <span class="person-mark">
+                            {{
+                              firstLetter(
+                                member.fullName
+                              )
+                            }}
+                          </span>
+
+
+                          <div>
+
+                            <strong>
+                              {{ member.fullName }}
+                            </strong>
+
+                            <small>
+                              {{ member.email }}
+                            </small>
+
+                          </div>
+
+
+                          <em>
+                            {{
+                              roleLabel(
+                                member.roleName
+                              )
+                            }}
+                          </em>
+
+
+                          <small class="joined">
+                            انضم {{
+                              formatDate(
+                                member.joinedAt
+                              )
+                            }}
+                          </small>
+
+                        </li>
+
+                      }
+
+                    </ul>
+
+                  }
+
+                </section>
+
+
+                <section class="detail-section">
+
+                  <header>
+
+                    <div>
+
+                      <h4>
+                        حالة المهام
+                      </h4>
+
+                      <p>
+                        توزيع مهام المشروع حسب سير العمل الحالي.
+                      </p>
+
+                    </div>
+
+                    <b>
+                      {{
+                        taskStatsOf(project).total
+                      }}
+                    </b>
+
+                  </header>
+
+
+                  <ul class="detail-status">
+
+                    <li>
+
+                      <span>
+                        للبدء
+                      </span>
+
+                      <b>
+                        {{
+                          taskStatsOf(project).todo
+                        }}
+                      </b>
+
+                      <div class="meter">
+                        <i
+                          class="todo"
+                          [style.width.%]="
+                            taskStatsOf(project).total > 0
+                              ? (
+                                  taskStatsOf(project).todo
+                                  /
+                                  taskStatsOf(project).total
+                                )
+                                *
+                                100
+                              : 0
+                          "
+                        ></i>
+                      </div>
+
+                    </li>
+
+
+                    <li>
+
+                      <span>
+                        قيد التنفيذ
+                      </span>
+
+                      <b>
+                        {{
+                          taskStatsOf(project).inProgress
+                        }}
+                      </b>
+
+                      <div class="meter">
+                        <i
+                          class="progress"
+                          [style.width.%]="
+                            taskStatsOf(project).total > 0
+                              ? (
+                                  taskStatsOf(project).inProgress
+                                  /
+                                  taskStatsOf(project).total
+                                )
+                                *
+                                100
+                              : 0
+                          "
+                        ></i>
+                      </div>
+
+                    </li>
+
+
+                    <li>
+
+                      <span>
+                        مكتملة جزئيًا
+                      </span>
+
+                      <b>
+                        {{
+                          taskStatsOf(project).inReview
+                        }}
+                      </b>
+
+                      <div class="meter">
+                        <i
+                          class="partial"
+                          [style.width.%]="
+                            taskStatsOf(project).total > 0
+                              ? (
+                                  taskStatsOf(project).inReview
+                                  /
+                                  taskStatsOf(project).total
+                                )
+                                *
+                                100
+                              : 0
+                          "
+                        ></i>
+                      </div>
+
+                    </li>
+
+
+                    <li>
+
+                      <span>
+                        مكتملة
+                      </span>
+
+                      <b>
+                        {{
+                          taskStatsOf(project).done
+                        }}
+                      </b>
+
+                      <div class="meter">
+                        <i
+                          class="done"
+                          [style.width.%]="
+                            taskStatsOf(project).total > 0
+                              ? (
+                                  taskStatsOf(project).done
+                                  /
+                                  taskStatsOf(project).total
+                                )
+                                *
+                                100
+                              : 0
+                          "
+                        ></i>
+                      </div>
+
+                    </li>
+
+
+                    <li>
+
+                      <span>
+                        ملغاة
+                      </span>
+
+                      <b>
+                        {{
+                          taskStatsOf(project).cancelled
+                        }}
+                      </b>
+
+                      <div class="meter">
+                        <i
+                          class="cancelled"
+                          [style.width.%]="
+                            taskStatsOf(project).total > 0
+                              ? (
+                                  taskStatsOf(project).cancelled
+                                  /
+                                  taskStatsOf(project).total
+                                )
+                                *
+                                100
+                              : 0
+                          "
+                        ></i>
+                      </div>
+
+                    </li>
+
+                  </ul>
+
+
+                  <div class="completion-row">
+
+                    <div>
+
+                      <span>
+                        تقدم الإنجاز
+                      </span>
+
+                      <small>
+                        {{
+                          taskStatsOf(project).done
+                        }}
+                        مكتملة من
+                        {{
+                          taskStatsOf(project).total
+                        }}
+                      </small>
+
+                    </div>
+
+
+                    <b>
+                      {{
+                        taskStatsOf(project).completion
+                      }}%
+                    </b>
+
+                  </div>
+
+
+                  <div class="meter large">
+                    <i
+                      class="done"
+                      [style.width.%]="
+                        taskStatsOf(project).completion
+                      "
+                    ></i>
+                  </div>
+
+                </section>
+
+              </div>
+
+
+              @if (
+                project.isArchived
+              ) {
+
+                <div class="archived-note">
+                  المشروع مؤرشف؛ يمكن استعراض محتواه، لكن تعديله متوقف.
+                </div>
+
+              }
+
+
+              <div class="detail-actions">
+
+                <button
+                  class="open-project"
+                  type="button"
+                  (click)="openProject(project)"
+                >
+                  عرض مهام المشروع
+                  <span>←</span>
+                </button>
+
+
+                @if (canViewProjectMembers) {
+
+                  <button
+                    class="secondary-button"
+                    type="button"
+                    (click)="openMembers(project)"
+                  >
+                    أعضاء المشروع
+                  </button>
+
+                }
+
+              </div>
+
+            </article>
+
+          } @else {
 
           <article
             class="project-card"
@@ -257,7 +907,7 @@
                         type="button"
                         title="تعديل المشروع"
                         aria-label="تعديل المشروع"
-                        (click)="openEdit(project)"
+                        (click)="openEdit(project); $event.stopPropagation()"
                       >
                         ✎
                       </button>
@@ -326,7 +976,83 @@
 
               </div>
 
+
+              @if (canViewProjectMembers) {
+
+                <div>
+
+                  <span>
+                    أعضاء المشروع
+                  </span>
+
+                  <strong>
+                    {{
+                      membersOf(project).length
+                    }}
+                  </strong>
+
+                </div>
+
+              }
+
+
+              @if (isFocusedProjectView) {
+
+                <div>
+
+                  <span>
+                    المساحة
+                  </span>
+
+                  <strong>
+                    {{ workspaceName }}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    أُنشئ في
+                  </span>
+
+                  <strong>
+                    {{
+                      formatDate(
+                        project.createdAt
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+              }
+
             </div>
+
+
+            @if (
+              isFocusedProjectView &&
+              membersOf(project).length > 0
+            ) {
+
+              <ul class="project-member-preview">
+
+                @for (
+                  member of membersOf(project);
+                  track member.userId
+                ) {
+
+                  <li>
+                    {{ member.fullName }}
+                  </li>
+
+                }
+
+              </ul>
+
+            }
 
 
             @if (
@@ -346,7 +1072,13 @@
               (click)="openProject(project)"
             >
 
-              فتح المشروع
+              {{
+                isMemberView
+                  ? 'إظهار المهام المسندة لي'
+                  : isManagerView
+                    ? 'عرض مهام المشروع'
+                    : 'إظهار مهام المشروع'
+              }}
 
               <span>
                 ←
@@ -354,7 +1086,26 @@
 
             </button>
 
+
+            @if (canViewProjectMembers) {
+
+              <button
+                class="secondary-button"
+                type="button"
+                (click)="openMembers(project)"
+              >
+                {{
+                  isMemberView
+                    ? 'إظهار الأعضاء'
+                    : 'أعضاء المشروع'
+                }}
+              </button>
+
+            }
+
           </article>
+
+          }
 
         }
 
@@ -692,6 +1443,142 @@
         </label>
 
 
+        @if (canAddProjectMembers) {
+
+          <div class="project-members-panel">
+
+            <span>
+              أعضاء المشروع
+            </span>
+
+
+            <p>
+              يمكن إضافة أعضاء من مساحة العمل الحالية فقط.
+            </p>
+
+
+            @if (loadingProjectMembers) {
+
+              <small>
+                جارٍ تحميل أعضاء المشروع...
+              </small>
+
+            } @else if (projectMembers.length === 0) {
+
+              <small>
+                لم يُضف أي عضو إلى هذا المشروع بعد.
+              </small>
+
+            } @else {
+
+              <ul class="project-members-list">
+
+                @for (
+                  member
+                  of projectMembers;
+                  track member.userId
+                ) {
+
+                  <li>
+
+                    <div>
+
+                      <strong>
+                        {{ member.fullName }}
+                      </strong>
+
+                      <small>
+                        {{ member.email }}
+                      </small>
+
+                    </div>
+
+
+                    <button
+                      type="button"
+                      class="remove-member-button"
+                      [disabled]="addingProjectMember"
+                      (click)="removeProjectMember(member)"
+                    >
+                      إزالة
+                    </button>
+
+                  </li>
+
+                }
+
+              </ul>
+
+            }
+
+
+            <div class="add-member-row">
+
+              <select
+                [value]="selectedAddMemberUserId"
+                [disabled]="
+                  addingProjectMember ||
+                  eligibleProjectMembers.length === 0
+                "
+                (change)="onAddMemberUserChange($event)"
+              >
+
+                <option value="0">
+                  اختر عضوًا من مساحة العمل
+                </option>
+
+
+                @for (
+                  member
+                  of eligibleProjectMembers;
+                  track member.userId
+                ) {
+
+                  <option
+                    [value]="member.userId"
+                  >
+                    {{ member.fullName }}
+                    —
+                    {{ member.email }}
+                  </option>
+
+                }
+
+              </select>
+
+
+              <button
+                type="button"
+                class="secondary-button"
+                [disabled]="
+                  addingProjectMember ||
+                  eligibleProjectMembers.length === 0
+                "
+                (click)="addProjectMember()"
+              >
+                {{
+                  addingProjectMember
+                    ? 'جارٍ الإضافة...'
+                    : 'إضافة عضو إلى هذا المشروع'
+                }}
+              </button>
+
+            </div>
+
+
+            @if (eligibleProjectMembers.length === 0) {
+
+              <small>
+                لا يوجد أعضاء في مساحة العمل يمكن إضافتهم إلى هذا المشروع.
+              </small>
+
+            }
+
+          </div>
+
+        }
+
+
         <footer>
 
           <button
@@ -720,6 +1607,121 @@
         </footer>
 
       </form>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       PROJECT MEMBERS
+       ====================================================== -->
+
+  @if (
+    membersModalOpen &&
+    selectedProject
+  ) {
+
+    <button
+      class="modal-backdrop"
+      type="button"
+      aria-label="إغلاق"
+      (click)="closeMembers()"
+    ></button>
+
+
+    <section class="project-modal">
+
+      <header>
+
+        <div>
+
+          <h2>
+            أعضاء المشروع
+          </h2>
+
+          <p>
+            الأعضاء داخل
+            {{ selectedProject.name }}
+            من مساحة العمل الحالية فقط.
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-button"
+          type="button"
+          (click)="closeMembers()"
+        >
+          ×
+        </button>
+
+      </header>
+
+
+      <div class="project-members-panel">
+
+        @if (loadingProjectMembers) {
+
+          <small>
+            جارٍ تحميل أعضاء المشروع...
+          </small>
+
+        } @else if (projectMembers.length === 0) {
+
+          <small>
+            لم يُضف أي عضو إلى هذا المشروع بعد.
+          </small>
+
+        } @else {
+
+          <ul class="project-members-list">
+
+            @for (
+              member
+              of projectMembers;
+              track member.userId
+            ) {
+
+              <li>
+
+                <div>
+
+                  <strong>
+                    {{ member.fullName }}
+                  </strong>
+
+                  <small>
+                    {{ member.email }}
+                    —
+                    {{ roleLabel(member.roleName) }}
+                  </small>
+
+                </div>
+
+              </li>
+
+            }
+
+          </ul>
+
+        }
+
+      </div>
+
+
+      <footer>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="closeMembers()"
+        >
+          إغلاق
+        </button>
+
+      </footer>
 
     </section>
 

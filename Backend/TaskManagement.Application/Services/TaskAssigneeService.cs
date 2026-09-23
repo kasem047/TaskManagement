@@ -133,6 +133,72 @@ public sealed class TaskAssigneeService
 
 
     /* =========================================================
+       ASSIGNABLE MEMBERS
+       ========================================================= */
+
+    public async Task<List<AssignableMemberResponse>>
+        GetAssignableMembersAsync(
+            int workspaceId,
+            int projectId)
+    {
+        await GetProjectAsync(
+            workspaceId,
+            projectId);
+
+        await _permissionService
+            .EnsurePermissionAsync(
+                workspaceId,
+                SystemPermissions.TaskAssign);
+
+        await EnsureWorkspaceOwnerCannotAssignAsync(
+            workspaceId);
+
+        var projectMemberUserIds =
+            await GetProjectMemberUserIdsAsync(
+                projectId);
+
+        var workspaceMembers =
+            await _dbContext
+                .WorkspaceMembers
+                .AsNoTracking()
+                .Include(member =>
+                    member.User)
+                .Include(member =>
+                    member.Role)
+                .Where(member =>
+                    member.WorkspaceId ==
+                        workspaceId &&
+                    member.Status ==
+                        WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted)
+                .OrderBy(member =>
+                    member.User.FullName)
+                .ToListAsync();
+
+        return workspaceMembers
+            .Where(member =>
+                IsAssignableMember(
+                    member,
+                    projectMemberUserIds))
+            .Select(member =>
+                new AssignableMemberResponse
+                {
+                    UserId =
+                        member.UserId,
+                    FullName =
+                        member.User.FullName,
+                    Email =
+                        member.User.Email ??
+                        string.Empty,
+                    RoleName =
+                        member.Role?.Name ??
+                        SystemRoles.Member
+                })
+            .ToList();
+    }
+
+
+    /* =========================================================
        ASSIGN / REASSIGN
        ========================================================= */
 
@@ -154,6 +220,9 @@ public sealed class TaskAssigneeService
                 workspaceId,
                 SystemPermissions.TaskAssign);
 
+        await EnsureWorkspaceOwnerCannotAssignAsync(
+            workspaceId);
+
 
         if (project.IsArchived)
         {
@@ -173,6 +242,8 @@ public sealed class TaskAssigneeService
                 .WorkspaceMembers
                 .Include(member =>
                     member.User)
+                .Include(member =>
+                    member.Role)
                 .FirstOrDefaultAsync(
                     member =>
                         member.WorkspaceId ==
@@ -197,6 +268,69 @@ public sealed class TaskAssigneeService
         {
             throw new ConflictException(
                 "The selected user account is inactive or deleted.");
+        }
+
+
+        if (
+            workspaceMember.Role?.Name ==
+                SystemRoles.WorkspaceOwner ||
+            workspaceMember.Role?.Name ==
+                "Owner")
+        {
+            throw new BadRequestException(
+                "Workspace owner cannot be assigned to a task.");
+        }
+
+
+        var projectMemberUserIds =
+            await GetProjectMemberUserIdsAsync(
+                projectId);
+
+        var isProjectMember =
+            projectMemberUserIds.Contains(
+                request.UserId);
+
+
+        if (
+            !IsAssignableMember(
+                workspaceMember,
+                projectMemberUserIds))
+        {
+            throw new BadRequestException(
+                "The selected user must be a member of this project or a workspace member with the Member role.");
+        }
+
+
+        var projectMembership =
+            await _dbContext
+                .ProjectMembers
+                .FirstOrDefaultAsync(member =>
+                    member.ProjectId == projectId &&
+                    member.UserId == request.UserId);
+
+
+        var now =
+            DateTime.UtcNow;
+
+
+        if (!isProjectMember)
+        {
+            if (projectMembership is null)
+            {
+                _dbContext.ProjectMembers.Add(
+                    new ProjectMember
+                    {
+                        ProjectId = projectId,
+                        UserId = request.UserId,
+                        CreatedAt = now
+                    });
+            }
+            else
+            {
+                projectMembership.IsDeleted = false;
+                projectMembership.DeletedAt = null;
+                projectMembership.UpdatedAt = now;
+            }
         }
 
 
@@ -232,10 +366,6 @@ public sealed class TaskAssigneeService
             return MapToResponse(
                 currentActiveAssignments[0]);
         }
-
-
-        var now =
-            DateTime.UtcNow;
 
 
         var previousAssigneeUserIds =
@@ -382,9 +512,9 @@ public sealed class TaskAssigneeService
                 recipients,
                 workspaceId,
                 previousNames.Count == 0
-                    ? "Task assigned"
-                    : "Task assignee changed",
-                $"Task \"{task.Title}\" is now assigned to \"{workspaceMember.User.FullName}\".",
+                    ? "تم إسناد مهمة إليك"
+                    : "تغيّر إسناد مهمة",
+                $"أصبحت المهمة \"{task.Title}\" مسندة إلى \"{workspaceMember.User.FullName}\".",
                 previousNames.Count == 0
                     ? "task.assigned"
                     : "task.assignee_changed",
@@ -417,6 +547,9 @@ public sealed class TaskAssigneeService
             .EnsurePermissionAsync(
                 workspaceId,
                 SystemPermissions.TaskAssign);
+
+        await EnsureWorkspaceOwnerCannotAssignAsync(
+            workspaceId);
 
 
         if (project.IsArchived)
@@ -516,8 +649,8 @@ public sealed class TaskAssigneeService
             .CreateManyAsync(
                 recipients,
                 workspaceId,
-                "Task assignee removed",
-                $"Task \"{task.Title}\" no longer has an assignee.",
+                "أُلغي إسناد مهمة",
+                $"لم تعد المهمة \"{task.Title}\" مسندة لأي عضو.",
                 "task.unassigned",
                 nameof(TaskItem),
                 task.Id);
@@ -626,6 +759,82 @@ public sealed class TaskAssigneeService
             throw new NotFoundException(
                 "Task not found.");
         }
+    }
+
+
+    private async Task EnsureWorkspaceOwnerCannotAssignAsync(
+        int workspaceId)
+    {
+        var roleName =
+            await _permissionService
+                .GetActiveRoleNameAsync(
+                    workspaceId);
+
+        if (roleName == SystemRoles.WorkspaceOwner ||
+            roleName == "Owner")
+        {
+            throw new ForbiddenException(
+                "Workspace owners cannot assign tasks.");
+        }
+
+        if (roleName == SystemRoles.Member)
+        {
+            throw new ForbiddenException(
+                "Members cannot assign or change task assignees.");
+        }
+    }
+
+
+    private async Task<HashSet<int>>
+        GetProjectMemberUserIdsAsync(
+            int projectId)
+    {
+        var userIds =
+            await _dbContext
+                .ProjectMembers
+                .AsNoTracking()
+                .Where(member =>
+                    member.ProjectId ==
+                        projectId &&
+                    !member.IsDeleted)
+                .Select(member =>
+                    member.UserId)
+                .ToListAsync();
+
+        return userIds.ToHashSet();
+    }
+
+
+    private static bool IsAssignableMember(
+        WorkspaceMember member,
+        HashSet<int> projectMemberUserIds)
+    {
+        var roleName =
+            member.Role?.Name;
+
+        if (
+            roleName ==
+                SystemRoles.WorkspaceOwner ||
+            roleName ==
+                "Owner")
+        {
+            return false;
+        }
+
+        if (
+            !member.User.IsActive ||
+            member.User.IsDeleted)
+        {
+            return false;
+        }
+
+        if (projectMemberUserIds.Contains(member.UserId))
+        {
+            return true;
+        }
+
+        return roleName ==
+            SystemRoles.Member;
     }
 
 

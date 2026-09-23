@@ -5,11 +5,17 @@
     <div class="header-copy">
 
       <h1>
-        إدارة المهام
+        {{
+          isMemberBoard
+            ? 'مهامي'
+            : isManagerBoard
+              ? 'مهام المشروع'
+              : 'إدارة المهام'
+        }}
       </h1>
 
       <p>
-        متابعة المهام عبر مساحات العمل والمشاريع المتاحة لك.
+        {{ pageSubtitle }}
       </p>
 
     </div>
@@ -56,6 +62,8 @@
       </button>
 
 
+      @if (canCreateTask) {
+
       <button
         class="create-button"
         type="button"
@@ -64,6 +72,8 @@
         <span>+</span>
         مهمة جديدة
       </button>
+
+      }
 
     </div>
 
@@ -763,6 +773,8 @@
 
           <div class="scope-buttons">
 
+            @if (!hideWorkspaceScope) {
+
             <button
               type="button"
               [class.active]="
@@ -786,6 +798,8 @@
             >
               المساحة الحالية
             </button>
+
+            }
 
 
             <button
@@ -828,6 +842,8 @@
 
         </section>
 
+
+        @if (!hideWorkspaceScope) {
 
         <section class="filter-section">
 
@@ -895,6 +911,8 @@
           </div>
 
         </section>
+
+        }
 
 
         <section class="filter-section">
@@ -1729,7 +1747,7 @@
 
 
               <small class="draft-save-hint">
-                تغيير المسؤول مؤقت ولن يتم تطبيقه إلا بعد الضغط على «حفظ التعديلات».
+                يمكن إسناد المهمة لأعضاء المشروع أو أعضاء مساحة العمل بدور عضو. التغيير يُحفظ مع «حفظ التعديلات».
               </small>
 
 
@@ -1869,7 +1887,7 @@
                       } @else {
 
                         <p>
-                          لا يوجد أعضاء آخرون متاحون للإسناد.
+                          لا يوجد أعضاء يمكن إسناد المهمة إليهم ضمن المشروع أو مساحة العمل.
                         </p>
 
                       }
@@ -2169,6 +2187,11 @@
               <input
                 type="text"
                 formControlName="title"
+                [readOnly]="
+                  !canEditTaskDetails(
+                    selectedTask
+                  )
+                "
               >
 
             </div>
@@ -2183,6 +2206,11 @@
               <textarea
                 rows="4"
                 formControlName="description"
+                [readOnly]="
+                  !canEditTaskDetails(
+                    selectedTask
+                  )
+                "
               ></textarea>
 
             </div>
@@ -2198,6 +2226,11 @@
 
                 <select
                   formControlName="priority"
+                  [attr.disabled]="
+                    !canEditTaskDetails(
+                      selectedTask
+                    ) || null
+                  "
                 >
                   <option [ngValue]="1">منخفضة</option>
                   <option [ngValue]="2">متوسطة</option>
@@ -2217,6 +2250,11 @@
                 <input
                   type="datetime-local"
                   formControlName="dueDate"
+                  [readOnly]="
+                    !canEditTaskDetails(
+                      selectedTask
+                    )
+                  "
                 >
 
               </div>
@@ -2326,8 +2364,21 @@
                 class="secondary-button"
                 (click)="closeTaskPanel()"
               >
-                إلغاء
+                {{
+                  canSaveTaskChanges(
+                    selectedTask
+                  )
+                    ? 'إلغاء'
+                    : 'إغلاق'
+                }}
               </button>
+
+
+              @if (
+                canSaveTaskChanges(
+                  selectedTask
+                )
+              ) {
 
               <button
                 type="submit"
@@ -2343,6 +2394,8 @@
                     : 'حفظ التعديلات'
                 }}
               </button>
+
+              }
 
             </footer>
 

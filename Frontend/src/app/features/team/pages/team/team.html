@@ -12,7 +12,11 @@
       </h1>
 
       <p>
-        إدارة أعضاء مساحة العمل وأدوارهم.
+        @if (isReadOnlyTeam) {
+          عرض أعضاء مساحة العمل للتعيين والرجوع إليهم.
+        } @else {
+          إدارة أعضاء مساحة العمل وأدوارهم.
+        }
       </p>
 
     </div>
@@ -106,37 +110,19 @@
 
       } @else {
 
-        <select
-          [value]="selectedWorkspace?.id ?? 0"
-          (change)="
-            selectWorkspaceFromValue(
-              $any($event.target).value
-            )
-          "
-        >
-
-          @for (
-            workspace
-            of workspaces;
-            track workspace.id
-          ) {
-
-            <option
-              [value]="workspace.id"
-            >
-              {{ workspace.name }}
-            </option>
-
-          }
-
-        </select>
+        <strong>
+          {{
+            selectedWorkspace?.name
+            || 'مساحة العمل'
+          }}
+        </strong>
 
       }
 
     </div>
 
 
-    @if (selectedWorkspace) {
+        @if (selectedWorkspace) {
 
       <div class="workspace-context">
 
@@ -147,19 +133,6 @@
         <strong>
           {{ currentRoleLabel }}
         </strong>
-
-
-        @if (canManageMembers) {
-
-          <button
-            type="button"
-            class="secondary-button"
-            (click)="openTransferOwnership()"
-          >
-            نقل الملكية
-          </button>
-
-        }
 
       </div>
 
@@ -193,178 +166,6 @@
       </article>
 
     </div>
-
-
-    @if (canManageMembers) {
-
-      <section class="team-panel">
-
-        <header class="panel-header">
-
-          <div>
-            <h2>الدعوات المعلقة</h2>
-
-            <p>
-              الدعوات التي لم يقبلها أو يرفضها المستخدمون بعد.
-            </p>
-          </div>
-
-        </header>
-
-
-        @if (loadingInvitations) {
-
-          <div class="state-box">
-
-            <span class="spinner"></span>
-
-            <strong>
-              جارٍ تحميل الدعوات...
-            </strong>
-
-          </div>
-
-        } @else if (
-          pendingInvitations.length ===
-            0
-        ) {
-
-          <div class="state-box">
-
-            <strong>
-              لا توجد دعوات معلقة
-            </strong>
-
-          </div>
-
-        } @else {
-
-          <div class="members-list">
-
-            @for (
-              invitation
-              of pendingInvitations;
-              track invitation.id
-            ) {
-
-              <article class="member-card">
-
-                <div class="member-main">
-
-                  <span class="member-avatar">
-                    {{
-                      invitation
-                        .invitedUserFullName
-                        .trim()
-                        .charAt(0)
-                        .toUpperCase()
-                    }}
-                  </span>
-
-
-                  <div class="member-identity">
-
-                    <div>
-
-                      <strong>
-                        {{
-                          invitation
-                            .invitedUserFullName
-                        }}
-                      </strong>
-
-                    </div>
-
-
-                    <span>
-                      دعوة معلقة
-                    </span>
-
-                  </div>
-
-                </div>
-
-
-                <div class="member-role">
-
-                  <span
-                    class="role-badge"
-                    [class.manager]="
-                      invitation.roleName ===
-                      'ProjectManager'
-                    "
-                  >
-                    {{
-                      roleLabel(
-                        invitation.roleName
-                      )
-                    }}
-                  </span>
-
-                </div>
-
-
-                <div class="member-date">
-
-                  <span>
-                    تاريخ الدعوة
-                  </span>
-
-                  <strong>
-                    {{
-                      formatDate(
-                        invitation.createdAt
-                      )
-                    }}
-                  </strong>
-
-                </div>
-
-
-                <div class="member-actions">
-
-                  <button
-                    type="button"
-                    class="remove-button"
-                    [disabled]="
-                      cancelingInvitationId !==
-                      null
-                    "
-                    (click)="
-                      cancelInvitation(
-                        invitation
-                      )
-                    "
-                  >
-
-                    @if (
-                      cancelingInvitationId ===
-                      invitation.id
-                    ) {
-
-                      جارٍ الإلغاء...
-
-                    } @else {
-
-                      إلغاء الدعوة
-
-                    }
-
-                  </button>
-
-                </div>
-
-              </article>
-
-            }
-
-          </div>
-
-        }
-
-      </section>
-
-    }
 
 
     <section class="team-panel">
@@ -554,7 +355,6 @@
                 ) {
 
                   <select
-                    [value]="member.roleId"
                     [disabled]="
                       changingRoleMemberId !==
                       null
@@ -569,12 +369,18 @@
 
                     @for (
                       role
-                      of roles;
+                      of assignableRoles;
                       track role.id
                     ) {
 
                       <option
                         [value]="role.id"
+                        [selected]="
+                          isCurrentMemberRole(
+                            member,
+                            role.id
+                          )
+                        "
                       >
                         {{
                           roleLabel(
@@ -585,20 +391,7 @@
 
                     }
 
-                  </select>
-
-
-                  <button
-                    type="button"
-                    class="secondary-button"
-                    (click)="
-                      openPermissions(
-                        member
-                      )
-                    "
-                  >
-                    الصلاحيات
-                  </button>
+                    </select>
 
 
                   <button
@@ -635,7 +428,7 @@
                 ) {
 
                   <span class="read-only">
-                    تتم إدارة الملكية عبر «نقل الملكية»
+                    تتم إدارة الملكية بواسطة مسؤول النظام
                   </span>
 
                 } @else {
@@ -657,6 +450,178 @@
       }
 
     </section>
+
+
+    @if (canManageMembers) {
+
+      <section class="team-panel">
+
+        <header class="panel-header">
+
+          <div>
+            <h2>الدعوات المعلقة</h2>
+
+            <p>
+              الدعوات التي لم يقبلها أو يرفضها المستخدمون بعد.
+            </p>
+          </div>
+
+        </header>
+
+
+        @if (loadingInvitations) {
+
+          <div class="state-box">
+
+            <span class="spinner"></span>
+
+            <strong>
+              جارٍ تحميل الدعوات...
+            </strong>
+
+          </div>
+
+        } @else if (
+          pendingInvitations.length ===
+            0
+        ) {
+
+          <div class="state-box">
+
+            <strong>
+              لا توجد دعوات معلقة
+            </strong>
+
+          </div>
+
+        } @else {
+
+          <div class="members-list">
+
+            @for (
+              invitation
+              of pendingInvitations;
+              track invitation.id
+            ) {
+
+              <article class="member-card">
+
+                <div class="member-main">
+
+                  <span class="member-avatar">
+                    {{
+                      invitation
+                        .invitedUserFullName
+                        .trim()
+                        .charAt(0)
+                        .toUpperCase()
+                    }}
+                  </span>
+
+
+                  <div class="member-identity">
+
+                    <div>
+
+                      <strong>
+                        {{
+                          invitation
+                            .invitedUserFullName
+                        }}
+                      </strong>
+
+                    </div>
+
+
+                    <span>
+                      دعوة معلقة
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <div class="member-role">
+
+                  <span
+                    class="role-badge"
+                    [class.manager]="
+                      invitation.roleName ===
+                      'ProjectManager'
+                    "
+                  >
+                    {{
+                      roleLabel(
+                        invitation.roleName
+                      )
+                    }}
+                  </span>
+
+                </div>
+
+
+                <div class="member-date">
+
+                  <span>
+                    تاريخ الدعوة
+                  </span>
+
+                  <strong>
+                    {{
+                      formatDate(
+                        invitation.createdAt
+                      )
+                    }}
+                  </strong>
+
+                </div>
+
+
+                <div class="member-actions">
+
+                  <button
+                    type="button"
+                    class="remove-button"
+                    [disabled]="
+                      cancelingInvitationId !==
+                      null
+                    "
+                    (click)="
+                      cancelInvitation(
+                        invitation
+                      )
+                    "
+                  >
+
+                    @if (
+                      cancelingInvitationId ===
+                      invitation.id
+                    ) {
+
+                      جارٍ الإلغاء...
+
+                    } @else {
+
+                      إلغاء الدعوة
+
+                    }
+
+                  </button>
+
+                </div>
+
+              </article>
+
+            }
+
+          </div>
+
+        }
+
+      </section>
+
+    }
 
   } @else if (
     !loadingWorkspaces
@@ -1246,7 +1211,7 @@
 
 
         <div class="info-message">
-          لا يمكن تعيين مالك لمساحة العمل من هنا. تغيير المالك يتم فقط عبر عملية نقل الملكية.
+          لا يمكن تعيين مالك لمساحة العمل من هنا. إذا احتاج المالك إلى المغادرة، يقوم مسؤول النظام بتعيين مالك جديد.
         </div>
 
 

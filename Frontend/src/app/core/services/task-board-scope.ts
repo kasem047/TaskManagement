@@ -27,6 +27,10 @@ import {
 } from './task-assignees';
 
 import {
+  WorkspaceAccess
+} from './workspace-access';
+
+import {
   environment
 } from '../../../environments/environment';
 
@@ -177,6 +181,10 @@ export class TaskBoardScope {
     inject(TaskAssignees);
 
 
+  private readonly access =
+    inject(WorkspaceAccess);
+
+
   private readonly baseUrl =
     `${environment.apiBaseUrl}/api`;
 
@@ -212,9 +220,29 @@ export class TaskBoardScope {
             }
 
 
+            const visibleWorkspaces =
+              workspaces.filter(workspace =>
+                this.access.matchesActiveRole(
+                  workspace.currentUserRole
+                )
+              );
+
+
+            if (
+              visibleWorkspaces.length === 0
+            ) {
+
+              return of<TaskBoardSnapshot>({
+                workspaces: [],
+                projects: [],
+                tasks: []
+              });
+            }
+
+
             const workspaceRequests:
               Observable<WorkspaceBoardResult>[] =
-              workspaces.map(
+              visibleWorkspaces.map(
                 workspace =>
                   this.loadWorkspace(
                     workspace
@@ -236,7 +264,8 @@ export class TaskBoardScope {
 
                     return {
 
-                      workspaces,
+                      workspaces:
+                        visibleWorkspaces,
 
                       projects:
                         results.flatMap(

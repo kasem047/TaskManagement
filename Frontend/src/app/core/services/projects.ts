@@ -55,6 +55,28 @@ export interface UpdateProjectRequest {
 }
 
 
+export interface ProjectMember {
+  id: number;
+
+  projectId: number;
+
+  userId: number;
+
+  fullName: string;
+
+  email: string;
+
+  roleName: string;
+
+  joinedAt: string;
+}
+
+
+export interface AddProjectMemberRequest {
+  userId: number;
+}
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -153,6 +175,52 @@ export class Projects {
     return this.http
       .delete(
         `${this.workspaceProjectsUrl(workspaceId)}/${projectId}`
+      );
+  }
+
+
+  getMembers(
+    workspaceId: number,
+    projectId: number
+  ): Observable<ProjectMember[]> {
+
+    return this.http
+      .get<ProjectMember[]>(
+        `${this.workspaceProjectsUrl(workspaceId)}/${projectId}/members`
+      );
+  }
+
+
+  addMember(
+    workspaceId: number,
+    projectId: number,
+    userId: number
+  ): Observable<ProjectMember> {
+
+    const request:
+      AddProjectMemberRequest = {
+
+      userId
+    };
+
+
+    return this.http
+      .post<ProjectMember>(
+        `${this.workspaceProjectsUrl(workspaceId)}/${projectId}/members`,
+        request
+      );
+  }
+
+
+  removeMember(
+    workspaceId: number,
+    projectId: number,
+    userId: number
+  ): Observable<unknown> {
+
+    return this.http
+      .delete(
+        `${this.workspaceProjectsUrl(workspaceId)}/${projectId}/members/${userId}`
       );
   }
 }

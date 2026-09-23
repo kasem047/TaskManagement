@@ -23,6 +23,8 @@ export interface Workspace {
   createdByUserId: number;
   createdByUserName: string;
   currentUserRole: string;
+  ownerUserId: number;
+  ownerUserName: string;
   createdAt: string;
 }
 
@@ -30,6 +32,7 @@ export interface Workspace {
 export interface CreateWorkspaceRequest {
   name: string;
   description: string | null;
+  ownerUserId: number;
 }
 
 

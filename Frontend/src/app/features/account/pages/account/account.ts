@@ -28,6 +28,10 @@ import {
   NotificationRealtime
 } from '../../../../core/services/notification-realtime';
 
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
 
 type AccountTab =
   | 'profile'
@@ -65,6 +69,9 @@ export class AccountPage
 
   private readonly router =
     inject(Router);
+
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   activeTab:
@@ -861,6 +868,48 @@ export class AccountPage
         }
 
       });
+  }
+
+
+  get accountTypeLabel():
+    string {
+
+    if (
+      this.profile?.isSystemAdmin
+    ) {
+      return 'مسؤول النظام';
+    }
+
+    switch (
+      this.access.activeRoleMode
+    ) {
+
+      case 'owner':
+        return 'مالك مساحة العمل';
+
+      case 'manager':
+        return 'مدير مشروع';
+
+      case 'member':
+        return 'عضو';
+
+      default:
+        return 'مستخدم';
+    }
+  }
+
+
+  get workspaceLabel():
+    string {
+
+    const workspace =
+      this.access.scopedWorkspaces[0]
+      ?? this.access.ownedWorkspaces[0]
+      ?? this.access.pmWorkspaces[0]
+      ?? this.access.memberWorkspaces[0];
+
+    return workspace?.name
+      ?? '—';
   }
 
 

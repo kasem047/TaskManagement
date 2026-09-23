@@ -36,6 +36,21 @@ public sealed class TaskAssigneesController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("~/api/workspaces/{workspaceId:int}/projects/{projectId:int}/assignable-members")]
+    public async Task<ActionResult<List<AssignableMemberResponse>>>
+        GetAssignableMembers(
+            int workspaceId,
+            int projectId)
+    {
+        var response =
+            await _taskAssigneeService
+                .GetAssignableMembersAsync(
+                    workspaceId,
+                    projectId);
+
+        return Ok(response);
+    }
+
     [HttpPost]
     public async Task<ActionResult<TaskAssigneeResponse>>
         AssignUser(

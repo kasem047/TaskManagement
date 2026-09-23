@@ -35,6 +35,9 @@ public class User : IdentityUser<int>
     public ICollection<WorkspaceMember> WorkspaceMembers { get; set; } =
         new List<WorkspaceMember>();
 
+    public ICollection<ProjectMember> ProjectMembers { get; set; } =
+        new List<ProjectMember>();
+
     public ICollection<TaskItem> CreatedTasks { get; set; } =
         new List<TaskItem>();
 

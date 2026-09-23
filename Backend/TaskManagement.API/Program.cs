@@ -123,9 +123,20 @@ builder.Services
             policy =>
             {
                 policy
-                    .WithOrigins(
-                        "http://localhost:4200",
-                        "https://localhost:4200")
+                    .SetIsOriginAllowed(static origin =>
+                    {
+                        if (!Uri.TryCreate(
+                            origin,
+                            UriKind.Absolute,
+                            out var uri))
+                        {
+                            return false;
+                        }
+
+                        return uri.Host is
+                            "localhost" or
+                            "127.0.0.1";
+                    })
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -826,7 +837,14 @@ app.UseSwaggerUI();
 
 
 
-app.UseHttpsRedirection();
+app.UseCors(
+    "FrontendPolicy");
+
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 
 
@@ -837,11 +855,6 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 
 app.UseStaticFiles();
-
-
-
-app.UseCors(
-    "FrontendPolicy");
 
 
 

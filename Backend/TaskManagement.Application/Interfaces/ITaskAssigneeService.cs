@@ -9,6 +9,10 @@ public interface ITaskAssigneeService
         int projectId,
         int taskId);
 
+    Task<List<AssignableMemberResponse>> GetAssignableMembersAsync(
+        int workspaceId,
+        int projectId);
+
     Task<TaskAssigneeResponse> AssignUserAsync(
         int workspaceId,
         int projectId,

@@ -22,6 +22,8 @@ import {
 
 import {
   Observable,
+  catchError,
+  forkJoin,
   map,
   of,
   switchMap
@@ -57,6 +59,22 @@ import {
   WorkspaceMember,
   WorkspaceMembers
 } from '../../../../core/services/workspace-members';
+
+import {
+  TokenStorage
+} from '../../../../core/services/token-storage';
+
+import {
+  ProjectMember,
+  Projects
+} from '../../../../core/services/projects';
+
+import {
+  isManagerRole,
+  isMemberRole,
+  isOwnerRole,
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
 
 import {
   TaskInteraction
@@ -132,11 +150,20 @@ export class TasksPage
   private readonly taskAssigneesService =
     inject(TaskAssignees);
 
+  private readonly projectsService =
+    inject(Projects);
+
   private readonly workspaceMembersService =
     inject(WorkspaceMembers);
 
   private readonly formBuilder =
     inject(FormBuilder);
+
+  private readonly tokenStorage =
+    inject(TokenStorage);
+
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   /* =========================
@@ -383,6 +410,9 @@ export class TasksPage
   loadedMembersWorkspaceId:
     number | null = null;
 
+  loadedMembersProjectId:
+    number | null = null;
+
   readonly assigneePickerLimit =
     8;
 
@@ -605,7 +635,7 @@ export class TasksPage
     }
 
 
-    this.useAllScope();
+    this.useCurrentProjectScope();
 
     this.loadTasks();
   }
@@ -1683,9 +1713,10 @@ export class TasksPage
         {
 
           status:
-            this.statusValues[
-              targetStatus
-            ],
+            targetStatus ===
+              'InReview'
+              ? 'PartiallyCompleted'
+              : targetStatus,
 
           position,
 
@@ -1792,6 +1823,23 @@ export class TasksPage
      * السحب على اللوحة فيعتمد
      * المسؤول المحفوظ فعليًا.
      */
+    const role =
+      task.workspaceRole;
+
+
+    const currentUserId =
+      this.tokenStorage.getUser()?.userId
+      ?? 0;
+
+
+    const assignedToCurrentUser =
+      task.assignees
+        .some(assignee =>
+          Number(assignee.userId) ===
+            currentUserId
+        );
+
+
     const hasAssignee =
       (
         this.selectedTask?.id ===
@@ -1801,35 +1849,40 @@ export class TasksPage
       )
         ? this.draftAssignee !==
             null
-        : task.assignees.length >
+        : assignedToCurrentUser ||
+          task.assignees.length >
             0;
 
 
-    if (!hasAssignee) {
+    if (
+      isOwnerRole(
+        role
+      )
+    ) {
+
       return false;
     }
 
 
-    const role =
-      task.workspaceRole;
-
-
     if (
-      role ===
-        'WorkspaceOwner' ||
-      role ===
-        'Owner' ||
-      role ===
-        'ProjectManager'
+      isManagerRole(
+        role
+      )
     ) {
 
-      return true;
+      return hasAssignee;
     }
 
 
     if (
-      role === 'Member'
+      isMemberRole(
+        role
+      )
     ) {
+
+      if (!assignedToCurrentUser) {
+        return false;
+      }
 
       if (
         task.status ===
@@ -2249,13 +2302,8 @@ export class TasksPage
     }
 
 
-    return (
-      task.workspaceRole ===
-        'WorkspaceOwner' ||
-      task.workspaceRole ===
-        'Owner' ||
-      task.workspaceRole ===
-        'ProjectManager'
+    return isManagerRole(
+      task.workspaceRole
     );
   }
 
@@ -2298,6 +2346,8 @@ export class TasksPage
     if (
       this.loadedMembersWorkspaceId ===
         task.workspaceId &&
+      this.loadedMembersProjectId ===
+        task.projectId &&
       this.workspaceMembers.length >
         0
     ) {
@@ -2347,6 +2397,9 @@ export class TasksPage
     this.loadedMembersWorkspaceId =
       null;
 
+    this.loadedMembersProjectId =
+      null;
+
     this.workspaceMembers =
       [];
 
@@ -2368,19 +2421,172 @@ export class TasksPage
       '';
 
 
-    this.workspaceMembersService
-      .getByWorkspace(
-        task.workspaceId
+    const mapMember = (
+      member: {
+        userId: number;
+        fullName: string;
+        email: string;
+        roleName?: string;
+        status?: string;
+        joinedAt?: string;
+      }
+    ): WorkspaceMember => ({
+
+      id:
+        member.userId,
+
+      workspaceId:
+        task.workspaceId,
+
+      userId:
+        member.userId,
+
+      fullName:
+        member.fullName,
+
+      email:
+        member.email,
+
+      roleId:
+        0,
+
+      roleName:
+        member.roleName ||
+        'Member',
+
+      status:
+        member.status ||
+        'Active',
+
+      joinedAt:
+        member.joinedAt ||
+        new Date().toISOString()
+
+    });
+
+
+    this.taskAssigneesService
+      .getAssignableMembers(
+        task.workspaceId,
+        task.projectId
+      )
+      .pipe(
+
+        catchError(() =>
+
+          forkJoin({
+
+            projectMembers:
+              this.projectsService
+                .getMembers(
+                  task.workspaceId,
+                  task.projectId
+                )
+                .pipe(
+                  catchError(() =>
+                    of(
+                      [] as ProjectMember[]
+                    )
+                  )
+                ),
+
+            workspaceMembers:
+              this.workspaceMembersService
+                .getByWorkspace(
+                  task.workspaceId
+                )
+                .pipe(
+                  catchError(() =>
+                    of(
+                      [] as WorkspaceMember[]
+                    )
+                  )
+                )
+
+          })
+          .pipe(
+
+            map(({
+              projectMembers,
+              workspaceMembers
+            }) => {
+
+              const byUserId =
+                new Map<number, WorkspaceMember>();
+
+              for (
+                const member of projectMembers
+              ) {
+
+                if (
+                  !member.userId ||
+                  isOwnerRole(
+                    member.roleName
+                  )
+                ) {
+                  continue;
+                }
+
+                byUserId.set(
+                  member.userId,
+                  mapMember(
+                    member
+                  )
+                );
+              }
+
+              for (
+                const member of workspaceMembers
+              ) {
+
+                if (
+                  member.status &&
+                  member.status !==
+                    'Active'
+                ) {
+                  continue;
+                }
+
+                if (
+                  !isMemberRole(
+                    member.roleName
+                  )
+                ) {
+                  continue;
+                }
+
+                byUserId.set(
+                  member.userId,
+                  mapMember(
+                    member
+                  )
+                );
+              }
+
+              return [
+                ...byUserId.values()
+              ];
+
+            })
+
+          )
+
+        )
+
       )
       .subscribe({
 
         next: (
-          members:
-            WorkspaceMember[]
+          members
         ) => {
 
           this.workspaceMembers =
-            [...members]
+            members
+              .map(member =>
+                mapMember(
+                  member
+                )
+              )
               .sort(
                 (a, b) =>
                   a.fullName
@@ -2393,6 +2599,9 @@ export class TasksPage
 
           this.loadedMembersWorkspaceId =
             task.workspaceId;
+
+          this.loadedMembersProjectId =
+            task.projectId;
 
 
           this.assigneesLoading =
@@ -2978,6 +3187,15 @@ export class TasksPage
     task: BoardTask
   ): Observable<unknown> {
 
+    if (
+      !this.canManageAssignees(
+        task
+      )
+    ) {
+      return of(null);
+    }
+
+
     const draftUserId =
       this.draftAssignee
         ?.userId
@@ -3046,7 +3264,149 @@ export class TasksPage
      CREATE
      ========================= */
 
+  get canCreateTask():
+    boolean {
+
+    const workspace =
+      this.workspaces.find(item =>
+        item.id ===
+          this.workspaceId
+      );
+
+    return isManagerRole(
+      workspace?.currentUserRole
+    );
+  }
+
+
+  get isManagerBoard():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'manager';
+  }
+
+
+  get isMemberBoard():
+    boolean {
+
+    return this.access.activeRoleMode ===
+      'member';
+  }
+
+
+  get hideWorkspaceScope():
+    boolean {
+
+    return this.isManagerBoard ||
+      this.isMemberBoard;
+  }
+
+
+  get pageSubtitle():
+    string {
+
+    if (this.access.activeRoleMode === 'owner') {
+
+      return 'عرض مهام جميع المشاريع عبر الفلترة حسب المشروع. التعديل على التنفيذ يتم بواسطة مدير المشروع والعضو المسند.';
+    }
+
+
+    if (this.isManagerBoard) {
+
+      return `إدارة مهام مشروع ${this.projectName} فقط. لا يمكن الوصول إلى مهام مشاريع أخرى.`;
+    }
+
+
+    if (this.isMemberBoard) {
+
+      return 'المهام المسندة باسمك داخل المشاريع التي أنت عضو فيها فقط.';
+    }
+
+
+    return 'المهام المسندة باسمك فقط. يمكنك التعديل على هذه المهام دون غيرها.';
+  }
+
+
+  canEditTaskDetails(
+    task:
+      BoardTask | null
+  ): boolean {
+
+    if (!task ||
+      task.projectArchived
+    ) {
+      return false;
+    }
+
+
+    return isManagerRole(
+      task.workspaceRole
+    );
+  }
+
+
+  canSaveTaskChanges(
+    task:
+      BoardTask | null
+  ): boolean {
+
+    if (!task ||
+      task.projectArchived
+    ) {
+      return false;
+    }
+
+
+    if (
+      isOwnerRole(
+        task.workspaceRole
+      )
+    ) {
+      return false;
+    }
+
+
+    if (
+      isManagerRole(
+        task.workspaceRole
+      )
+    ) {
+      return true;
+    }
+
+
+    return this.isAssignedToCurrentUser(
+      task
+    );
+  }
+
+
+  private isAssignedToCurrentUser(
+    task: BoardTask
+  ): boolean {
+
+    const currentUserId =
+      this.tokenStorage.getUser()?.userId
+      ?? 0;
+
+
+    return task.assignees
+      .some(assignee =>
+        Number(assignee.userId) ===
+          currentUserId
+      );
+  }
+
+
   openCreateModal(): void {
+
+    if (
+      !this.canCreateTask
+    ) {
+
+      return;
+    }
 
     let targetWorkspaceId =
       this.workspaceId;
@@ -3439,6 +3799,9 @@ export class TasksPage
       [];
 
     this.loadedMembersWorkspaceId =
+      null;
+
+    this.loadedMembersProjectId =
       null;
 
     this.taskDependencies =
@@ -3846,12 +4209,25 @@ export class TasksPage
      EDIT
      ========================= */
 
-  saveTaskChanges(): void {
+    saveTaskChanges(): void {
 
     if (
       !this.selectedTask ||
       this.editingTask
     ) {
+      return;
+    }
+
+
+    if (
+      !this.canSaveTaskChanges(
+        this.selectedTask
+      )
+    ) {
+
+      this.editError =
+        'لا تملك صلاحية تعديل هذه المهمة.';
+
       return;
     }
 
@@ -4109,37 +4485,44 @@ export class TasksPage
      * كل الطلبات التالية تبدأ حصريًا
      * عند الضغط على "حفظ التعديلات".
      */
-    this.tasksService
-      .update(
-        currentTask.workspaceId,
-        currentTask.projectId,
-        currentTask.id,
-        {
-
-          title:
-            value.title
-              .trim(),
-
-          description:
-            value.description
-              .trim()
-              || null,
-
-          priority:
-            Number(
-              value.priority
-            ) as TaskPriorityValue,
-
-          /*
-           * المهم هنا:
-           * نستخدم requestedDueDate
-           * وليس value.dueDate مباشرة.
-           */
-          dueDate:
-            requestedDueDate
-
-        }
+    const detailsRequest =
+      this.canEditTaskDetails(
+        currentTask
       )
+
+        ? this.tasksService
+            .update(
+              currentTask.workspaceId,
+              currentTask.projectId,
+              currentTask.id,
+              {
+
+                title:
+                  value.title
+                    .trim(),
+
+                description:
+                  value.description
+                    .trim()
+                    || null,
+
+                priority:
+                  Number(
+                    value.priority
+                  ) as TaskPriorityValue,
+
+                dueDate:
+                  requestedDueDate
+
+              }
+            )
+
+        : of(
+            currentTask
+          );
+
+
+    detailsRequest
       .pipe(
 
         /*
@@ -4209,9 +4592,10 @@ export class TasksPage
                 {
 
                   status:
-                    this.statusValues[
-                      requestedStatus
-                    ],
+                    requestedStatus ===
+                      'InReview'
+                      ? 'PartiallyCompleted'
+                      : requestedStatus,
 
                   position:
                     statusChanged
@@ -4704,14 +5088,34 @@ export class TasksPage
     }
 
 
-    return (
+    const detail =
       error?.error?.message
       ??
       error?.error?.detail
       ??
       error?.error?.title
       ??
-      error?.message
+      error?.message;
+
+
+    if (
+      typeof detail ===
+        'string' &&
+      detail.includes(
+        'must be a member of this project'
+      )
+      ||
+      detail.includes(
+        'workspace member with the Member role'
+      )
+    ) {
+
+      return 'يمكن إسناد المهمة لأعضاء المشروع أو أعضاء مساحة العمل بدور عضو.';
+    }
+
+
+    return (
+      detail
       ??
       'حدث خطأ غير متوقع.'
     );

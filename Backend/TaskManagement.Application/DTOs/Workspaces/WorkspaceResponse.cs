@@ -14,5 +14,9 @@ public class WorkspaceResponse
 
     public string CurrentUserRole { get; set; } = string.Empty;
 
+    public int OwnerUserId { get; set; }
+
+    public string OwnerUserName { get; set; } = string.Empty;
+
     public DateTime CreatedAt { get; set; }
 }

@@ -4,11 +4,15 @@
 
 
 .team-page {
+  width: 100%;
+
   min-height:
-    calc(100vh - 28px);
+    calc(100vh - 32px);
+
+  margin: 0 auto;
 
   padding:
-    28px 30px 55px;
+    var(--space-8) var(--space-8) var(--space-12);
 
   color:
     var(--text);
@@ -29,7 +33,7 @@
 .page-header h1 {
   margin: 0;
 
-  font-size: 32px;
+  font-size: 42px;
   font-weight: 850;
 
   line-height: 1.3;
@@ -43,7 +47,7 @@
   color:
     var(--muted);
 
-  font-size: 15px;
+  font-size: 21px;
   line-height: 1.7;
 }
 
@@ -60,30 +64,34 @@
 
 
 .primary-button {
-  min-height: 47px;
+  min-height: var(--control-height, 52px);
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  gap: 8px;
+  gap: var(--space-2);
 
   padding:
-    0 19px;
+    0 var(--space-6);
 
-  border-radius: 13px;
+  border-radius: var(--radius-md);
 
-  color: #ffffff;
+  color: var(--white);
 
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
 
   background:
     linear-gradient(
       135deg,
       var(--primary),
-      var(--violet)
+      var(--primary-2)
     );
+}
+
+.primary-button:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 
@@ -102,7 +110,7 @@
 
   border-radius: 13px;
 
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
 }
 
@@ -193,35 +201,15 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 
-.workspace-bar select {
-  min-width: 230px;
-  height: 42px;
-
-  padding:
-    0 11px;
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 11px;
-
-  outline: 0;
-
-  color:
-    var(--text);
-
-  background:
-    var(--surface-2);
-
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
+.workspace-bar strong {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
 }
 
 
@@ -249,7 +237,7 @@
       transparent
     );
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -300,13 +288,13 @@
   color:
     var(--muted);
 
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
 }
 
 
 .stats-grid strong {
-  font-size: 27px;
+  font-size: 31px;
   font-weight: 900;
 }
 
@@ -349,7 +337,7 @@
 .panel-header h2 {
   margin: 0;
 
-  font-size: 21px;
+  font-size: 25px;
   font-weight: 850;
 }
 
@@ -361,7 +349,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -420,7 +408,7 @@
     var(--surface-2);
 
   font: inherit;
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -462,10 +450,12 @@
 
   align-items: center;
 
-  gap: 16px;
+  min-height: 100px;
+
+  gap: var(--space-4);
 
   padding:
-    15px 20px;
+    var(--space-4) var(--space-5);
 
   border-bottom:
     1px solid
@@ -512,7 +502,7 @@
 
   color: #ffffff;
 
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 900;
 
   background:
@@ -545,7 +535,7 @@
 .member-identity strong {
   overflow: hidden;
 
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
 
   white-space: nowrap;
@@ -560,7 +550,7 @@
   color:
     var(--muted);
 
-  font-size: 11.5px;
+  font-size: 17px;
 
   white-space: nowrap;
 
@@ -584,7 +574,7 @@
       transparent
     );
 
-  font-size: 9px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -607,7 +597,7 @@
       transparent
     );
 
-  font-size: 10.5px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -651,12 +641,12 @@
   color:
     var(--muted);
 
-  font-size: 10px;
+  font-size: 17px;
 }
 
 
 .member-date strong {
-  font-size: 11.5px;
+  font-size: 17px;
 }
 
 
@@ -693,7 +683,7 @@
     var(--surface-2);
 
   font: inherit;
-  font-size: 11px;
+  font-size: 18px;
 }
 
 
@@ -715,7 +705,7 @@
       0.09
     );
 
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 750;
 }
 
@@ -731,7 +721,7 @@
   color:
     var(--muted);
 
-  font-size: 11px;
+  font-size: 18px;
 }
 
 
@@ -763,7 +753,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -926,7 +916,7 @@
 .modal h2 {
   margin: 0;
 
-  font-size: 22px;
+  font-size: 26px;
 }
 
 
@@ -937,7 +927,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -958,7 +948,7 @@
   background:
     transparent;
 
-  font-size: 22px;
+  font-size: 26px;
 
   cursor: pointer;
 }
@@ -981,7 +971,7 @@
 
 
 .field > span {
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -1008,7 +998,7 @@
     var(--surface-2);
 
   font: inherit;
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
@@ -1022,7 +1012,7 @@
   color:
     #ef8392;
 
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 650;
 }
 
@@ -1040,7 +1030,7 @@
   color:
     var(--muted);
 
-  font-size: 12px;
+  font-size: 16px;
 
   background:
     var(--surface-2);
@@ -1074,7 +1064,7 @@
 
 
 .role-help strong {
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1082,7 +1072,7 @@
   color:
     var(--muted);
 
-  font-size: 10.5px;
+  font-size: 17px;
   line-height: 1.6;
 }
 
@@ -1116,7 +1106,7 @@
   background:
     transparent;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 750;
 }
 
@@ -1176,17 +1166,13 @@
 
   .workspace-bar > div:first-child {
     min-width: 0;
+    width: 100%;
 
     align-items:
       stretch;
 
     flex-direction:
       column;
-  }
-
-
-  .workspace-bar select {
-    width: 100%;
   }
 
 

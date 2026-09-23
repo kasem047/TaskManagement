@@ -12,7 +12,72 @@
        TOP QUICK NOTIFICATION BELL
        ====================================================== -->
 
-  <div class="notification-anchor">
+  <div
+    class="notification-anchor"
+    [class.is-hidden]="isAdminDashboard"
+  >
+
+    @if (access.showRoleSwitcher) {
+
+      <div
+        class="role-mode-menu"
+        [class.open]="roleMenuOpen"
+        (click)="$event.stopPropagation()"
+      >
+
+        <button
+          class="role-mode-button"
+          type="button"
+          (click)="toggleRoleMenu($event)"
+          [attr.aria-expanded]="roleMenuOpen"
+          aria-haspopup="listbox"
+        >
+
+          <span class="role-mode-copy">
+            <small>عرض النظام كـ</small>
+            <strong>{{ access.activeRoleLabel }}</strong>
+          </span>
+
+          <svg viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+
+        </button>
+
+
+        @if (roleMenuOpen) {
+
+          <ul class="role-mode-list" role="listbox">
+
+            @for (
+              mode of access.availableRoleModes;
+              track mode
+            ) {
+
+              <li>
+
+                <button
+                  type="button"
+                  [class.active]="access.activeRoleMode === mode"
+                  (click)="selectRole(mode, $event)"
+                >
+
+                  {{ access.roleModeLabel(mode) }}
+
+                </button>
+
+              </li>
+
+            }
+
+          </ul>
+
+        }
+
+      </div>
+
+    }
+
 
     <button
       class="notification-launcher"
@@ -145,19 +210,15 @@
 
 
                   <small>
-                    {{ notification.message }}
+                    {{
+                      notificationMessage(
+                        notification
+                      )
+                    }}
                   </small>
 
 
                   <span class="quick-meta">
-                    {{
-                      actorLabel(
-                        notification
-                      )
-                    }}
-
-                    •
-
                     {{
                       formatNotificationTime(
                         notification.createdAt
@@ -259,19 +320,15 @@
 
 
             <small>
-              {{ notification.message }}
+              {{
+                notificationMessage(
+                  notification
+                )
+              }}
             </small>
 
 
             <span class="toast-meta">
-              {{
-                actorLabel(
-                  notification
-                )
-              }}
-
-              •
-
               {{
                 formatNotificationTime(
                   notification.createdAt
@@ -327,165 +384,14 @@
 
     <nav class="navigation">
 
-      <a
-        routerLink="/dashboard"
-        routerLinkActive="active"
-        aria-label="لوحة التحكم"
-        title="لوحة التحكم"
-      >
-
-        <svg viewBox="0 0 24 24">
-          <path d="m3 11 9-8 9 8" />
-          <path d="M5 10v10h14V10" />
-          <path d="M9 20v-6h6v6" />
-        </svg>
-
-      </a>
-
-
-      <a
-        routerLink="/projects"
-        [class.active]="isProjectsRoute()"
-        aria-label="المشاريع"
-        title="المشاريع"
-      >
-
-        <svg viewBox="0 0 24 24">
-
-          <rect
-            x="3"
-            y="5"
-            width="18"
-            height="15"
-            rx="3"
-          />
-
-          <path d="M8 5V3h8v2" />
-
-        </svg>
-
-      </a>
-
-
-      <a
-        routerLink="/tasks"
-        [class.active]="isTasksRoute()"
-        aria-label="المهام"
-        title="المهام"
-      >
-
-        <svg viewBox="0 0 24 24">
-
-          <rect
-            x="3"
-            y="3"
-            width="18"
-            height="18"
-            rx="5"
-          />
-
-          <path d="m8 12 3 3 5-6" />
-
-        </svg>
-
-      </a>
-
-
-      <a
-        routerLink="/team"
-        routerLinkActive="active"
-        aria-label="الفريق"
-        title="الفريق"
-      >
-
-        <svg viewBox="0 0 24 24">
-
-          <circle
-            cx="9"
-            cy="7"
-            r="4"
-          />
-
-          <path
-            d="M3 21v-2a6 6 0 0 1 6-6h1"
-          />
-
-          <path
-            d="M16 3a4 4 0 0 1 0 8"
-          />
-
-        </svg>
-
-      </a>
-
-
-      <a
-        routerLink="/activity"
-        routerLinkActive="active"
-        aria-label="سجل النشاط"
-        title="سجل النشاط"
-      >
-
-        <svg viewBox="0 0 24 24">
-
-          <path
-            d="M3 12a9 9 0 1 0 3-6.7L3 8"
-          />
-
-          <path d="M3 4v4h4" />
-          <path d="M12 7v5l3 2" />
-
-        </svg>
-
-      </a>
-
-
-      <a
-        routerLink="/notifications"
-        routerLinkActive="active"
-        aria-label="الإشعارات"
-        title="الإشعارات"
-      >
-
-        <svg viewBox="0 0 24 24">
-
-          <path
-            d="
-              M18 8
-              a6 6 0 0 0-12 0
-              c0 7-3 7-3 9
-              h18
-              c0-2-3-2-3-9
-            "
-          />
-
-          <path d="M10 21h4" />
-
-        </svg>
-
-
-        @if (unreadCount > 0) {
-
-          <span class="sidebar-badge">
-            {{
-              unreadCount > 9
-                ? '9+'
-                : unreadCount
-            }}
-          </span>
-
-        }
-
-      </a>
-
-
-      @if (isSystemAdmin) {
+      @if (access.showAdminNav) {
 
         <a
           routerLink="/admin"
           routerLinkActive="active"
-          aria-label="إدارة النظام"
-          title="إدارة النظام"
+          [routerLinkActiveOptions]="{ exact: false }"
+          aria-label="لوحة إدارة النظام"
+          title="لوحة إدارة النظام"
         >
 
           <svg viewBox="0 0 24 24">
@@ -509,6 +415,370 @@
             <path d="m9 12 2 2 4-5" />
 
           </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/admin/users"
+          routerLinkActive="active"
+          aria-label="المستخدمون"
+          title="المستخدمون"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <circle
+              cx="9"
+              cy="7"
+              r="4"
+            />
+
+            <path
+              d="M3 21v-2a6 6 0 0 1 6-6h1"
+            />
+
+            <path
+              d="M16 3a4 4 0 0 1 0 8"
+            />
+
+          </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/admin/roles-permissions"
+          routerLinkActive="active"
+          aria-label="الأدوار والصلاحيات"
+          title="الأدوار والصلاحيات"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="2"
+            />
+
+            <circle
+              cx="9"
+              cy="12"
+              r="2.4"
+            />
+
+            <path d="M14 10h5" />
+            <path d="M14 14h4" />
+
+          </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/admin/password-recovery"
+          routerLinkActive="active"
+          aria-label="استعادة كلمات المرور"
+          title="استعادة كلمات المرور"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <rect
+              x="4"
+              y="10"
+              width="16"
+              height="10"
+              rx="2"
+            />
+
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+
+          </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/workspaces"
+          routerLinkActive="active"
+          aria-label="مساحات العمل"
+          title="مساحات العمل"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="16"
+              rx="4"
+            />
+
+            <path d="M3 10h18" />
+
+          </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/activity"
+          routerLinkActive="active"
+          aria-label="نشاط النظام"
+          title="نشاط النظام"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="M3 12a9 9 0 1 0 3-6.7L3 8"
+            />
+
+            <path d="M3 4v4h4" />
+            <path d="M12 7v5l3 2" />
+
+          </svg>
+
+        </a>
+
+
+        <a
+          routerLink="/notifications"
+          routerLinkActive="active"
+          aria-label="الإشعارات"
+          title="الإشعارات"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="
+                M18 8
+                a6 6 0 0 0-12 0
+                c0 7-3 7-3 9
+                h18
+                c0-2-3-2-3-9
+              "
+            />
+
+            <path d="M10 21h4" />
+
+          </svg>
+
+
+          @if (unreadCount > 0) {
+
+            <span class="sidebar-badge">
+              {{
+                unreadCount > 9
+                  ? '9+'
+                  : unreadCount
+              }}
+            </span>
+
+          }
+
+        </a>
+
+      } @else {
+
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="active"
+          aria-label="لوحة التحكم"
+          title="لوحة التحكم"
+        >
+
+          <svg viewBox="0 0 24 24">
+            <path d="m3 11 9-8 9 8" />
+            <path d="M5 10v10h14V10" />
+            <path d="M9 20v-6h6v6" />
+          </svg>
+
+        </a>
+
+
+        @if (access.showWorkspacesNav) {
+
+          <a
+            routerLink="/workspaces"
+            routerLinkActive="active"
+            aria-label="مساحات العمل"
+            title="مساحات العمل"
+          >
+
+            <svg viewBox="0 0 24 24">
+
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="16"
+                rx="4"
+              />
+
+              <path d="M3 10h18" />
+
+            </svg>
+
+          </a>
+
+        }
+
+
+        @if (access.showProjectsNav) {
+
+          <a
+            routerLink="/projects"
+            [class.active]="isProjectsRoute()"
+            aria-label="المشاريع"
+            title="المشاريع"
+          >
+
+            <svg viewBox="0 0 24 24">
+
+              <rect
+                x="3"
+                y="5"
+                width="18"
+                height="15"
+                rx="3"
+              />
+
+              <path d="M8 5V3h8v2" />
+
+            </svg>
+
+          </a>
+
+        }
+
+
+        @if (access.showTasksNav) {
+
+          <a
+            routerLink="/tasks"
+            [class.active]="isTasksRoute()"
+            aria-label="المهام"
+            title="المهام"
+          >
+
+            <svg viewBox="0 0 24 24">
+
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="5"
+              />
+
+              <path d="m8 12 3 3 5-6" />
+
+            </svg>
+
+          </a>
+
+        }
+
+
+        @if (access.showTeamNav) {
+
+          <a
+            routerLink="/team"
+            routerLinkActive="active"
+            aria-label="الفريق"
+            title="الفريق"
+          >
+
+            <svg viewBox="0 0 24 24">
+
+              <circle
+                cx="9"
+                cy="7"
+                r="4"
+              />
+
+              <path
+                d="M3 21v-2a6 6 0 0 1 6-6h1"
+              />
+
+              <path
+                d="M16 3a4 4 0 0 1 0 8"
+              />
+
+            </svg>
+
+          </a>
+
+        }
+
+
+        @if (access.showActivityNav) {
+
+          <a
+            routerLink="/activity"
+            routerLinkActive="active"
+            aria-label="سجل النشاط"
+            title="سجل النشاط"
+          >
+
+            <svg viewBox="0 0 24 24">
+
+              <path
+                d="M3 12a9 9 0 1 0 3-6.7L3 8"
+              />
+
+              <path d="M3 4v4h4" />
+              <path d="M12 7v5l3 2" />
+
+            </svg>
+
+          </a>
+
+        }
+
+
+        <a
+          routerLink="/notifications"
+          routerLinkActive="active"
+          aria-label="الإشعارات"
+          title="الإشعارات"
+        >
+
+          <svg viewBox="0 0 24 24">
+
+            <path
+              d="
+                M18 8
+                a6 6 0 0 0-12 0
+                c0 7-3 7-3 9
+                h18
+                c0-2-3-2-3-9
+              "
+            />
+
+            <path d="M10 21h4" />
+
+          </svg>
+
+
+          @if (unreadCount > 0) {
+
+            <span class="sidebar-badge">
+              {{
+                unreadCount > 9
+                  ? '9+'
+                  : unreadCount
+              }}
+            </span>
+
+          }
 
         </a>
 

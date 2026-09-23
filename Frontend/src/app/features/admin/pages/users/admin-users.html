@@ -204,8 +204,10 @@
 
           <thead>
             <tr>
+              <th>ID</th>
               <th>المستخدم</th>
-              <th>نوع الحساب</th>
+              <th>الدور</th>
+              <th>وصف المستخدم</th>
               <th>الحالة</th>
               <th>آخر دخول</th>
               <th>الإجراءات</th>
@@ -221,6 +223,10 @@
             ) {
 
               <tr>
+
+                <td class="id-cell">
+                  {{ user.id }}
+                </td>
 
                 <td>
 
@@ -252,11 +258,19 @@
 
                   <span
                     class="type-badge"
-                    [class.admin]="user.isSystemAdmin"
+                    [class.admin]="user.workspaceRole === 'SystemAdmin'"
+                    [class.owner]="user.workspaceRole === 'WorkspaceOwner'"
+                    [class.manager]="user.workspaceRole === 'ProjectManager'"
+                    [class.member]="user.workspaceRole === 'Member'"
                   >
                     {{ userTypeLabel(user) }}
                   </span>
 
+                </td>
+
+
+                <td class="description-cell">
+                  {{ user.roleDescription || '—' }}
                 </td>
 
 
@@ -699,11 +713,22 @@
 
         <article>
           <span>
-            نوع الحساب
+            الدور
           </span>
 
           <strong>
             {{ userTypeLabel(selectedUser) }}
+          </strong>
+        </article>
+
+
+        <article class="wide">
+          <span>
+            وصف المستخدم
+          </span>
+
+          <strong>
+            {{ selectedUser.roleDescription || '—' }}
           </strong>
         </article>
 

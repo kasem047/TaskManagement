@@ -4,8 +4,10 @@
 
 
 .roles-page {
+  width: 100%;
   min-height: 100%;
-  padding: 28px;
+  margin: 0 auto;
+  padding: var(--space-8);
   color: var(--text-primary);
 }
 
@@ -23,7 +25,7 @@
   display: inline-block;
   margin-bottom: 6px;
   color: var(--primary);
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -36,7 +38,7 @@
 
 
 .page-header h1 {
-  font-size: 30px;
+  font-size: 34px;
 }
 
 
@@ -44,7 +46,7 @@
 .permissions-header p {
   margin: 7px 0 0;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 18px;
 }
 
 
@@ -90,7 +92,7 @@
   margin-bottom: 16px;
   padding: 12px 14px;
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 17px;
   white-space: pre-line;
 }
 
@@ -186,7 +188,7 @@
   border-radius: 999px;
   color: var(--text-secondary);
   background: var(--surface-3);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -201,7 +203,7 @@
   min-height: 35px;
   margin: 8px 0;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -212,7 +214,7 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -228,7 +230,7 @@
   color: var(--primary);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 15px;
   cursor: pointer;
 }
 
@@ -256,7 +258,7 @@
 
 .permissions-header > div > span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -285,7 +287,7 @@
 
 .module-card h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 19px;
 }
 
 
@@ -296,7 +298,7 @@
   text-align: center;
   color: var(--text-secondary);
   background: var(--surface-3);
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -342,13 +344,13 @@
 
 
 .permission-row strong {
-  font-size: 13px;
+  font-size: 17px;
 }
 
 
 .permission-row small {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
@@ -417,7 +419,7 @@
 
 .modal > header span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -425,7 +427,7 @@
   border: 0;
   color: var(--text-secondary);
   background: transparent;
-  font-size: 26px;
+  font-size: 30px;
   cursor: pointer;
 }
 
@@ -438,7 +440,7 @@
 
 
 .form-field label {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 750;
 }
 

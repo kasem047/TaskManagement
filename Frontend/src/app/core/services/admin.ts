@@ -59,6 +59,22 @@ export class Admin {
     `${environment.apiBaseUrl}/api/admin`;
 
 
+  exportDashboard(
+    format:
+      'excel' | 'pdf'
+  ): Observable<Blob> {
+
+    return this.http
+      .get(
+        `${this.baseUrl}/dashboard/export/${format}`,
+        {
+          responseType:
+            'blob'
+        }
+      );
+  }
+
+
   getDashboard():
     Observable<AdminDashboard> {
 

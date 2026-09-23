@@ -1,0 +1,203 @@
+<section class="board" [class.manager]="variant === 'manager'" [class.member]="variant === 'member'">
+  <header class="head">
+    <div>
+      @if (eyebrow) {
+        <span>{{ eyebrow }}</span>
+      }
+      @if (heading) {
+        <h2>{{ heading }}</h2>
+      }
+      @if (subtitle) {
+        <p>{{ subtitle }}</p>
+      }
+    </div>
+
+    <div class="actions">
+      @if (showTeamAction) {
+        <button type="button" class="ghost" (click)="teamClick.emit()">الفريق</button>
+      }
+      @if (showTasksAction) {
+        <button type="button" class="ghost" (click)="tasksClick.emit()">المهام</button>
+      }
+      <button type="button" class="solid" (click)="projectsClick.emit()">{{ projectsActionLabel }}</button>
+    </div>
+  </header>
+
+  <div class="kpis">
+    <article>
+      <span>{{ projectsCaption }}</span>
+      <strong>{{ insights.projectCount }}</strong>
+      <small>{{ insights.activeProjects }} نشط · {{ insights.archivedProjects }} مؤرشف</small>
+      <div class="meter"><i [style.width.%]="activeProjectRate"></i></div>
+    </article>
+    <article>
+      <span>المهام</span>
+      <strong>{{ insights.totalTasks }}</strong>
+      <small>{{ insights.doneTasks }} مكتملة · الإنجاز {{ completion }}%</small>
+      <div class="meter"><i [style.width.%]="completion"></i></div>
+    </article>
+    <article>
+      <span>{{ thirdLabel }}</span>
+      <strong>{{ insights.memberCount }}</strong>
+      <small>{{ thirdHint }}</small>
+    </article>
+  </div>
+
+  <div class="task-charts">
+    <article class="card chart-card">
+      <header>
+        <div>
+          <span>حالة المهام</span>
+          <h3>توزيع سير العمل</h3>
+        </div>
+        <b>{{ insights.totalTasks }}</b>
+      </header>
+
+      <div class="workflow-layout">
+        <div class="workflow-donut">
+          <svg viewBox="0 0 160 160">
+            <circle class="workflow-track" cx="80" cy="80" r="54"></circle>
+            @for (slice of taskSlices; track slice.key) {
+              @if (slice.value > 0) {
+                <circle
+                  class="workflow-slice"
+                  cx="80"
+                  cy="80"
+                  r="54"
+                  [attr.stroke]="slice.color"
+                  [attr.stroke-dasharray]="slice.dasharray"
+                  [attr.stroke-dashoffset]="slice.offset"
+                ></circle>
+              }
+            }
+          </svg>
+          <div class="workflow-center">
+            <strong>{{ insights.totalTasks }}</strong>
+            <small>مهمة</small>
+          </div>
+        </div>
+
+        <ul class="workflow-legend">
+          @for (slice of taskSlices; track slice.key) {
+            <li>
+              <i [style.background]="slice.color"></i>
+              <span>{{ slice.label }}</span>
+              <small>{{ slice.percent }}%</small>
+              <b>{{ slice.value }}</b>
+            </li>
+          }
+        </ul>
+      </div>
+    </article>
+
+    <article class="card chart-card">
+      <header>
+        <div>
+          <span>الرسم البياني</span>
+          <h3>حجم المهام حسب الحالة</h3>
+        </div>
+      </header>
+
+      <div class="volume-chart">
+        @for (slice of taskSlices; track slice.key) {
+          <div class="volume-col">
+            <span>{{ slice.value }}</span>
+            <div class="volume-track">
+              <em
+                [style.height.%]="barHeight(slice.value)"
+                [style.background]="slice.color"
+              ></em>
+            </div>
+            <small>{{ slice.label }}</small>
+          </div>
+        }
+      </div>
+    </article>
+  </div>
+
+  @if (variant === 'owner' || variant === 'manager' || variant === 'member') {
+    <div class="charts-grid">
+      <article class="card chart-card">
+        <header>
+          <div>
+            <span>{{ userChartLabel }}</span>
+            <h3>{{ userChartTitle }}</h3>
+          </div>
+          <b>{{ insights.memberCount }}</b>
+        </header>
+
+        <div class="donut-row">
+          <div class="donut">
+            <div class="donut-pie" [style.background]="userConic"></div>
+            <div class="donut-hole">
+              <strong>{{ insights.memberCount }}</strong>
+              <small>{{ variant === 'owner' ? 'مستخدم' : 'عضو' }}</small>
+            </div>
+          </div>
+          <ul>
+            @for (slice of userSlices; track slice.key) {
+              <li>
+                <i [style.background]="slice.color"></i>
+                <span>{{ slice.label }}</span>
+                <b>{{ slice.value }}</b>
+                <small>{{ slice.percent }}%</small>
+                <div class="slice-bar">
+                  <em [style.width.%]="barWidth(slice.percent)" [style.background]="slice.color"></em>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      </article>
+
+      <article class="card chart-card">
+        <header>
+          <div>
+            <span>{{ projectChartLabel }}</span>
+            <h3>{{ projectChartTitle }}</h3>
+          </div>
+          <b>{{ insights.projectCount }}</b>
+        </header>
+
+        <div class="donut-row">
+          <div class="donut">
+            <div class="donut-pie" [style.background]="projectConic"></div>
+            <div class="donut-hole">
+              <strong>{{ activeProjectRate }}%</strong>
+              <small>نشط</small>
+            </div>
+          </div>
+          <ul>
+            @for (slice of projectSlices; track slice.key) {
+              <li>
+                <i [style.background]="slice.color"></i>
+                <span>{{ slice.label }}</span>
+                <b>{{ slice.value }}</b>
+                <small>{{ slice.percent }}%</small>
+                <div class="slice-bar">
+                  <em [style.width.%]="barWidth(slice.percent)" [style.background]="slice.color"></em>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+
+        @if (insights.projectProgress.length > 0) {
+          <div class="progress-list">
+            @for (project of insights.projectProgress; track project.name) {
+              <div class="progress-row">
+                <div class="progress-copy">
+                  <span>{{ project.name }}</span>
+                  <small>{{ project.done }}/{{ project.total }} · {{ project.rate }}%</small>
+                </div>
+                <div class="meter">
+                  <i [style.width.%]="project.rate"></i>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </article>
+    </div>
+  }
+</section>

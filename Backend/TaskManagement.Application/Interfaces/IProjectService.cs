@@ -27,4 +27,20 @@ public interface IProjectService
     Task DeleteProjectAsync(
         int workspaceId,
         int projectId);
+
+    Task<List<ProjectMemberResponse>>
+        GetProjectMembersAsync(
+            int workspaceId,
+            int projectId);
+
+    Task<ProjectMemberResponse>
+        AddProjectMemberAsync(
+            int workspaceId,
+            int projectId,
+            AddProjectMemberRequest request);
+
+    Task RemoveProjectMemberAsync(
+        int workspaceId,
+        int projectId,
+        int userId);
 }

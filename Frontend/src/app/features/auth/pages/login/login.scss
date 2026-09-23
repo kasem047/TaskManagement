@@ -131,12 +131,20 @@
   background:
     radial-gradient(
       circle at 15% 15%,
-      rgba(234, 136, 160, 0.18),
+      color-mix(
+        in srgb,
+        var(--rose) 22%,
+        transparent
+      ),
       transparent 18rem
     ),
     radial-gradient(
       circle at 95% 90%,
-      rgba(179, 155, 232, 0.24),
+      color-mix(
+        in srgb,
+        var(--violet) 26%,
+        transparent
+      ),
       transparent 20rem
     ),
     linear-gradient(
@@ -161,20 +169,22 @@
 
 
 .brand-mark {
-  width: 92px;
-  height: 58px;
+  width: 104px;
+  height: 72px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
   flex: none;
+
+  overflow: visible;
 }
 
 
 .brand-mark img {
-  width: 88px;
-  height: auto;
+  width: 96px;
+  height: 64px;
 
   display: block;
 
@@ -185,7 +195,7 @@
 .brand strong {
   display: block;
 
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
 }
 
@@ -203,7 +213,7 @@
       0.68
     );
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -220,7 +230,7 @@
   margin:
     0 0 16px;
 
-  font-size: 39px;
+  font-size: 43px;
   font-weight: 700;
 
   line-height: 1.45;
@@ -240,7 +250,7 @@
       0.74
     );
 
-  font-size: 15px;
+  font-size: 19px;
 
   line-height: 2;
 }
@@ -306,7 +316,7 @@
   width:
     min(
       100%,
-      450px
+      480px
     );
 }
 
@@ -324,7 +334,7 @@
   color:
     var(--primary);
 
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -337,7 +347,7 @@
   color:
     var(--text-primary);
 
-  font-size: 31px;
+  font-size: 35px;
   font-weight: 750;
 
   line-height: 1.4;
@@ -353,7 +363,7 @@
   color:
     var(--text-secondary);
 
-  font-size: 14px;
+  font-size: 18px;
 
   line-height: 1.9;
 }
@@ -362,7 +372,7 @@
 form {
   display: grid;
 
-  gap: 19px;
+  gap: var(--space-5);
 }
 
 
@@ -377,8 +387,8 @@ form {
   color:
     var(--text-primary);
 
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 
@@ -386,28 +396,28 @@ form {
   color:
     var(--text-muted);
 
-  font-size: 11px;
+  font-size: 17px;
 
   line-height: 1.7;
 }
 
 
 .input-wrap {
-  height: 52px;
+  height: var(--control-height, 52px);
 
   display: flex;
   align-items: center;
 
-  gap: 9px;
+  gap: var(--space-2);
 
   padding:
-    0 13px;
+    0 var(--space-4);
 
   border:
     1px solid
     var(--border);
 
-  border-radius: 13px;
+  border-radius: var(--radius-md);
 
   background:
     var(--surface-2);
@@ -480,7 +490,7 @@ form {
   background:
     transparent;
 
-  font-size: 14px;
+  font-size: 18px;
 
   direction: ltr;
 
@@ -520,7 +530,7 @@ form {
 
   font-family: inherit;
 
-  font-size: 14px;
+  font-size: 18px;
 
   line-height: 1.8;
 }
@@ -605,7 +615,7 @@ form {
 
   font-family: inherit;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 750;
 
   cursor: pointer;
@@ -622,7 +632,7 @@ form {
   color:
     var(--danger);
 
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -652,7 +662,7 @@ form {
   background:
     var(--danger-soft);
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
 
   line-height: 1.7;
@@ -679,20 +689,20 @@ form {
 .submit-button,
 .secondary-button {
   width: 100%;
-  height: 52px;
+  height: var(--control-height, 52px);
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  gap: 9px;
+  gap: var(--space-2);
 
-  border-radius: 13px;
+  border-radius: var(--radius-md);
 
   font-family: inherit;
 
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
 
   cursor: pointer;
 }
@@ -701,7 +711,7 @@ form {
 .submit-button {
   border: 0;
 
-  color: #ffffff;
+  color: var(--white);
 
   background:
     linear-gradient(
@@ -714,9 +724,17 @@ form {
     0 12px 25px
     color-mix(
       in srgb,
-      var(--primary) 20%,
+      var(--primary) 22%,
       transparent
     );
+}
+
+.submit-button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.submit-button:active:not(:disabled) {
+  filter: brightness(0.96);
 }
 
 
@@ -772,7 +790,7 @@ form {
 
   font-family: inherit;
 
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 
   cursor: pointer;
@@ -880,12 +898,12 @@ form {
   color:
     var(--text-muted);
 
-  font-size: 11px;
+  font-size: 15px;
 }
 
 
 .status-top strong {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 
@@ -924,7 +942,7 @@ form {
   color:
     var(--text-secondary);
 
-  font-size: 13px;
+  font-size: 17px;
 
   line-height: 1.85;
 }
@@ -943,7 +961,7 @@ form {
     1px solid
     var(--border);
 
-  font-size: 12px;
+  font-size: 16px;
 }
 
 
@@ -1047,7 +1065,7 @@ form {
   background:
     var(--surface-2);
 
-  font-size: 11px;
+  font-size: 15px;
 
   text-align: center;
 }
@@ -1079,7 +1097,7 @@ form {
     Consolas,
     monospace;
 
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
 
   letter-spacing: 12px;
@@ -1233,12 +1251,12 @@ form {
   .form-heading h2,
   .recovery-header h2,
   .completed-state h2 {
-    font-size: 26px;
+    font-size: 30px;
   }
 
 
   .verification-code-input {
-    font-size: 24px;
+    font-size: 28px;
 
     letter-spacing: 8px;
   }

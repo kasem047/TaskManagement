@@ -17,7 +17,11 @@
         {{
           isSystemAdmin
             ? 'سجل التدقيق العام'
-            : 'سجل النشاط'
+            : isMemberMode
+              ? 'نشاطك'
+              : isManagerMode
+                ? 'نشاط المشروع'
+                : 'سجل النشاط'
         }}
       </h1>
 
@@ -29,6 +33,14 @@
         ) {
 
           راقب جميع العمليات والتغييرات المسجلة على مستوى النظام.
+
+        } @else if (isMemberMode) {
+
+          العمليات التي قمت بها فقط داخل المشاريع التي أنت عضو فيها.
+
+        } @else if (isManagerMode) {
+
+          راقب العمليات والتعديلات داخل المشروع الذي تديره فقط.
 
         } @else {
 
@@ -154,49 +166,60 @@
         </label>
 
 
-        <select
-          [value]="
-            selectedWorkspaceId
-          "
-          (change)="
-            selectWorkspace(
-              $any(
-                $event.target
-              ).value
-            )
-          "
-        >
+        @if (isSystemAdmin) {
 
-          @if (
-            isSystemAdmin
-          ) {
+          <select
+            [value]="
+              selectedWorkspaceId
+            "
+            (change)="
+              selectWorkspace(
+                $any(
+                  $event.target
+                ).value
+              )
+            "
+          >
 
-            <option
-              [value]="0"
-            >
-              جميع مساحات العمل
-            </option>
+            @if (isSystemAdmin) {
 
-          }
+              <option
+                [value]="0"
+              >
+                جميع مساحات العمل
+              </option>
+
+            }
 
 
-          @for (
-            workspace
-            of manageableWorkspaces;
-            track workspace.id
-          ) {
+            @for (
+              workspace
+              of manageableWorkspaces;
+              track workspace.id
+            ) {
 
-            <option
-              [value]="
-                workspace.id
-              "
-            >
-              {{ workspace.name }}
-            </option>
+              <option
+                [value]="
+                  workspace.id
+                "
+              >
+                {{ workspace.name }}
+              </option>
 
-          }
+            }
 
-        </select>
+          </select>
+
+        } @else {
+
+          <strong>
+            {{
+              selectedWorkspace?.name
+              || 'مساحة العمل'
+            }}
+          </strong>
+
+        }
 
       </div>
 
@@ -459,87 +482,108 @@
         class="global-filters-panel"
       >
 
-        <div
-          class="search-box"
+        <label
+          class="filter-field search-field"
         >
 
-          <svg
-            viewBox="0 0 24 24"
+          <span>
+            بحث
+          </span>
+
+
+          <div
+            class="search-box"
           >
 
-            <circle
-              cx="11"
-              cy="11"
-              r="7"
-            />
-
-            <path
-              d="m20 20-4-4"
-            />
-
-          </svg>
-
-
-          <input
-            type="search"
-            [(ngModel)]="
-              search
-            "
-            placeholder="بحث بالمستخدم أو الإجراء أو الوصف أو مساحة العمل..."
-          >
-
-        </div>
-
-
-        <input
-          class="filter-input"
-          type="number"
-          min="1"
-          [(ngModel)]="
-            globalUserId
-          "
-          placeholder="رقم المستخدم"
-        >
-
-
-        <input
-          class="filter-input"
-          type="text"
-          [(ngModel)]="
-            globalAction
-          "
-          placeholder="الإجراء مثل task.created"
-        >
-
-
-        <select
-          class="entity-select"
-          [(ngModel)]="
-            entityFilter
-          "
-        >
-
-          @for (
-            filter
-            of entityFilters;
-            track filter.value
-          ) {
-
-            <option
-              [value]="
-                filter.value
-              "
+            <svg
+              viewBox="0 0 24 24"
             >
-              {{ filter.label }}
-            </option>
 
-          }
+              <circle
+                cx="11"
+                cy="11"
+                r="7"
+              />
 
-        </select>
+              <path
+                d="m20 20-4-4"
+              />
+
+            </svg>
+
+
+            <input
+              type="search"
+              [(ngModel)]="
+                search
+              "
+              placeholder="المستخدم أو الإجراء أو الوصف..."
+            >
+
+          </div>
+
+        </label>
 
 
         <label
-          class="date-filter"
+          class="filter-field"
+        >
+
+          <span>
+            رقم المستخدم
+          </span>
+
+          <input
+            class="filter-input"
+            type="number"
+            min="1"
+            [(ngModel)]="
+              globalUserId
+            "
+            placeholder="الكل"
+          >
+
+        </label>
+
+
+        <label
+          class="filter-field"
+        >
+
+          <span>
+            المصدر
+          </span>
+
+          <select
+            class="entity-select"
+            [(ngModel)]="
+              entityFilter
+            "
+          >
+
+            @for (
+              filter
+              of visibleEntityFilters;
+              track filter.value
+            ) {
+
+              <option
+                [value]="
+                  filter.value
+                "
+              >
+                {{ filter.label }}
+              </option>
+
+            }
+
+          </select>
+
+        </label>
+
+
+        <label
+          class="filter-field"
         >
 
           <span>
@@ -547,6 +591,7 @@
           </span>
 
           <input
+            class="filter-input"
             type="date"
             [(ngModel)]="
               globalFrom
@@ -557,7 +602,7 @@
 
 
         <label
-          class="date-filter"
+          class="filter-field"
         >
 
           <span>
@@ -565,6 +610,7 @@
           </span>
 
           <input
+            class="filter-input"
             type="date"
             [(ngModel)]="
               globalTo
@@ -637,7 +683,7 @@
           <input
             type="search"
             placeholder="ابحث بالمستخدم أو الإجراء أو الوصف..."
-            [value]="search"
+            [value]="searchDraft"
             (input)="
               setSearch(
                 $any(
@@ -653,7 +699,7 @@
         <select
           class="entity-select"
           [value]="
-            entityFilter
+            entityFilterDraft
           "
           (change)="
             setEntityFilter(
@@ -666,7 +712,7 @@
 
           @for (
             filter
-            of entityFilters;
+            of visibleEntityFilters;
             track filter.value
           ) {
 
@@ -683,15 +729,32 @@
         </select>
 
 
-        <button
-          class="clear-button"
-          type="button"
-          (click)="
-            clearFilters()
-          "
+        <div
+          class="role-filter-actions"
         >
-          مسح الفلاتر
-        </button>
+
+          <button
+            class="apply-button"
+            type="button"
+            (click)="
+              applyRoleFilters()
+            "
+          >
+            تطبيق الفلترة
+          </button>
+
+
+          <button
+            class="clear-button"
+            type="button"
+            (click)="
+              clearFilters()
+            "
+          >
+            مسح الفلاتر
+          </button>
+
+        </div>
 
       </section>
 
@@ -785,11 +848,23 @@
         </div>
 
         <strong>
-          لا توجد أحداث مطابقة
+          @if (logs.length === 0) {
+            لا توجد أحداث بعد
+          } @else {
+            لا توجد أحداث مطابقة
+          }
         </strong>
 
         <p>
-          جرّب تغيير البحث أو الفلاتر.
+          @if (logs.length === 0 && isManagerMode) {
+            يظهر هنا نشاط المشاريع التي تديرها داخل مساحة العمل الحالية. إذا لم يُنشأ مشروع بعد فلن تظهر أحداث، وإذا كانت المهام في مساحة أخرى فاخترها من قائمة مساحة العمل أعلاه.
+          } @else if (logs.length === 0 && isMemberMode) {
+            يظهر هنا ما قمت به أنت فقط داخل المشاريع التي أنت عضو فيها.
+          } @else if (logs.length === 0) {
+            لم يُسجَّل أي نشاط في مساحة العمل هذه بعد.
+          } @else {
+            جرّب تغيير البحث أو الفلاتر، ثم اضغط تطبيق الفلترة.
+          }
         </p>
 
       </section>

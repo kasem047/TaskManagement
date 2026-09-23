@@ -159,4 +159,62 @@ public sealed class PermissionService : IPermissionService
                 "You do not have permission to perform this action.");
         }
     }
+
+    public async Task<bool> IsSystemAdminAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUserService.IsAuthenticated)
+        {
+            return false;
+        }
+
+        var userId = _currentUserService.UserId;
+
+        return await _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(
+                user =>
+                    user.Id == userId &&
+                    user.IsSystemAdmin &&
+                    user.IsActive &&
+                    !user.IsDeleted,
+                cancellationToken);
+    }
+
+    public async Task<string?> GetActiveRoleNameAsync(
+        int workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUserService.IsAuthenticated)
+        {
+            return null;
+        }
+
+        if (await IsSystemAdminAsync(cancellationToken))
+        {
+            return "SystemAdmin";
+        }
+
+        var userId = _currentUserService.UserId;
+
+        var workspaceMember = await _dbContext.WorkspaceMembers
+            .AsNoTracking()
+            .Include(member => member.Role)
+            .FirstOrDefaultAsync(
+                member =>
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == userId &&
+                    member.Status == WorkspaceMemberStatus.Active &&
+                    !member.IsDeleted,
+                cancellationToken);
+
+        if (workspaceMember is null ||
+            workspaceMember.Role is null ||
+            workspaceMember.Role.IsDeleted)
+        {
+            return null;
+        }
+
+        return workspaceMember.Role.Name;
+    }
 }

@@ -11,4 +11,11 @@ public interface IPermissionService
         int workspaceId,
         string permissionName,
         CancellationToken cancellationToken = default);
+
+    Task<bool> IsSystemAdminAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<string?> GetActiveRoleNameAsync(
+        int workspaceId,
+        CancellationToken cancellationToken = default);
 }

@@ -752,6 +752,27 @@ public sealed class NotificationService
                 .Distinct()
                 .ToList();
 
+        if (workspaceId.HasValue &&
+            ShouldCopyWorkspaceOwner(
+                type))
+        {
+            var ownerUserId =
+                await GetActiveWorkspaceOwnerUserIdAsync(
+                    workspaceId.Value);
+
+            if (ownerUserId.HasValue &&
+                ownerUserId.Value != actorUserId)
+            {
+                recipientUserIds.Add(
+                    ownerUserId.Value);
+            }
+        }
+
+        recipientUserIds =
+            recipientUserIds
+                .Distinct()
+                .ToList();
+
         if (recipientUserIds.Count == 0)
         {
             return;
@@ -1103,6 +1124,51 @@ public sealed class NotificationService
                     notification.UserId,
                     realtimeNotification);
         }
+    }
+
+    /* =========================================================
+       WORKSPACE OWNER COPY
+       ========================================================= */
+
+    private static bool ShouldCopyWorkspaceOwner(
+        string type)
+    {
+        if (string.IsNullOrWhiteSpace(type) ||
+            type == "manual.notification")
+        {
+            return false;
+        }
+
+        if (type.StartsWith(
+                "task.",
+                StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return type is
+            "project.archived" or
+            "project.deleted" or
+            "project.manager_required" or
+            "project.manager_assigned" or
+            "project.manager_removed" or
+            "member.ontime_reward" or
+            "workspace.invitation_accepted" or
+            "workspace.invitation_rejected";
+    }
+
+    private async Task<int?> GetActiveWorkspaceOwnerUserIdAsync(
+        int workspaceId)
+    {
+        return await _dbContext.WorkspaceMembers
+            .AsNoTracking()
+            .Where(member =>
+                member.WorkspaceId == workspaceId &&
+                member.Status == WorkspaceMemberStatus.Active &&
+                !member.IsDeleted &&
+                member.Role.Name == SystemRoles.WorkspaceOwner)
+            .Select(member => (int?)member.UserId)
+            .FirstOrDefaultAsync();
     }
 
     /* =========================================================

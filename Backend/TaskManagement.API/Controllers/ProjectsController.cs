@@ -103,4 +103,54 @@ public class ProjectsController : ControllerBase
             projectId
         });
     }
+
+    [HttpGet("{projectId:int}/members")]
+    public async Task<ActionResult<List<ProjectMemberResponse>>>
+        GetProjectMembers(
+            int workspaceId,
+            int projectId)
+    {
+        var response =
+            await _projectService.GetProjectMembersAsync(
+                workspaceId,
+                projectId);
+
+        return Ok(response);
+    }
+
+    [HttpPost("{projectId:int}/members")]
+    public async Task<ActionResult<ProjectMemberResponse>>
+        AddProjectMember(
+            int workspaceId,
+            int projectId,
+            AddProjectMemberRequest request)
+    {
+        var response =
+            await _projectService.AddProjectMemberAsync(
+                workspaceId,
+                projectId,
+                request);
+
+        return Ok(response);
+    }
+
+    [HttpDelete("{projectId:int}/members/{userId:int}")]
+    public async Task<IActionResult> RemoveProjectMember(
+        int workspaceId,
+        int projectId,
+        int userId)
+    {
+        await _projectService.RemoveProjectMemberAsync(
+            workspaceId,
+            projectId,
+            userId);
+
+        return Ok(new
+        {
+            message = "Project member removed successfully.",
+            workspaceId,
+            projectId,
+            userId
+        });
+    }
 }

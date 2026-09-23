@@ -234,8 +234,8 @@ public sealed class PasswordRecoveryService
                 .CreateSystemManyAsync(
                     adminUserIds,
                     null,
-                    "Password recovery request",
-                    $"{user.FullName} submitted a password recovery request.",
+                    "طلب استعادة كلمة المرور",
+                    $"{user.FullName} أرسل طلب استعادة كلمة المرور.",
                     "account.password_recovery.requested",
                     nameof(PasswordRecoveryRequest),
                     recoveryRequest.Id);
@@ -601,8 +601,8 @@ public sealed class PasswordRecoveryService
             .CreateSystemManyAsync(
                 recipients.Distinct(),
                 null,
-                "Password reset completed",
-                $"Password recovery was completed for account {user.Email}. All previous sessions were revoked.",
+                "اكتملت استعادة كلمة المرور",
+                $"اكتملت استعادة كلمة المرور للحساب {user.Email}. وأُلغيت الجلسات السابقة.",
                 "account.password_recovery.completed",
                 nameof(PasswordRecoveryRequest),
                 recoveryRequest.Id);
@@ -746,8 +746,8 @@ public sealed class PasswordRecoveryService
                     recoveryRequest.UserId
                 },
                 null,
-                "Password recovery approved",
-                "Your password recovery request was approved. Waiting for the administrator to send the verification code.",
+                "تمت الموافقة على استعادة كلمة المرور",
+                "تمت الموافقة على طلب استعادة كلمة المرور. بانتظار إرسال رمز التحقق من المسؤول.",
                 "account.password_recovery.approved",
                 nameof(PasswordRecoveryRequest),
                 recoveryRequest.Id);
@@ -836,8 +836,8 @@ public sealed class PasswordRecoveryService
                     recoveryRequest.UserId
                 },
                 null,
-                "Password recovery rejected",
-                $"Your password recovery request was rejected. Reason: {rejectionReason}",
+                "رُفض طلب استعادة كلمة المرور",
+                $"رُفض طلب استعادة كلمة المرور. السبب: {rejectionReason}",
                 "account.password_recovery.rejected",
                 nameof(PasswordRecoveryRequest),
                 recoveryRequest.Id);
@@ -961,8 +961,8 @@ public sealed class PasswordRecoveryService
                     recoveryRequest.UserId
                 },
                 null,
-                "Password recovery code sent",
-                $"A 6-digit password recovery code was sent to {MaskEmail(recoveryRequest.RecoveryEmail)}.",
+                "تم إرسال رمز الاستعادة",
+                $"تم إرسال رمز استعادة كلمة المرور المكوّن من 6 أرقام إلى {MaskEmail(recoveryRequest.RecoveryEmail)}.",
                 "account.password_recovery.code_sent",
                 nameof(PasswordRecoveryRequest),
                 recoveryRequest.Id);

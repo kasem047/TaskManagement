@@ -1,4 +1,6 @@
-﻿namespace TaskManagement.Application.DTOs.Admin;
+﻿using System.Text.Json.Serialization;
+
+namespace TaskManagement.Application.DTOs.Admin;
 
 public sealed class AdminUserResponse
 {
@@ -13,6 +15,14 @@ public sealed class AdminUserResponse
     public bool IsActive { get; set; }
 
     public bool IsSystemAdmin { get; set; }
+
+    public bool OwnsWorkspace { get; set; }
+
+    [JsonPropertyName("workspaceRole")]
+    public string WorkspaceRole { get; set; } = "None";
+
+    [JsonPropertyName("roleDescription")]
+    public string RoleDescription { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
 

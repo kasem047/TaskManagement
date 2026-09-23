@@ -20,6 +20,15 @@ import {
   Workspaces
 } from '../../../../core/services/workspaces';
 
+import {
+  AdminUser,
+  AdminUsers
+} from '../../../../core/services/admin-users';
+
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
 
 @Component({
   selector: 'app-workspace-management',
@@ -45,6 +54,14 @@ export class WorkspaceManagementPage
 
   private readonly workspacesService =
     inject(Workspaces);
+
+
+  private readonly adminUsers =
+    inject(AdminUsers);
+
+
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   private readonly router =
@@ -93,6 +110,26 @@ export class WorkspaceManagementPage
     false;
 
 
+  assignModalOpen =
+    false;
+
+
+  assignWorkspace:
+    Workspace | null = null;
+
+
+  eligibleOwners:
+    AdminUser[] = [];
+
+
+  loadingOwners =
+    false;
+
+
+  assigning =
+    false;
+
+
   editModalOpen =
     false;
 
@@ -126,6 +163,28 @@ export class WorkspaceManagementPage
         '',
         [
           Validators.maxLength(1000)
+        ]
+      ],
+
+      ownerUserId: [
+        0,
+        [
+          Validators.required,
+          Validators.min(1)
+        ]
+      ]
+
+    });
+
+
+  readonly assignForm =
+    this.fb.nonNullable.group({
+
+      newOwnerUserId: [
+        0,
+        [
+          Validators.required,
+          Validators.min(1)
         ]
       ]
 
@@ -182,14 +241,28 @@ export class WorkspaceManagementPage
       '';
 
 
-    this.workspacesService
-      .getAll()
+    this.access
+      .refresh()
       .subscribe({
 
-        next: workspaces => {
+        next: snapshot => {
+
+          if (
+            !this.access.isSystemAdmin &&
+            !this.access.showWorkspacesNav
+          ) {
+
+            this.router.navigateByUrl(
+              '/dashboard'
+            );
+
+            return;
+          }
 
           this.workspaces =
-            workspaces;
+            this.access.isSystemAdmin
+              ? snapshot.workspaces
+              : this.access.scopedWorkspaces;
 
 
           this.loading =
@@ -263,14 +336,17 @@ export class WorkspaceManagementPage
   get canCreateWorkspace():
     boolean {
 
-    /*
-     * أثناء Loading نعتبر الإنشاء
-     * ممنوعًا مؤقتًا.
-     */
     return (
       !this.loading &&
-      !this.ownedWorkspace
+      this.access.isSystemAdmin
     );
+  }
+
+
+  get isSystemAdmin():
+    boolean {
+
+    return this.access.isSystemAdmin;
   }
 
 
@@ -394,12 +470,16 @@ export class WorkspaceManagementPage
     this.workspaceForm
       .reset({
         name: '',
-        description: ''
+        description: '',
+        ownerUserId: 0
       });
 
 
     this.createModalOpen =
       true;
+
+
+    this.loadEligibleOwners();
   }
 
 
@@ -420,7 +500,232 @@ export class WorkspaceManagementPage
     this.workspaceForm
       .reset({
         name: '',
-        description: ''
+        description: '',
+        ownerUserId: 0
+      });
+  }
+
+
+  private loadEligibleOwners():
+    void {
+
+    if (
+      !this.access.isSystemAdmin
+    ) {
+
+      this.eligibleOwners =
+        [];
+
+      return;
+    }
+
+
+    this.loadingOwners =
+      true;
+
+
+    this.adminUsers
+      .getUsers(
+        undefined,
+        true
+      )
+      .subscribe({
+
+        next: users => {
+
+          this.loadingOwners =
+            false;
+
+
+          this.eligibleOwners =
+            users.filter(user =>
+              !user.isSystemAdmin &&
+              user.isActive &&
+              user.ownsWorkspace !==
+                true
+            );
+        },
+
+
+        error: error => {
+
+          this.loadingOwners =
+            false;
+
+
+          this.eligibleOwners =
+            [];
+
+
+          this.errorMessage =
+            this.extractApiError(
+              error
+            );
+        }
+
+      });
+  }
+
+
+  openAssignOwner(
+    workspace: Workspace
+  ): void {
+
+    if (
+      !this.access.isSystemAdmin
+    ) {
+
+      this.errorMessage =
+        'تعيين مالك مساحة العمل متاح لمسؤول النظام فقط.';
+
+      return;
+    }
+
+
+    this.assignWorkspace =
+      workspace;
+
+    this.assignModalOpen =
+      true;
+
+    this.errorMessage =
+      '';
+
+    this.successMessage =
+      '';
+
+
+    this.assignForm
+      .reset({
+        newOwnerUserId: 0
+      });
+
+
+    this.loadEligibleOwners();
+  }
+
+
+  closeAssignOwner():
+    void {
+
+    if (
+      this.assigning
+    ) {
+
+      return;
+    }
+
+
+    this.assignModalOpen =
+      false;
+
+    this.assignWorkspace =
+      null;
+
+
+    this.assignForm
+      .reset({
+        newOwnerUserId: 0
+      });
+  }
+
+
+  assignOwner(): void {
+
+    if (
+      this.assigning ||
+      !this.assignWorkspace
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !this.access.isSystemAdmin
+    ) {
+
+      this.closeAssignOwner();
+
+      this.errorMessage =
+        'تعيين مالك مساحة العمل متاح لمسؤول النظام فقط.';
+
+      return;
+    }
+
+
+    if (
+      this.assignForm.invalid
+    ) {
+
+      this.assignForm
+        .markAllAsTouched();
+
+
+      this.errorMessage =
+        'اختر المستخدم الذي سيصبح المالك الجديد.';
+
+      return;
+    }
+
+
+    const newOwnerUserId =
+      Number(
+        this.assignForm
+          .getRawValue()
+          .newOwnerUserId
+      );
+
+
+    this.assigning =
+      true;
+
+    this.errorMessage =
+      '';
+
+
+    this.workspacesService
+      .transferOwnership(
+        this.assignWorkspace.id,
+        newOwnerUserId
+      )
+      .subscribe({
+
+        next: () => {
+
+          this.assigning =
+            false;
+
+
+          const workspaceName =
+            this.assignWorkspace
+              ?.name
+            ?? '';
+
+
+          this.closeAssignOwner();
+
+
+          this.successMessage =
+            `تم تعيين مالك جديد لمساحة العمل "${workspaceName}".`;
+
+
+          this.loadWorkspaces();
+        },
+
+
+        error: error => {
+
+          this.assigning =
+            false;
+
+
+          this.errorMessage =
+            this.extractApiError(
+              error
+            );
+        }
+
       });
   }
 
@@ -447,7 +752,7 @@ export class WorkspaceManagementPage
 
 
       this.errorMessage =
-        'لا يمكن للمستخدم امتلاك أكثر من مساحة عمل واحدة.';
+        'لا يمكن إنشاء مساحة عمل إلا بواسطة مسؤول النظام.';
 
       return;
     }
@@ -528,7 +833,12 @@ export class WorkspaceManagementPage
         description:
           description
             ? description
-            : null
+            : null,
+
+        ownerUserId:
+          Number(
+            value.ownerUserId
+          )
 
       })
       .subscribe({
@@ -544,7 +854,7 @@ export class WorkspaceManagementPage
 
 
           this.successMessage =
-            `تم إنشاء مساحة العمل "${workspace.name}" بنجاح.`;
+            `تم إنشاء مساحة العمل "${workspace.name}" وإسنادها إلى المالك المحدد.`;
 
 
           this.saveWorkspaceContext(
@@ -604,7 +914,10 @@ export class WorkspaceManagementPage
           workspace.name,
 
         description:
-          workspace.description ?? ''
+          workspace.description ?? '',
+
+        ownerUserId:
+          workspace.ownerUserId || 0
 
       });
 
@@ -1127,6 +1440,11 @@ export class WorkspaceManagementPage
         return 'عضو';
 
 
+      case 'SystemAdmin':
+
+        return 'مسؤول النظام';
+
+
       default:
 
         return roleName;
@@ -1216,11 +1534,63 @@ export class WorkspaceManagementPage
         )
         ||
         detail.includes(
+          'already owns an active workspace'
+        )
+        ||
+        detail.includes(
+          'already owns another active workspace'
+        )
+        ||
+        detail.includes(
           'only one active workspace'
         )
       ) {
 
-        return 'لا يمكنك امتلاك أكثر من مساحة عمل نشطة واحدة.';
+        return 'لا يمكن إسناد مساحة العمل إلى مستخدم يملك مساحة عمل نشطة أخرى.';
+      }
+
+
+      if (
+        detail.includes(
+          'Only the system administrator can create'
+        )
+      ) {
+
+        return 'إنشاء مساحات العمل متاح لمسؤول النظام فقط.';
+      }
+
+
+      if (
+        detail.includes(
+          'Only the system administrator can assign'
+        )
+      ) {
+
+        return 'تعيين مالك مساحة العمل متاح لمسؤول النظام فقط.';
+      }
+
+
+      if (
+        detail.includes(
+          'System administrator cannot be assigned'
+        )
+      ) {
+
+        return 'لا يمكن تعيين مسؤول النظام مالكًا لمساحة العمل.';
+      }
+
+
+      if (
+        detail.includes(
+          'selected owner was not found'
+        )
+        ||
+        detail.includes(
+          'selected owner account is inactive'
+        )
+      ) {
+
+        return 'المستخدم المحدد غير صالح لإسناد مساحة العمل.';
       }
 
 

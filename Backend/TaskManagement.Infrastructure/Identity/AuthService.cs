@@ -245,8 +245,8 @@ public sealed class AuthService
                     user.Id
                 },
                 null,
-                "Profile updated",
-                "Your account profile information was updated.",
+                "تم تحديث الملف الشخصي",
+                "تم تحديث بيانات ملفك الشخصي.",
                 "account.profile_updated",
                 nameof(User),
                 user.Id);
@@ -267,6 +267,12 @@ public sealed class AuthService
     {
         var user =
             await GetCurrentUserAsync();
+
+        if (!user.IsSystemAdmin)
+        {
+            throw new ForbiddenException(
+                "Email cannot be changed from the account page.");
+        }
 
 
         var passwordValid =
@@ -348,8 +354,8 @@ public sealed class AuthService
 
         await NotifySecurityEventAsync(
             user.Id,
-            "Account email changed",
-            $"Account email changed from \"{previousEmail}\" to \"{newEmail}\".",
+            "تم تغيير البريد الإلكتروني",
+            $"تم تغيير البريد الإلكتروني من \"{previousEmail}\" إلى \"{newEmail}\".",
             "account.email_changed");
 
 
@@ -434,8 +440,8 @@ public sealed class AuthService
 
         await NotifySecurityEventAsync(
             user.Id,
-            "Password changed",
-            "Your account password was changed. Other active sessions were revoked.",
+            "تم تغيير كلمة المرور",
+            "تم تغيير كلمة مرور حسابك، وأُلغيت الجلسات النشطة الأخرى.",
             "account.password_changed");
     }
 

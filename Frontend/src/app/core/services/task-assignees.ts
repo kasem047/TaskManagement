@@ -34,6 +34,14 @@ export interface AssignTaskRequest {
 }
 
 
+export interface AssignableMember {
+  userId: number;
+  fullName: string;
+  email: string;
+  roleName: string;
+}
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -115,6 +123,17 @@ export class TaskAssignees {
       {
         userId
       }
+    );
+  }
+
+
+  getAssignableMembers(
+    workspaceId: number,
+    projectId: number
+  ): Observable<AssignableMember[]> {
+
+    return this.http.get<AssignableMember[]>(
+      `${this.baseUrl}/workspaces/${workspaceId}/projects/${projectId}/assignable-members`
     );
   }
 

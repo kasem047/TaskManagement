@@ -1,75 +1,58 @@
 :root {
   color-scheme: light;
 
-  // Backgrounds
-  --bg: #f4f6fa;
-  --surface: #ffffff;
-  --surface-2: #f7f8fc;
-  --surface-3: #eef2f7;
+  /* Palette kept for reference; UI uses navy / indigo below */
+  --forest-50: #f0f5f4;
+  --forest-100: #dde8e7;
+  --forest-200: #c3d7d3;
+  --forest-300: #a0c0bb;
+  --forest-400: #77a49d;
+  --forest-500: #428177;
+  --forest-600: #27655b;
+  --forest-700: #054239;
+  --forest-800: #02342e;
+  --forest-900: #002623;
 
-  // Borders
-  --border: #e1e6ef;
-  --border-strong: #d4dce8;
+  --wheat-50: #f8f7f2;
+  --wheat-100: #edebe0;
+  --wheat-200: #e0dac6;
+  --wheat-300: #d3c9ac;
+  --wheat-400: #c6b893;
+  --wheat-500: #b9a779;
+  --wheat-600: #a8966d;
+  --wheat-700: #988561;
+  --wheat-800: #806e50;
+  --wheat-900: #67583e;
 
-  // Text
-  --text-primary: #182033;
-  --text-secondary: #5e6a80;
-  --text-muted: #8994a8;
+  --umber-900: #260f14;
+  --umber-700: #4a151e;
+  --umber-500: #6b1f2a;
 
-  // Brand
-  --primary: #5d6fe6;
-  --primary-2: #8a73d8;
-  --primary-hover: #5264d3;
-  --primary-active: #4758bd;
-  --primary-soft: #e9ecfd;
+  --charcoal-900: #161616;
+  --charcoal-700: #3d3a3b;
+  --white: #ffffff;
 
-  // Supporting colors
-  --violet: #8a73d8;
-  --violet-soft: #eeeaf9;
+  --navy-50: #f4f6fa;
+  --navy-100: #eef2f7;
+  --navy-200: #e1e6ef;
+  --navy-300: #d4dce8;
+  --navy-700: #232d48;
+  --navy-800: #171c29;
+  --navy-900: #0f131d;
+  --navy-950: #0b0e14;
 
-  --rose: #d26d87;
-  --rose-soft: #f8e8ed;
+  --brand-indigo: #5d6fe6;
+  --brand-violet: #8a73d8;
+  --brand-pink: #d26d87;
 
-  --sky: #629bc7;
-  --sky-soft: #eaf2f8;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
 
-  --cyan: #5e9da8;
-  --cyan-soft: #e8f2f3;
-
-  // Semantic
-  --success: #4f8a75;
-  --success-soft: #e6f1ec;
-
-  --warning: #c77b55;
-  --warning-soft: #f8e9df;
-
-  --danger: #c95468;
-  --danger-soft: #f8e5e9;
-
-  // Sidebar
-  --sidebar: #151d33;
-  --sidebar-active: #232d48;
-  --sidebar-text: #aab6cf;
-
-  // Radius
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-
-  // Shadows
-  --shadow-sm:
-    0 1px 2px rgba(22, 29, 51, 0.03),
-    0 8px 22px rgba(22, 29, 51, 0.05);
-
-  --shadow-md:
-    0 18px 46px rgba(22, 29, 51, 0.08);
-
-  --shadow-lg:
-    0 28px 70px rgba(22, 29, 51, 0.12);
-
-  // Spacing
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -79,11 +62,81 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+  --space-16: 64px;
+
+  --page-max-width: 100%;
+  --page-padding: var(--space-8);
+  --gutter: var(--space-6);
+  --control-height: 56px;
+  --sidebar-width: 128px;
+  --nav-item-height: 64px;
+
+  --shadow-sm:
+    0 1px 2px rgba(22, 29, 51, 0.04),
+    0 8px 22px rgba(22, 29, 51, 0.06);
+  --shadow-md: 0 18px 46px rgba(22, 29, 51, 0.1);
+  --shadow-lg: 0 28px 70px rgba(22, 29, 51, 0.14);
+
+  /* Semantic — Light: navy structure + indigo / violet product accent */
+  --bg: var(--navy-50);
+  --surface: var(--white);
+  --surface-2: #f7f8fc;
+  --surface-3: var(--navy-100);
+
+  --border: var(--navy-200);
+  --border-strong: var(--navy-300);
+
+  --text-primary: #182033;
+  --text-secondary: #5e6a80;
+  --text-muted: #8994a8;
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+
+  --primary: var(--brand-indigo);
+  --primary-2: var(--brand-violet);
+  --primary-hover: #5264d3;
+  --primary-active: #4758bd;
+  --primary-soft: #e9ecfd;
+
+  --violet: var(--brand-violet);
+  --violet-soft: #eeeaf9;
+
+  --rose: var(--brand-pink);
+  --rose-soft: #f8e8ed;
+
+  --sky: #629bc7;
+  --sky-soft: #eaf2f8;
+
+  --cyan: #5e9da8;
+  --cyan-soft: #e8f2f3;
+
+  --success: #4f8a75;
+  --success-soft: #e6f1ec;
+
+  --warning: #c77b55;
+  --warning-soft: #f8e9df;
+
+  --danger: #c95468;
+  --danger-soft: #f8e5e9;
+
+  --sidebar: #151d33;
+  --sidebar-active: #232d48;
+  --sidebar-text: #aab6cf;
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-2);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 }
 
 html.dark {
   color-scheme: dark;
-  --primary-2: #9b87e3;
 
   --bg: #0f131d;
   --surface: #171c29;
@@ -96,8 +149,11 @@ html.dark {
   --text-primary: #f3f5fa;
   --text-secondary: #a9b1c1;
   --text-muted: #7e899e;
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
 
   --primary: #7f90ff;
+  --primary-2: #9b87e3;
   --primary-hover: #91a0ff;
   --primary-active: #6f82f0;
   --primary-soft: #28325a;
@@ -130,12 +186,19 @@ html.dark {
   --shadow-sm:
     0 1px 2px rgba(0, 0, 0, 0.14),
     0 10px 28px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 20px 52px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.32);
 
-  --shadow-md:
-    0 20px 52px rgba(0, 0, 0, 0.24);
-
-  --shadow-lg:
-    0 28px 80px rgba(0, 0, 0, 0.32);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-2);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 }
 
 * {
@@ -146,6 +209,10 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+}
+
+html {
+  font-size: 20px;
 }
 
 body {
@@ -159,11 +226,37 @@ body {
     Arial,
     sans-serif;
 
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.65;
+
   color: var(--text-primary);
   background: var(--bg);
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+h1 {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 24px;
+  font-weight: 600;
 }
 
 button,
@@ -177,9 +270,22 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 a {
   color: inherit;
   text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 app-root {

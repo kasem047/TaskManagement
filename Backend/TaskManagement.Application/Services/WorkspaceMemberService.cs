@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TaskManagement.Application.Common;
 using TaskManagement.Application.Common.Exceptions;
 using TaskManagement.Application.DTOs.WorkspaceMembers;
 using TaskManagement.Application.Interfaces;
@@ -102,7 +103,10 @@ public sealed class WorkspaceMemberService
                 .AsNoTracking()
                 .Where(role =>
                     !role.IsDeleted &&
-                    role.Name != SystemRoles.WorkspaceOwner)
+                    (
+                        role.Name == SystemRoles.ProjectManager ||
+                        role.Name == SystemRoles.Member
+                    ))
                 .OrderBy(role =>
                     role.Name == SystemRoles.ProjectManager
                         ? 1
@@ -346,8 +350,8 @@ public sealed class WorkspaceMemberService
             await _notificationService.CreateAsync(
                 userToAdd.Id,
                 workspaceId,
-                "Workspace membership activated",
-                $"Your workspace membership was activated with role {role.Name}.",
+                "تم تفعيل عضويتك في مساحة العمل",
+                $"تم تفعيل عضويتك في مساحة العمل بدور {NotificationCopy.Role(role.Name)}.",
                 "workspace.member_added",
                 nameof(WorkspaceMember),
                 existingMember.Id);
@@ -400,8 +404,8 @@ public sealed class WorkspaceMemberService
         await _notificationService.CreateAsync(
             userToAdd.Id,
             workspaceId,
-            "Added to workspace",
-            $"You were added to a workspace with role {role.Name}.",
+            "تمت إضافتك إلى مساحة عمل",
+            $"تمت إضافتك إلى مساحة عمل بدور {NotificationCopy.Role(role.Name)}.",
             "workspace.member_added",
             nameof(WorkspaceMember),
             member.Id);
@@ -510,8 +514,8 @@ public sealed class WorkspaceMemberService
         await _notificationService.CreateAsync(
             member.UserId,
             workspaceId,
-            "Workspace role changed",
-            $"Your workspace role changed from {previousRoleName} to {newRole.Name}.",
+            "تغيّر دورك في مساحة العمل",
+            $"تغيّر دورك في مساحة العمل من {NotificationCopy.Role(previousRoleName)} إلى {NotificationCopy.Role(newRole.Name)}.",
             "workspace.member_role_changed",
             nameof(WorkspaceMember),
             member.Id);
@@ -569,7 +573,7 @@ public sealed class WorkspaceMemberService
             SystemRoles.WorkspaceOwner)
         {
             throw new ConflictException(
-                "Workspace owner cannot be removed directly. Transfer ownership first.");
+                "Workspace owner cannot be removed directly. A system administrator must assign a new owner first.");
         }
 
         /*
@@ -660,8 +664,8 @@ public sealed class WorkspaceMemberService
         await _notificationService.CreateAsync(
             removedUserId,
             workspaceId,
-            "Removed from workspace",
-            "You were removed from a workspace.",
+            "تمت إزالتك من مساحة عمل",
+            "تمت إزالتك من مساحة العمل.",
             "workspace.member_removed",
             nameof(WorkspaceMember),
             member.Id);
@@ -671,8 +675,8 @@ public sealed class WorkspaceMemberService
             await _notificationService.CreateAsync(
                 ownerUserId,
                 workspaceId,
-                "Project requires a new manager",
-                $"{removedUserFullName} is no longer managing project \"{project.Name}\". Please assign a new project manager.",
+                "المشروع يحتاج مديرًا جديدًا",
+                $"{removedUserFullName} لم يعد يدير المشروع \"{project.Name}\". يرجى تعيين مدير مشروع جديد.",
                 "project.manager_required",
                 nameof(Project),
                 project.Id);
@@ -788,11 +792,13 @@ public sealed class WorkspaceMemberService
         EnsureValidMemberManagementRole(
             Role role)
     {
-        if (role.Name ==
-            SystemRoles.WorkspaceOwner)
+        if (role.Name !=
+                SystemRoles.ProjectManager &&
+            role.Name !=
+                SystemRoles.Member)
         {
             throw new ConflictException(
-                "Workspace owner cannot be assigned through member management. Use ownership transfer instead.");
+                "Only ProjectManager and Member can be assigned through member management. A system administrator assigns the workspace owner.");
         }
     }
 

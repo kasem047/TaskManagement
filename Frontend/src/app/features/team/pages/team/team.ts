@@ -40,6 +40,14 @@ import {
   TokenStorage
 } from '../../../../core/services/token-storage';
 
+import {
+  Router
+} from '@angular/router';
+
+import {
+  WorkspaceAccess
+} from '../../../../core/services/workspace-access';
+
 
 @Component({
   selector: 'app-team-page',
@@ -79,6 +87,14 @@ export class TeamPage
 
   private readonly tokenStorage =
     inject(TokenStorage);
+
+
+  private readonly router =
+    inject(Router);
+
+
+  private readonly access =
+    inject(WorkspaceAccess);
 
 
   readonly currentUser =
@@ -257,7 +273,32 @@ export class TeamPage
 
   ngOnInit(): void {
 
-    this.loadWorkspaces();
+    this.access
+      .refresh()
+      .subscribe({
+
+        next: () => {
+
+          if (!this.access.showTeamNav) {
+
+            this.router.navigateByUrl(
+              '/dashboard'
+            );
+
+            return;
+          }
+
+          this.loadWorkspaces();
+        },
+
+        error: () => {
+
+          this.router.navigateByUrl(
+            '/dashboard'
+          );
+        }
+
+      });
   }
 
 
@@ -282,8 +323,24 @@ export class TeamPage
 
         next: workspaces => {
 
+          if (
+            this.access.loaded &&
+            !this.access.showTeamNav
+          ) {
+
+            this.router.navigateByUrl(
+              '/dashboard'
+            );
+
+            return;
+          }
+
           this.workspaces =
-            workspaces;
+            workspaces.filter(workspace =>
+              this.access.matchesActiveRole(
+                workspace.currentUserRole
+              )
+            );
 
 
           this.loadingWorkspaces =
@@ -787,6 +844,29 @@ export class TeamPage
   }
 
 
+  get isReadOnlyTeam():
+    boolean {
+
+    return (
+      !!this.selectedWorkspace &&
+      !this.canManageMembers
+    );
+  }
+
+
+  get assignableRoles():
+    WorkspaceRoleOption[] {
+
+    return this.roles
+      .filter(role =>
+        role.name ===
+          'ProjectManager' ||
+        role.name ===
+          'Member'
+      );
+  }
+
+
   get canLeaveWorkspace():
     boolean {
 
@@ -818,6 +898,18 @@ export class TeamPage
       ||
       member.roleName ===
         'Owner'
+    );
+  }
+
+
+  isCurrentMemberRole(
+    member: WorkspaceMember,
+    roleId: number
+  ): boolean {
+
+    return (
+      Number(roleId) ===
+        Number(member.roleId)
     );
   }
 
@@ -2016,31 +2108,12 @@ export class TeamPage
   openTransferOwnership():
     void {
 
-    if (
-      !this.selectedWorkspace ||
-      !this.canManageMembers
-    ) {
-
-      return;
-    }
+    this.transferOwnershipOpen =
+      false;
 
 
     this.errorMessage =
-      '';
-
-    this.successMessage =
-      '';
-
-
-    this.transferOwnershipForm
-      .reset({
-        newOwnerUserId: 0,
-        confirmExit: false
-      });
-
-
-    this.transferOwnershipOpen =
-      true;
+      'مالك مساحة العمل لا ينقل الملكية بنفسه. يقوم مسؤول النظام بتعيين مالك جديد.';
   }
 
 
@@ -2437,7 +2510,7 @@ export class TeamPage
         )
       ) {
 
-        return 'مالك مساحة العمل لا يستطيع المغادرة مباشرة. انقل الملكية إلى عضو آخر أولًا.';
+        return 'مالك مساحة العمل لا يستطيع المغادرة مباشرة. يقوم مسؤول النظام بتعيين مالك جديد.';
       }
 
 
@@ -2481,7 +2554,7 @@ export class TeamPage
         )
       ) {
 
-        return 'لا يمكن تعيين مالك مساحة العمل من إدارة الأعضاء. استخدم نقل الملكية.';
+        return 'لا يمكن تعيين مالك مساحة العمل من إدارة الأعضاء. يقوم مسؤول النظام بتعيين المالك.';
       }
 
 
@@ -2501,7 +2574,7 @@ export class TeamPage
         )
       ) {
 
-        return 'لا يمكن إزالة مالك مساحة العمل مباشرة. يجب نقل الملكية أولًا.';
+        return 'لا يمكن إزالة مالك مساحة العمل مباشرة. يجب أن يعيّن مسؤول النظام مالكًا جديدًا أولًا.';
       }
 
 

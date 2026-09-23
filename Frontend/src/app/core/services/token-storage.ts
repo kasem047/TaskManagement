@@ -190,5 +190,21 @@ export class TokenStorage {
     localStorage.removeItem(
       'taskmanagement_project_name'
     );
+
+    localStorage.removeItem(
+      'taskmanagement_selected_workspace_id'
+    );
+
+    localStorage.removeItem(
+      'taskmanagement_selected_workspace_name'
+    );
+
+    localStorage.removeItem(
+      'taskmanagement_selected_project_id'
+    );
+
+    localStorage.removeItem(
+      'taskmanagement_role_mode'
+    );
   }
 }

@@ -51,10 +51,6 @@ import {
 } from './features/admin/pages/roles-permissions/roles-permissions';
 
 import {
-  UserPermissionsPage
-} from './features/admin/pages/user-permissions/user-permissions';
-
-import {
   TeamPage
 } from './features/team/pages/team/team';
 
@@ -73,6 +69,10 @@ import {
 import {
   authGuard
 } from './core/guards/auth-guard';
+
+import {
+  adminGuard
+} from './core/guards/admin-guard';
 
 
 export const routes:
@@ -194,7 +194,11 @@ export const routes:
           'admin',
 
         component:
-          AdminDashboardPage
+          AdminDashboardPage,
+
+        canActivate: [
+          adminGuard
+        ]
       },
 
 
@@ -203,7 +207,11 @@ export const routes:
           'admin/dashboard',
 
         component:
-          AdminDashboardPage
+          AdminDashboardPage,
+
+        canActivate: [
+          adminGuard
+        ]
       },
 
 
@@ -212,7 +220,11 @@ export const routes:
           'admin/users',
 
         component:
-          AdminUsersPage
+          AdminUsersPage,
+
+        canActivate: [
+          adminGuard
+        ]
       },
 
 
@@ -221,7 +233,11 @@ export const routes:
           'admin/password-recovery',
 
         component:
-          PasswordRecoveryAdminPage
+          PasswordRecoveryAdminPage,
+
+        canActivate: [
+          adminGuard
+        ]
       },
 
 
@@ -230,7 +246,11 @@ export const routes:
           'admin/roles-permissions',
 
         component:
-          RolesPermissionsPage
+          RolesPermissionsPage,
+
+        canActivate: [
+          adminGuard
+        ]
       },
 
 
@@ -238,8 +258,11 @@ export const routes:
         path:
           'admin/user-permissions',
 
-        component:
-          UserPermissionsPage
+        pathMatch:
+          'full',
+
+        redirectTo:
+          'admin/roles-permissions'
       },
 
 
